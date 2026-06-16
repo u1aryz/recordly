@@ -160,7 +160,7 @@ function App() {
 						</div>
 					)}
 					{message ? (
-						<div className="alert alert-warning mt-4">{message}</div>
+						<div className="alert alert-soft alert-warning mt-4">{message}</div>
 					) : null}
 				</section>
 			</div>
@@ -213,7 +213,7 @@ function CaptureDetail({
 			</div>
 
 			{capture.stopReason ? (
-				<div className="alert alert-warning mt-4">
+				<div className="alert alert-soft alert-warning mt-4">
 					停止理由: {translateStopReason(capture.stopReason)}
 				</div>
 			) : null}

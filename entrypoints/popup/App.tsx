@@ -109,7 +109,9 @@ function App() {
 			) : null}
 
 			{state.error ? (
-				<div className="alert alert-warning mt-3 text-xs">{state.error}</div>
+				<div className="alert alert-soft alert-warning mt-3 text-xs">
+					{state.error}
+				</div>
 			) : null}
 
 			{!state.loading && state.videos.length === 0 && !state.error ? (
