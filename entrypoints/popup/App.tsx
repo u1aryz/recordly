@@ -1,3 +1,10 @@
+import {
+	ArrowPathIcon,
+	ClockIcon,
+	CursorArrowRaysIcon,
+	PlayCircleIcon,
+	VideoCameraIcon,
+} from "@heroicons/react/24/outline";
 import { useCallback, useEffect, useState } from "react";
 import type { VideoDescriptor } from "@/shared/types";
 import { formatDuration } from "@/shared/video";
@@ -78,6 +85,7 @@ function App() {
 					type="button"
 					onClick={openCaptures}
 				>
+					<ClockIcon className="h-4 w-4" />
 					履歴
 				</button>
 			</header>
@@ -87,6 +95,7 @@ function App() {
 				type="button"
 				onClick={startPicker}
 			>
+				<CursorArrowRaysIcon className="h-5 w-5" />
 				ページ上で動画を選択
 			</button>
 
@@ -97,6 +106,7 @@ function App() {
 					type="button"
 					onClick={refreshVideos}
 				>
+					<ArrowPathIcon className="h-3.5 w-3.5" />
 					更新
 				</button>
 			</div>
@@ -154,6 +164,11 @@ function App() {
 								disabled={!video.canCapture}
 								onClick={() => startCapture(video.id)}
 							>
+								{video.canCapture ? (
+									<PlayCircleIcon className="h-4 w-4" />
+								) : (
+									<VideoCameraIcon className="h-4 w-4" />
+								)}
 								開始
 							</button>
 						</div>

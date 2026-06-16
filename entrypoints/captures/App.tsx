@@ -1,3 +1,10 @@
+import {
+	ArrowDownTrayIcon,
+	ArrowPathIcon,
+	FilmIcon,
+	StopCircleIcon,
+	TrashIcon,
+} from "@heroicons/react/24/outline";
 import type { Dispatch, SetStateAction } from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { getCaptureBlob, listCaptures } from "@/shared/storage";
@@ -108,6 +115,7 @@ function App() {
 						</p>
 					</div>
 					<button className="btn btn-sm" type="button" onClick={reload}>
+						<ArrowPathIcon className="h-4 w-4" />
 						再読み込み
 					</button>
 				</div>
@@ -130,8 +138,9 @@ function App() {
 							onClick={() => setSelectedId(capture.id)}
 						>
 							<div className="flex items-center justify-between gap-2">
-								<span className="min-w-0 flex-1 truncate font-medium text-sm">
-									{capture.title}
+								<span className="flex min-w-0 flex-1 items-center gap-2 font-medium text-sm">
+									<FilmIcon className="h-4 w-4 shrink-0 text-base-content/55" />
+									<span className="truncate">{capture.title}</span>
 								</span>
 								<StatusBadge status={capture.status} />
 							</div>
@@ -224,6 +233,7 @@ function CaptureDetail({
 			<div className="mt-6 flex flex-wrap gap-2">
 				{isRecording ? (
 					<button className="btn btn-error" type="button" onClick={onStop}>
+						<StopCircleIcon className="h-5 w-5" />
 						停止
 					</button>
 				) : (
@@ -232,6 +242,7 @@ function CaptureDetail({
 						type="button"
 						onClick={onDownload}
 					>
+						<ArrowDownTrayIcon className="h-5 w-5" />
 						ダウンロード
 					</button>
 				)}
@@ -240,6 +251,7 @@ function CaptureDetail({
 					type="button"
 					onClick={onDelete}
 				>
+					<TrashIcon className="h-5 w-5" />
 					削除
 				</button>
 			</div>
