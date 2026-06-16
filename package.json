@@ -1,0 +1,52 @@
+{
+	"name": "video-capture-ext-v2",
+	"description": "DevTools style video picker and MP4 capture extension",
+	"private": true,
+	"version": "0.0.1",
+	"type": "module",
+	"packageManager": "pnpm@11.6.0",
+	"engines": {
+		"node": ">=22"
+	},
+	"scripts": {
+		"prepare": "lefthook install",
+		"dev": "wxt",
+		"dev:firefox": "wxt -b firefox",
+		"build": "wxt build",
+		"build:firefox": "wxt build -b firefox",
+		"zip": "wxt zip",
+		"zip:firefox": "wxt zip -b firefox",
+		"typecheck": "tsc --noEmit",
+		"test": "vitest run",
+		"format": "biome check --write --unsafe",
+		"postinstall": "wxt prepare"
+	},
+	"dependencies": {
+		"@wxt-dev/webextension-polyfill": "^1.0.0",
+		"daisyui": "^5.5.23",
+		"mediabunny": "^1.46.0",
+		"react": "^19.1.0",
+		"react-dom": "^19.1.0",
+		"webextension-polyfill": "^0.12.0"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "2.4.16",
+		"@commitlint/cli": "21.0.2",
+		"@commitlint/config-conventional": "21.0.2",
+		"@commitlint/types": "21.0.1",
+		"@tailwindcss/vite": "4.3.1",
+		"@testing-library/jest-dom": "^6.9.1",
+		"@testing-library/react": "^16.3.2",
+		"@types/node": "25.9.3",
+		"@types/react": "19.2.17",
+		"@types/react-dom": "19.2.3",
+		"@wxt-dev/module-react": "1.2.2",
+		"fake-indexeddb": "^6.2.5",
+		"jsdom": "^29.1.1",
+		"lefthook": "2.1.9",
+		"tailwindcss": "4.3.1",
+		"typescript": "6.0.3",
+		"vitest": "^4.1.9",
+		"wxt": "0.20.26"
+	}
+}
