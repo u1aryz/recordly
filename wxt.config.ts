@@ -22,6 +22,7 @@ export default defineConfig({
 			"--disable-features=IsolateOrigins,site-per-process",
 			"--remote-debugging-port=9222",
 		],
+		startUrls: ["https://kick.com/"],
 	},
 	dev: {
 		server: {
