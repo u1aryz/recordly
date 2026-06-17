@@ -247,10 +247,12 @@ function CaptureDetail({
 	const isRecording = capture.status === "recording";
 	return (
 		<div>
-			<div className="flex flex-wrap items-start justify-between gap-4">
-				<div>
-					<h2 className="font-semibold text-lg">{capture.title}</h2>
-					<p className="text-base-content/65 text-sm">{capture.pageUrl}</p>
+			<div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-4">
+				<div className="min-w-0">
+					<h2 className="break-words font-semibold text-lg">{capture.title}</h2>
+					<p className="truncate text-base-content/65 text-sm">
+						{capture.pageUrl}
+					</p>
 				</div>
 				<StatusBadge status={capture.status} />
 			</div>
