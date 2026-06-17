@@ -2,7 +2,7 @@ import {
 	ArrowDownTrayIcon,
 	ArrowPathIcon,
 	FilmIcon,
-	StopCircleIcon,
+	StopIcon,
 	TrashIcon,
 } from "@heroicons/react/24/outline";
 import type { Dispatch, SetStateAction } from "react";
@@ -233,7 +233,7 @@ function CaptureDetail({
 			<div className="mt-6 flex flex-wrap gap-2">
 				{isRecording ? (
 					<button className="btn btn-error" type="button" onClick={onStop}>
-						<StopCircleIcon className="h-5 w-5" />
+						<StopIcon className="h-5 w-5" />
 						停止
 					</button>
 				) : (

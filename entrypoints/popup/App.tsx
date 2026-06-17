@@ -3,7 +3,7 @@ import {
 	ClockIcon,
 	CursorArrowRaysIcon,
 	FilmIcon,
-	PlayCircleIcon,
+	PlayIcon,
 	VideoCameraIcon,
 } from "@heroicons/react/24/outline";
 import { useCallback, useEffect, useState } from "react";
@@ -179,7 +179,7 @@ function App() {
 									onClick={() => startCapture(video.id)}
 								>
 									{video.canCapture ? (
-										<PlayCircleIcon className="h-4 w-4" />
+										<PlayIcon className="h-4 w-4" />
 									) : (
 										<VideoCameraIcon className="h-4 w-4" />
 									)}
