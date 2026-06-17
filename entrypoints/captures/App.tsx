@@ -227,12 +227,14 @@ function CaptureDetail({
 				</div>
 			) : null}
 			{capture.errorMessage ? (
-				<div className="alert alert-error mt-4">{capture.errorMessage}</div>
+				<div className="alert alert-soft alert-error mt-4">
+					{capture.errorMessage}
+				</div>
 			) : null}
 
 			<div className="mt-6 flex flex-wrap gap-2">
 				{isRecording ? (
-					<button className="btn btn-error" type="button" onClick={onStop}>
+					<button className="btn btn-warning" type="button" onClick={onStop}>
 						<StopIcon className="h-5 w-5" />
 						停止
 					</button>
@@ -246,11 +248,7 @@ function CaptureDetail({
 						ダウンロード
 					</button>
 				)}
-				<button
-					className="btn btn-outline btn-error"
-					type="button"
-					onClick={onDelete}
-				>
+				<button className="btn btn-error" type="button" onClick={onDelete}>
 					<TrashIcon className="h-5 w-5" />
 					削除
 				</button>
