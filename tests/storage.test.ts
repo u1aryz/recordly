@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { createCaptureMetadata } from "@/shared/capture-state";
 import {
 	appendCaptureChunk,
+	createCaptureReadableStream,
 	deleteCapture,
 	getCaptureBlob,
 	listCaptures,
@@ -37,6 +38,11 @@ describe("capture storage", () => {
 		const blob = await getCaptureBlob(metadata);
 		expect(blob.size).toBe(3);
 		expect(blob.type).toBe("video/mp4");
+
+		const streamed = await readStreamBytes(
+			createCaptureReadableStream({ ...metadata, chunkCount: 2 }),
+		);
+		expect(streamed).toEqual([1, 2, 3]);
 	});
 
 	it("deletes metadata and chunks together", async () => {
@@ -63,3 +69,18 @@ describe("capture storage", () => {
 		expect(blob.size).toBe(0);
 	});
 });
+
+async function readStreamBytes(stream: ReadableStream<Uint8Array>) {
+	const reader = stream.getReader();
+	const bytes: number[] = [];
+
+	while (true) {
+		const result = await reader.read();
+		if (result.done) {
+			break;
+		}
+		bytes.push(...result.value);
+	}
+
+	return bytes;
+}

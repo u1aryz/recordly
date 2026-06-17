@@ -125,3 +125,50 @@ export async function getCaptureBlob(metadata: CaptureMetadata): Promise<Blob> {
 		{ type: metadata.mimeType },
 	);
 }
+
+export function createCaptureReadableStream(
+	metadata: CaptureMetadata,
+): ReadableStream<Uint8Array> {
+	let db: IDBDatabase | null = null;
+	let nextIndex = 0;
+
+	function closeDb() {
+		db?.close();
+		db = null;
+	}
+
+	return new ReadableStream<Uint8Array>({
+		async pull(controller) {
+			try {
+				if (nextIndex >= metadata.chunkCount) {
+					closeDb();
+					controller.close();
+					return;
+				}
+
+				db ??= await openCaptureDb();
+				const tx = db.transaction(CHUNKS_STORE, "readonly");
+				const id = `${metadata.id}:${nextIndex.toString().padStart(8, "0")}`;
+				const chunk = await requestToPromise<StoredChunk | undefined>(
+					tx.objectStore(CHUNKS_STORE).get(id),
+				);
+				await transactionDone(tx);
+				nextIndex += 1;
+
+				if (!chunk) {
+					closeDb();
+					controller.error(new Error("Capture chunk is missing."));
+					return;
+				}
+
+				controller.enqueue(new Uint8Array(chunk.chunk));
+			} catch (error) {
+				closeDb();
+				controller.error(error);
+			}
+		},
+		cancel() {
+			closeDb();
+		},
+	});
+}

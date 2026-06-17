@@ -16,9 +16,33 @@ import type {
 	SVGProps,
 } from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { getCaptureBlob, listCaptures } from "@/shared/storage";
+import { createCaptureReadableStream, listCaptures } from "@/shared/storage";
 import type { CaptureMetadata, PortMessage } from "@/shared/types";
 import { formatBytes, formatDuration } from "@/shared/video";
+
+type SaveFilePickerOptions = {
+	suggestedName?: string;
+	startIn?: string;
+	types?: {
+		description?: string;
+		accept: Record<string, string[]>;
+	}[];
+};
+
+const MP4_FILE_PICKER_TYPES = [
+	{
+		description: "MP4 video",
+		accept: { "video/mp4": [".mp4"] },
+	},
+];
+
+declare global {
+	interface Window {
+		showSaveFilePicker?: (
+			options?: SaveFilePickerOptions,
+		) => Promise<FileSystemFileHandle>;
+	}
+}
 
 function App() {
 	const [captures, setCaptures] = useState<CaptureMetadata[]>([]);
@@ -26,6 +50,7 @@ function App() {
 		new URLSearchParams(location.search).get("captureId"),
 	);
 	const [message, setMessage] = useState<string | null>(null);
+	const [isDownloading, setIsDownloading] = useState(false);
 
 	const selected = useMemo(
 		() => captures.find((capture) => capture.id === selectedId) ?? captures[0],
@@ -77,20 +102,35 @@ function App() {
 	}
 
 	async function downloadCapture(capture: CaptureMetadata) {
-		const blob = await getCaptureBlob(capture);
-		if (blob.size === 0) {
+		if (isDownloading) {
+			return;
+		}
+		if (capture.sizeBytes === 0 || capture.chunkCount === 0) {
 			setMessage("保存済みデータがありません。");
 			return;
 		}
-		const url = URL.createObjectURL(blob);
+
+		if (!window.showSaveFilePicker) {
+			setMessage("このブラウザではストリーミング保存に対応していません。");
+			return;
+		}
+
+		setIsDownloading(true);
 		try {
-			await browser.downloads.download({
-				url,
-				filename: capture.fileName,
-				saveAs: true,
+			const file = await window.showSaveFilePicker({
+				suggestedName: capture.fileName,
+				startIn: "downloads",
+				types: MP4_FILE_PICKER_TYPES,
 			});
+			const writable = await file.createWritable();
+			await createCaptureReadableStream(capture).pipeTo(writable);
+		} catch (error) {
+			if (error instanceof DOMException && error.name === "AbortError") {
+				return;
+			}
+			throw error;
 		} finally {
-			setTimeout(() => URL.revokeObjectURL(url), 30_000);
+			setIsDownloading(false);
 		}
 	}
 
@@ -170,6 +210,7 @@ function App() {
 					{selected ? (
 						<CaptureDetail
 							capture={selected}
+							isDownloading={isDownloading}
 							onDelete={() => deleteSelectedCapture(selected)}
 							onDownload={() => downloadCapture(selected)}
 							onStop={() => stopCapture(selected)}
@@ -192,11 +233,13 @@ function App() {
 
 function CaptureDetail({
 	capture,
+	isDownloading,
 	onStop,
 	onDownload,
 	onDelete,
 }: {
 	capture: CaptureMetadata;
+	isDownloading: boolean;
 	onStop: () => void;
 	onDownload: () => void;
 	onDelete: () => void;
@@ -254,10 +297,18 @@ function CaptureDetail({
 				) : (
 					<button
 						className="btn btn-primary"
+						disabled={isDownloading}
 						type="button"
 						onClick={onDownload}
 					>
-						<ArrowDownTrayIcon className="h-5 w-5" />
+						{isDownloading ? (
+							<span
+								aria-hidden="true"
+								className="loading loading-spinner loading-sm"
+							/>
+						) : (
+							<ArrowDownTrayIcon className="h-5 w-5" />
+						)}
 						ダウンロード
 					</button>
 				)}
