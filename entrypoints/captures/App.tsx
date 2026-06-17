@@ -279,7 +279,7 @@ function CaptureDetail({
 				</div>
 			</div>
 
-			{capture.stopReason ? (
+			{capture.stopReason && !capture.errorMessage ? (
 				<CaptureAlert className="mt-4" tone="warning">
 					停止理由: {translateStopReason(capture.stopReason)}
 				</CaptureAlert>

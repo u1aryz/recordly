@@ -2,6 +2,7 @@ import { arrayBufferToBase64 } from "@/shared/binary";
 import { createCaptureMetadata } from "@/shared/capture-state";
 import type { CaptureMetadata, StopReason } from "@/shared/types";
 import {
+	createVideoCaptureStream,
 	describeVideo,
 	findVideoFromPoint,
 	getMp4MimeType,
@@ -218,26 +219,20 @@ async function startCaptureById(
 		return { ok: false, reason: "対象の video が見つかりません" };
 	}
 
+	const descriptor = describeVideo(video);
 	const mimeType = getMp4MimeType();
 	if (!mimeType) {
-		await browser.runtime.sendMessage({
-			type: "CAPTURE_FINISHED",
-			captureId: crypto.randomUUID(),
-			status: "error",
-			stopReason: "unsupported",
-			errorMessage:
-				"このブラウザは MediaRecorder の MP4 出力に対応していません",
-			elapsedMs: 0,
-		});
-		return { ok: false, reason: "MP4 recording is unsupported" };
+		const errorMessage =
+			"このブラウザは MediaRecorder の MP4 出力に対応していません。";
+		const metadata = createFailedCaptureMetadata(
+			videoId,
+			descriptor,
+			"video/mp4",
+		);
+		await finishUnsupportedCapture(metadata, errorMessage);
+		return { ok: false, reason: errorMessage };
 	}
 
-	const stream = captureVideoStream(video);
-	if (!stream) {
-		return { ok: false, reason: "video.captureStream() が使えません" };
-	}
-
-	const descriptor = describeVideo(video);
 	const metadata = createCaptureMetadata({
 		videoId,
 		tabId: 0,
@@ -248,8 +243,24 @@ async function startCaptureById(
 		height: descriptor.height,
 		thumbnailDataUrl: createThumbnail(video),
 	});
+	const { stream, errorMessage } = createVideoCaptureStream(video);
+	if (!stream) {
+		await finishUnsupportedCapture(
+			metadata,
+			errorMessage ?? "video.captureStream() が使えません。",
+		);
+		return { ok: false, reason: errorMessage };
+	}
 
-	const recorder = new MediaRecorder(stream, { mimeType });
+	let recorder: MediaRecorder;
+	try {
+		recorder = new MediaRecorder(stream, { mimeType });
+	} catch (error) {
+		stopStream(stream);
+		const recorderErrorMessage = getRecorderErrorMessage(error);
+		await finishUnsupportedCapture(metadata, recorderErrorMessage);
+		return { ok: false, reason: recorderErrorMessage };
+	}
 	const startedAt = performance.now();
 	recorder.ondataavailable = (event) => {
 		if (event.data.size <= 0) {
@@ -272,9 +283,7 @@ async function startCaptureById(
 	recorder.onerror = (event) =>
 		stopCapture(metadata.id, "error", (event as ErrorEvent).message);
 	recorder.onstop = () => {
-		for (const track of stream.getTracks()) {
-			track.stop();
-		}
+		stopStream(stream);
 		const active = activeRecordings.get(metadata.id);
 		if (!active || active.finishSent) {
 			return;
@@ -317,7 +326,23 @@ async function startCaptureById(
 		pendingChunks: [],
 	});
 	await browser.runtime.sendMessage({ type: "CAPTURE_STARTED", metadata });
-	recorder.start(1000);
+	try {
+		recorder.start(1000);
+	} catch (error) {
+		stopStream(stream);
+		activeRecordings.delete(metadata.id);
+		window.clearInterval(resolutionTimer);
+		const recorderErrorMessage = getRecorderErrorMessage(error);
+		await browser.runtime.sendMessage({
+			type: "CAPTURE_FINISHED",
+			captureId: metadata.id,
+			status: "error",
+			stopReason: "unsupported",
+			errorMessage: recorderErrorMessage,
+			elapsedMs: performance.now() - startedAt,
+		});
+		return { ok: false, reason: recorderErrorMessage };
+	}
 	return { ok: true };
 }
 
@@ -359,16 +384,6 @@ function getFinishedStatus(reason?: StopReason): "error" | "stopped" {
 	return "stopped";
 }
 
-function captureVideoStream(video: HTMLVideoElement): MediaStream | null {
-	if (typeof video.captureStream === "function") {
-		return video.captureStream();
-	}
-	if (typeof video.mozCaptureStream === "function") {
-		return video.mozCaptureStream();
-	}
-	return null;
-}
-
 function createThumbnail(video: HTMLVideoElement): string | undefined {
 	try {
 		const canvas = document.createElement("canvas");
@@ -381,4 +396,48 @@ function createThumbnail(video: HTMLVideoElement): string | undefined {
 	} catch {
 		return undefined;
 	}
+}
+
+function createFailedCaptureMetadata(
+	videoId: string,
+	descriptor: ReturnType<typeof describeVideo>,
+	mimeType: string,
+): CaptureMetadata {
+	return createCaptureMetadata({
+		videoId,
+		tabId: 0,
+		pageUrl: location.href,
+		title: descriptor.title,
+		mimeType,
+		width: descriptor.width,
+		height: descriptor.height,
+	});
+}
+
+async function finishUnsupportedCapture(
+	metadata: CaptureMetadata,
+	errorMessage: string,
+): Promise<void> {
+	await browser.runtime.sendMessage({ type: "CAPTURE_STARTED", metadata });
+	await browser.runtime.sendMessage({
+		type: "CAPTURE_FINISHED",
+		captureId: metadata.id,
+		status: "error",
+		stopReason: "unsupported",
+		errorMessage,
+		elapsedMs: 0,
+	});
+}
+
+function stopStream(stream: MediaStream): void {
+	for (const track of stream.getTracks()) {
+		track.stop();
+	}
+}
+
+function getRecorderErrorMessage(error: unknown): string {
+	if (error instanceof Error && error.message) {
+		return error.message;
+	}
+	return "MediaRecorder の開始に失敗しました。";
 }

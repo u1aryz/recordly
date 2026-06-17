@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import {
+	createVideoCaptureStream,
 	findVideoFromPoint,
 	formatBytes,
 	formatDuration,
@@ -41,5 +42,20 @@ describe("video helpers", () => {
 		});
 		expect(getMp4MimeType()).toBeNull();
 		vi.unstubAllGlobals();
+	});
+
+	it("returns an unsupported message when captureStream is blocked by EME", () => {
+		const video = document.createElement("video");
+		video.captureStream = vi.fn(() => {
+			throw new DOMException(
+				"Stream capture not supported with EME",
+				"NotSupportedError",
+			);
+		});
+
+		const result = createVideoCaptureStream(video);
+
+		expect(result.stream).toBeNull();
+		expect(result.errorMessage).toContain("保護");
 	});
 });

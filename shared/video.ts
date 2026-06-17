@@ -70,6 +70,40 @@ export function listVideos(root: ParentNode = document): VideoDescriptor[] {
 	return Array.from(root.querySelectorAll("video")).map(describeVideo);
 }
 
+export function createVideoCaptureStream(video: HTMLVideoElement): {
+	stream: MediaStream | null;
+	errorMessage?: string;
+} {
+	const captureStream = getVideoCaptureStream(video);
+	if (!captureStream) {
+		return {
+			stream: null,
+			errorMessage: "このブラウザでは video.captureStream() が使えません",
+		};
+	}
+
+	try {
+		return { stream: captureStream() };
+	} catch (error) {
+		return {
+			stream: null,
+			errorMessage: getCaptureStreamErrorMessage(error),
+		};
+	}
+}
+
+function getVideoCaptureStream(
+	video: HTMLVideoElement,
+): (() => MediaStream) | null {
+	if (typeof video.captureStream === "function") {
+		return video.captureStream.bind(video);
+	}
+	if (typeof video.mozCaptureStream === "function") {
+		return video.mozCaptureStream.bind(video);
+	}
+	return null;
+}
+
 export function getMp4MimeType(): string | null {
 	const candidates = [
 		'video/mp4;codecs="avc1.42E01E,mp4a.40.2"',
@@ -105,6 +139,16 @@ export function formatBytes(bytes: number): string {
 		value /= 1024;
 	}
 	return `${value.toFixed(1)} TB`;
+}
+
+function getCaptureStreamErrorMessage(error: unknown): string {
+	if (error instanceof DOMException && error.name === "NotSupportedError") {
+		return "この動画は DRM などの保護によりキャプチャできません。";
+	}
+	if (error instanceof Error && error.message) {
+		return error.message;
+	}
+	return "video.captureStream() の開始に失敗しました。";
 }
 
 declare global {
