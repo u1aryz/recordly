@@ -15,6 +15,10 @@ run = "pnpm dev"
 description = "拡張機能をビルド"
 run = "pnpm build"
 
+[tasks.test]
+description = "テストを実行"
+run = "pnpm test"
+
 [tasks.format]
 description = "フォーマットと型チェック"
 run = ["pnpm format", "pnpm typecheck"]
