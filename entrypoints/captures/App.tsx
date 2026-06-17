@@ -1,11 +1,20 @@
 import {
 	ArrowDownTrayIcon,
 	ArrowPathIcon,
+	ExclamationTriangleIcon,
 	FilmIcon,
+	InformationCircleIcon,
 	StopIcon,
 	TrashIcon,
+	XCircleIcon,
 } from "@heroicons/react/24/outline";
-import type { Dispatch, SetStateAction } from "react";
+import type {
+	ComponentType,
+	Dispatch,
+	ReactNode,
+	SetStateAction,
+	SVGProps,
+} from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { getCaptureBlob, listCaptures } from "@/shared/storage";
 import type { CaptureMetadata, PortMessage } from "@/shared/types";
@@ -124,7 +133,9 @@ function App() {
 			<div className="mx-auto grid max-w-6xl gap-5 px-6 py-6 md:grid-cols-[320px_1fr]">
 				<aside className="space-y-2">
 					{captures.length === 0 ? (
-						<div className="alert">まだキャプチャはありません。</div>
+						<CaptureAlert tone="info">
+							まだキャプチャはありません。
+						</CaptureAlert>
 					) : null}
 					{captures.map((capture) => (
 						<button
@@ -169,7 +180,9 @@ function App() {
 						</div>
 					)}
 					{message ? (
-						<div className="alert alert-soft alert-warning mt-4">{message}</div>
+						<CaptureAlert className="mt-4" tone="warning">
+							{message}
+						</CaptureAlert>
 					) : null}
 				</section>
 			</div>
@@ -222,14 +235,14 @@ function CaptureDetail({
 			</div>
 
 			{capture.stopReason ? (
-				<div className="alert alert-soft alert-warning mt-4">
+				<CaptureAlert className="mt-4" tone="warning">
 					停止理由: {translateStopReason(capture.stopReason)}
-				</div>
+				</CaptureAlert>
 			) : null}
 			{capture.errorMessage ? (
-				<div className="alert alert-soft alert-error mt-4">
+				<CaptureAlert className="mt-4" tone="error">
 					{capture.errorMessage}
-				</div>
+				</CaptureAlert>
 			) : null}
 
 			<div className="mt-6 flex flex-wrap gap-2">
@@ -255,6 +268,50 @@ function CaptureDetail({
 			</div>
 		</div>
 	);
+}
+
+function CaptureAlert({
+	children,
+	className,
+	tone,
+}: {
+	children: ReactNode;
+	className?: string;
+	tone: "info" | "warning" | "error";
+}) {
+	const { Icon, iconClassName } = getAlertPresentation(tone);
+	return (
+		<div className={`alert alert-soft ${className ?? ""}`} role="alert">
+			<Icon
+				aria-hidden="true"
+				className={`h-5 w-5 shrink-0 ${iconClassName}`}
+			/>
+			<span>{children}</span>
+		</div>
+	);
+}
+
+function getAlertPresentation(tone: "info" | "warning" | "error"): {
+	Icon: ComponentType<SVGProps<SVGSVGElement>>;
+	iconClassName: string;
+} {
+	switch (tone) {
+		case "warning":
+			return {
+				Icon: ExclamationTriangleIcon,
+				iconClassName: "text-warning",
+			};
+		case "error":
+			return {
+				Icon: XCircleIcon,
+				iconClassName: "text-error",
+			};
+		default:
+			return {
+				Icon: InformationCircleIcon,
+				iconClassName: "text-info",
+			};
+	}
 }
 
 function StatusBadge({ status }: { status: CaptureMetadata["status"] }) {
