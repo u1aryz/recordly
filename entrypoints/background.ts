@@ -17,6 +17,8 @@ const capturePorts = new Set<Browser.runtime.Port>();
 const activeCaptures = new Map<string, CaptureMetadata>();
 
 export default defineBackground(() => {
+	void updateCaptureBadge();
+
 	browser.runtime.onConnect.addListener((port) => {
 		if (port.name !== "captures") {
 			return;
@@ -86,6 +88,7 @@ async function handleMessage(
 				};
 				activeCaptures.set(metadata.id, metadata);
 				await putCapture(metadata);
+				await updateCaptureBadge();
 				broadcast({ type: "CAPTURE_CREATED", metadata });
 				await openCapturesPage(metadata.id);
 			}
@@ -128,6 +131,7 @@ async function handleMessage(
 		case "DELETE_CAPTURE":
 			activeCaptures.delete(message.captureId);
 			await deleteCapture(message.captureId);
+			await updateCaptureBadge();
 			broadcast({ type: "CAPTURE_DELETED", captureId: message.captureId });
 			return { ok: true };
 		case "START_CAPTURE":
@@ -158,7 +162,16 @@ async function finishCapture(message: CaptureFinishedMessage) {
 	};
 	activeCaptures.delete(next.id);
 	await putCapture(next);
+	await updateCaptureBadge();
 	broadcast({ type: "CAPTURE_UPDATED", metadata: next });
+}
+
+async function updateCaptureBadge() {
+	const count = Array.from(activeCaptures.values()).filter(
+		(capture) => capture.status === "recording",
+	).length;
+	await browser.action.setBadgeBackgroundColor({ color: "#dc2626" });
+	await browser.action.setBadgeText({ text: count > 0 ? String(count) : "" });
 }
 
 async function findStored(id: string) {
