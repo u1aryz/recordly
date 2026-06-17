@@ -56,7 +56,7 @@ function App() {
 
 	useEffect(() => {
 		document.title = selected
-			? `Video Captures - ${getProgressSummary(selected)}`
+			? `${getProgressSummary(selected)} - Video Captures`
 			: "Video Captures";
 	}, [selected]);
 
