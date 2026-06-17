@@ -1,6 +1,10 @@
-import { arrayBufferToBase64 } from "@/shared/binary";
+import { blobToBase64 } from "@/shared/binary";
 import { createCaptureMetadata } from "@/shared/capture-state";
-import type { CaptureMetadata, StopReason } from "@/shared/types";
+import type {
+	CaptureMetadata,
+	CaptureStreamPortMessage,
+	StopReason,
+} from "@/shared/types";
 import {
 	createVideoCaptureStream,
 	describeVideo,
@@ -12,6 +16,7 @@ import {
 type ActiveRecording = {
 	metadata: CaptureMetadata;
 	recorder: MediaRecorder;
+	port: Browser.runtime.Port;
 	startedAt: number;
 	width: number;
 	height: number;
@@ -19,8 +24,11 @@ type ActiveRecording = {
 	stopReason?: StopReason;
 	errorMessage?: string;
 	finishSent: boolean;
-	pendingChunks: Promise<unknown>[];
+	chunkQueue: Promise<void>;
 };
+
+const CAPTURE_CHUNK_TIMESLICE_MS = 3000;
+const MAX_CAPTURE_CHUNK_BYTES = 42 * 1024 * 1024;
 
 const activeRecordings = new Map<string, ActiveRecording>();
 
@@ -262,23 +270,26 @@ async function startCaptureById(
 		return { ok: false, reason: recorderErrorMessage };
 	}
 	const startedAt = performance.now();
+	const port = browser.runtime.connect({ name: "capture-stream" });
+	port.onDisconnect.addListener(() => {
+		if (!activeRecordings.has(metadata.id)) {
+			return;
+		}
+		stopCapture(metadata.id, "error", "録画ストリーム接続が切断されました。");
+	});
 	recorder.ondataavailable = (event) => {
 		if (event.data.size <= 0) {
 			return;
 		}
 		const active = activeRecordings.get(metadata.id);
-		const pending = event.data.arrayBuffer().then((chunk) => {
-			const chunkBase64 = arrayBufferToBase64(chunk);
-			return browser.runtime.sendMessage({
-				type: "CAPTURE_CHUNK",
-				captureId: metadata.id,
-				chunkBase64,
-				size: event.data.size,
-				elapsedMs: performance.now() - startedAt,
+		if (!active) {
+			return;
+		}
+		active.chunkQueue = active.chunkQueue
+			.then(() => sendCaptureChunk(active, event.data))
+			.catch((error: unknown) => {
+				stopCapture(metadata.id, "error", getRecorderErrorMessage(error));
 			});
-		});
-		active?.pendingChunks.push(pending);
-		void pending;
 	};
 	recorder.onerror = (event) =>
 		stopCapture(metadata.id, "error", (event as ErrorEvent).message);
@@ -289,48 +300,33 @@ async function startCaptureById(
 			return;
 		}
 		active.finishSent = true;
-		void Promise.allSettled(active.pendingChunks).then(() =>
-			browser.runtime.sendMessage({
-				type: "CAPTURE_FINISHED",
-				captureId: metadata.id,
-				status: getFinishedStatus(active.stopReason),
-				stopReason: active.stopReason ?? "user",
-				errorMessage: active.errorMessage,
-				elapsedMs: performance.now() - active.startedAt,
-			}),
-		);
-		activeRecordings.delete(metadata.id);
+		void active.chunkQueue
+			.then(() => sendCaptureFinished(active))
+			.finally(() => {
+				activeRecordings.delete(metadata.id);
+				active.port.disconnect();
+			});
 	};
 
-	const resolutionTimer = window.setInterval(() => {
-		if (!document.contains(video)) {
-			stopCapture(metadata.id, "video_removed");
-			return;
-		}
-		if (
-			(video.videoWidth || video.clientWidth) !== metadata.width ||
-			(video.videoHeight || video.clientHeight) !== metadata.height
-		) {
-			stopCapture(metadata.id, "resolution_changed");
-		}
-	}, 500);
-
+	const resolutionTimer = createResolutionTimer(video, metadata);
 	activeRecordings.set(metadata.id, {
 		metadata,
 		recorder,
+		port,
 		startedAt,
 		width: metadata.width,
 		height: metadata.height,
 		resolutionTimer,
 		finishSent: false,
-		pendingChunks: [],
+		chunkQueue: Promise.resolve(),
 	});
-	await browser.runtime.sendMessage({ type: "CAPTURE_STARTED", metadata });
+	postCaptureStreamMessage(port, { type: "CAPTURE_STARTED", metadata });
 	try {
-		recorder.start(1000);
+		recorder.start(CAPTURE_CHUNK_TIMESLICE_MS);
 	} catch (error) {
 		stopStream(stream);
 		activeRecordings.delete(metadata.id);
+		port.disconnect();
 		window.clearInterval(resolutionTimer);
 		const recorderErrorMessage = getRecorderErrorMessage(error);
 		await browser.runtime.sendMessage({
@@ -344,6 +340,68 @@ async function startCaptureById(
 		return { ok: false, reason: recorderErrorMessage };
 	}
 	return { ok: true };
+}
+
+async function sendCaptureChunk(
+	active: ActiveRecording,
+	blob: Blob,
+): Promise<void> {
+	if (blob.size > MAX_CAPTURE_CHUNK_BYTES) {
+		stopCapture(
+			active.metadata.id,
+			"error",
+			"録画データが大きすぎるため停止しました。",
+		);
+		return;
+	}
+	postCaptureStreamMessage(active.port, {
+		type: "CAPTURE_CHUNK",
+		captureId: active.metadata.id,
+		chunkBase64: await blobToBase64(blob),
+		size: blob.size,
+		elapsedMs: performance.now() - active.startedAt,
+	});
+}
+
+async function sendCaptureFinished(active: ActiveRecording): Promise<void> {
+	const message = {
+		type: "CAPTURE_FINISHED",
+		captureId: active.metadata.id,
+		status: getFinishedStatus(active.stopReason),
+		stopReason: active.stopReason ?? "user",
+		errorMessage: active.errorMessage,
+		elapsedMs: performance.now() - active.startedAt,
+	} satisfies CaptureStreamPortMessage;
+	try {
+		postCaptureStreamMessage(active.port, message);
+	} catch {
+		await browser.runtime.sendMessage(message);
+	}
+}
+
+function postCaptureStreamMessage(
+	port: Browser.runtime.Port,
+	message: CaptureStreamPortMessage,
+): void {
+	port.postMessage(message);
+}
+
+function createResolutionTimer(
+	video: HTMLVideoElement,
+	metadata: CaptureMetadata,
+): number {
+	return window.setInterval(() => {
+		if (!document.contains(video)) {
+			stopCapture(metadata.id, "video_removed");
+			return;
+		}
+		if (
+			(video.videoWidth || video.clientWidth) !== metadata.width ||
+			(video.videoHeight || video.clientHeight) !== metadata.height
+		) {
+			stopCapture(metadata.id, "resolution_changed");
+		}
+	}, 500);
 }
 
 function stopCapture(

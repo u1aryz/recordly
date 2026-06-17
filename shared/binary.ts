@@ -1,14 +1,3 @@
-export function arrayBufferToBase64(buffer: ArrayBuffer): string {
-	const bytes = new Uint8Array(buffer);
-	let binary = "";
-	const chunkSize = 0x8000;
-	for (let offset = 0; offset < bytes.length; offset += chunkSize) {
-		const chunk = bytes.subarray(offset, offset + chunkSize);
-		binary += String.fromCharCode(...chunk);
-	}
-	return btoa(binary);
-}
-
 export function base64ToArrayBuffer(base64: string): ArrayBuffer {
 	const binary = atob(base64);
 	const bytes = new Uint8Array(binary.length);
@@ -16,4 +5,25 @@ export function base64ToArrayBuffer(base64: string): ArrayBuffer {
 		bytes[index] = binary.charCodeAt(index);
 	}
 	return bytes.buffer;
+}
+
+export function blobToBase64(blob: Blob): Promise<string> {
+	return new Promise((resolve, reject) => {
+		const reader = new FileReader();
+		reader.onerror = () => reject(reader.error);
+		reader.onload = () => {
+			if (typeof reader.result !== "string") {
+				reject(new Error("Blob could not be encoded as base64."));
+				return;
+			}
+			const marker = "base64,";
+			const markerIndex = reader.result.indexOf(marker);
+			if (markerIndex < 0) {
+				resolve(reader.result);
+				return;
+			}
+			resolve(reader.result.slice(markerIndex + marker.length));
+		};
+		reader.readAsDataURL(blob);
+	});
 }

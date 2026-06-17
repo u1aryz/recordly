@@ -93,6 +93,27 @@ export async function appendCaptureChunk(input: {
 	db.close();
 }
 
+export async function appendCaptureChunkWithMetadata(input: {
+	metadata: CaptureMetadata;
+	chunk: ArrayBuffer;
+	index: number;
+	size: number;
+}): Promise<void> {
+	const db = await openCaptureDb();
+	const tx = db.transaction([CAPTURES_STORE, CHUNKS_STORE], "readwrite");
+	const chunk: StoredChunk = {
+		id: `${input.metadata.id}:${input.index.toString().padStart(8, "0")}`,
+		captureId: input.metadata.id,
+		index: input.index,
+		chunk: input.chunk,
+		size: input.size,
+	};
+	tx.objectStore(CHUNKS_STORE).put(chunk);
+	tx.objectStore(CAPTURES_STORE).put(input.metadata);
+	await transactionDone(tx);
+	db.close();
+}
+
 export async function deleteCapture(captureId: string): Promise<void> {
 	const db = await openCaptureDb();
 	const tx = db.transaction([CAPTURES_STORE, CHUNKS_STORE], "readwrite");

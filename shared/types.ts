@@ -117,6 +117,11 @@ export type ExtensionMessage =
 	| OpenCapturesMessage
 	| DeleteCaptureMessage;
 
+export type CaptureStreamPortMessage =
+	| CaptureStartedMessage
+	| CaptureChunkMessage
+	| CaptureFinishedMessage;
+
 export type PortMessage =
 	| { type: "CAPTURES_SUBSCRIBE" }
 	| { type: "CAPTURE_PROGRESS"; progress: CaptureProgress }
