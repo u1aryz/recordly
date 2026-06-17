@@ -65,8 +65,8 @@ function App() {
 
 	useEffect(() => {
 		document.title = selected
-			? `${getProgressSummary(selected)} - Video Captures`
-			: "Video Captures";
+			? `${getProgressSummary(selected)} - Recordly Captures`
+			: "Recordly Captures";
 	}, [selected]);
 
 	async function stopCapture(capture: CaptureMetadata) {
@@ -112,7 +112,7 @@ function App() {
 				<div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
 					<div>
 						<h1 className="flex flex-wrap items-center gap-2 font-semibold text-xl">
-							<span>Video Captures</span>
+							<span>Recordly Captures</span>
 							{selected ? (
 								<span className="text-base-content/65 text-sm">
 									{getProgressSummary(selected)}

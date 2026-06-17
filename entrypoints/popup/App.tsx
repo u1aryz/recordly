@@ -77,9 +77,7 @@ function App() {
 			<header className="border-base-300 border-b bg-base-200 px-4 py-3">
 				<div className="flex items-center justify-between gap-3">
 					<div className="min-w-0">
-						<h1 className="truncate font-semibold text-base">
-							Video Capture Picker
-						</h1>
+						<h1 className="truncate font-semibold text-base">Recordly</h1>
 						<p className="text-base-content/65 text-xs">
 							ページ上の video を選んで MP4 キャプチャします。
 						</p>

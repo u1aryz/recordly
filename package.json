@@ -1,5 +1,5 @@
 {
-	"name": "video-capture-ext-v2",
+	"name": "recordly",
 	"description": "DevTools style video picker and MP4 capture extension",
 	"private": true,
 	"version": "0.0.1",

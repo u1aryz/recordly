@@ -1,11 +1,11 @@
 {
 	"extName": {
-		"message": "Video Capture Picker"
+		"message": "Recordly"
 	},
 	"extDescription": {
 		"message": "Pick a video on the page and capture it as MP4."
 	},
 	"popupTitle": {
-		"message": "Video Capture Picker"
+		"message": "Recordly"
 	}
 }
