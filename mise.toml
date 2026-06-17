@@ -1,0 +1,24 @@
+[settings]
+experimental = true
+
+[tools]
+pnpm = "11.6.0"
+
+[hooks]
+postinstall = "pnpm i"
+
+[tasks.dev]
+description = "開発モードで起動"
+run = "pnpm dev"
+
+[tasks.build]
+description = "拡張機能をビルド"
+run = "pnpm build"
+
+[tasks.format]
+description = "フォーマットと型チェック"
+run = ["pnpm format", "pnpm typecheck"]
+
+[tasks.zip]
+description = "拡張機能の zip を作成"
+run = "pnpm zip"
