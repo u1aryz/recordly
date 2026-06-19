@@ -1,4 +1,9 @@
 import { createCaptureMetadata } from "@/shared/capture-state";
+import {
+	isFilePickerAbortError,
+	MP4_FILE_PICKER_TYPES,
+} from "@/shared/file-system";
+import { isExtensionMessage } from "@/shared/message";
 import type {
 	CaptureFinishedMessage,
 	CaptureMetadata,
@@ -10,18 +15,10 @@ import {
 	createVideoCaptureStream,
 	describeVideo,
 	findVideoFromPoint,
+	formatDuration,
 	getMp4MimeType,
 	listVideos,
 } from "@/shared/video";
-
-type SaveFilePickerOptions = {
-	suggestedName?: string;
-	startIn?: string;
-	types?: {
-		description?: string;
-		accept: Record<string, string[]>;
-	}[];
-};
 
 type ActiveRecording = {
 	metadata: CaptureMetadata;
@@ -54,23 +51,9 @@ type RecordingHud = {
 	destroy: () => void;
 };
 
-declare global {
-	interface Window {
-		showSaveFilePicker?: (
-			options?: SaveFilePickerOptions,
-		) => Promise<FileSystemFileHandle>;
-	}
-}
-
 const CAPTURE_CHUNK_TIMESLICE_MS = 3000;
 const MAX_CAPTURE_CHUNK_BYTES = 42 * 1024 * 1024;
 const MAX_QUEUED_WRITE_BYTES = 128 * 1024 * 1024;
-const MP4_FILE_PICKER_TYPES = [
-	{
-		description: "MP4 video",
-		accept: { "video/mp4": [".mp4"] },
-	},
-];
 const activeRecordings = new Map<string, ActiveRecording>();
 
 export default defineContentScript({
@@ -81,25 +64,26 @@ export default defineContentScript({
 		const picker = createVideoPicker();
 
 		browser.runtime.onMessage.addListener((message: unknown) => {
-			if (!message || typeof message !== "object") {
+			if (!isExtensionMessage(message)) {
 				return undefined;
 			}
-			const type = (message as { type?: string }).type;
-			if (type === "LIST_VIDEOS") {
-				return Promise.resolve({ videos: listCapturableVideos() });
+			switch (message.type) {
+				case "LIST_VIDEOS":
+					return Promise.resolve({ videos: listCapturableVideos() });
+				case "START_PICKER":
+					picker.start();
+					return Promise.resolve({ ok: true });
+				case "STOP_CAPTURE":
+					stopCapture(message.captureId, "user");
+					return Promise.resolve({ ok: true });
+				default:
+					return undefined;
 			}
-			if (type === "START_PICKER") {
-				picker.start();
-				return Promise.resolve({ ok: true });
-			}
-			if (type === "STOP_CAPTURE") {
-				stopCapture((message as { captureId: string }).captureId, "user");
-				return Promise.resolve({ ok: true });
-			}
-			return undefined;
 		});
 
-		const onPageHide = () => stopAllRecordings("source_closed");
+		function onPageHide(): void {
+			stopAllRecordings("source_closed");
+		}
 		window.addEventListener("pagehide", onPageHide);
 
 		ctx.onInvalidated(() => {
@@ -199,7 +183,7 @@ function createVideoPicker(): VideoPicker {
 	const startButton = shadow.querySelector<HTMLButtonElement>(".start");
 	const cancelButton = shadow.querySelector<HTMLButtonElement>(".cancel");
 
-	function mount() {
+	function mount(): void {
 		if (!host.isConnected) {
 			document.documentElement.append(host);
 		}
@@ -209,7 +193,7 @@ function createVideoPicker(): VideoPicker {
 		window.addEventListener("resize", refreshOverlay, true);
 	}
 
-	function start() {
+	function start(): void {
 		if (picking) {
 			return;
 		}
@@ -223,7 +207,7 @@ function createVideoPicker(): VideoPicker {
 		refreshOverlay();
 	}
 
-	function stop() {
+	function stop(): void {
 		picking = false;
 		currentVideo = null;
 		host.style.display = "none";
@@ -238,11 +222,7 @@ function createVideoPicker(): VideoPicker {
 		host.remove();
 	}
 
-	function destroy() {
-		stop();
-	}
-
-	function onPointerMove(event: PointerEvent) {
+	function onPointerMove(event: PointerEvent): void {
 		if (!picking) {
 			return;
 		}
@@ -256,14 +236,14 @@ function createVideoPicker(): VideoPicker {
 		}
 	}
 
-	function onKeyDown(event: KeyboardEvent) {
+	function onKeyDown(event: KeyboardEvent): void {
 		if (event.key === "Escape") {
 			event.preventDefault();
 			stop();
 		}
 	}
 
-	function refreshOverlay() {
+	function refreshOverlay(): void {
 		if (!currentVideo || !frame || !toolbar || !meta) {
 			frame?.setAttribute("hidden", "");
 			toolbar?.setAttribute("hidden", "");
@@ -313,7 +293,7 @@ function createVideoPicker(): VideoPicker {
 	});
 	cancelButton?.addEventListener("click", stop);
 
-	return { start, destroy };
+	return { start, destroy: stop };
 }
 
 async function startRecording(
@@ -357,7 +337,7 @@ async function startRecording(
 			types: MP4_FILE_PICKER_TYPES,
 		});
 	} catch (error) {
-		if (error instanceof DOMException && error.name === "AbortError") {
+		if (isFilePickerAbortError(error)) {
 			return { ok: false, cancelled: true };
 		}
 		return {
@@ -516,7 +496,7 @@ function stopCapture(
 	captureId: string,
 	stopReason: StopReason,
 	errorMessage?: string,
-) {
+): void {
 	const active = activeRecordings.get(captureId);
 	if (!active || active.finishSent) {
 		return;
@@ -547,10 +527,12 @@ async function finishRecording(active: ActiveRecording): Promise<void> {
 	active.finishSent = true;
 	window.clearInterval(active.resolutionTimer);
 	stopStream(active.stream);
+	const stopReason = active.stopReason;
+	const isFatal = isFatalStopReason(stopReason);
 
 	try {
 		await active.writeQueue;
-		if (isFatalStopReason(active.stopReason)) {
+		if (isFatal) {
 			await active.writable.abort();
 		} else {
 			await active.writable.close();
@@ -558,13 +540,13 @@ async function finishRecording(active: ActiveRecording): Promise<void> {
 		postCaptureStreamMessage(active.port, {
 			type: "CAPTURE_FINISHED",
 			captureId: active.metadata.id,
-			status: getFinishedStatus(active.stopReason),
-			fileStatus: isFatalStopReason(active.stopReason) ? "failed" : "saved",
-			stopReason: active.stopReason === "user" ? undefined : active.stopReason,
+			status: getFinishedStatus(stopReason),
+			fileStatus: isFatal ? "failed" : "saved",
+			stopReason: stopReason === "user" ? undefined : stopReason,
 			errorMessage: active.errorMessage,
 			elapsedMs: performance.now() - active.startedAt,
 		});
-		const hudResult = getHudResult(active.stopReason, active.errorMessage);
+		const hudResult = getHudResult(stopReason, active.errorMessage);
 		active.hud.finish(hudResult.message, hudResult.tone);
 	} catch (error) {
 		await active.writable.abort().catch(() => undefined);
@@ -734,7 +716,7 @@ function createRecordingHud(captureId: string): RecordingHud {
 	return {
 		update(elapsedMs, stopping = false) {
 			if (time) {
-				time.textContent = formatElapsed(elapsedMs);
+				time.textContent = formatDuration(elapsedMs);
 			}
 			if (stopping && title && detail && stopButton) {
 				title.textContent = "保存して終了中…";
@@ -764,13 +746,6 @@ function createRecordingHud(captureId: string): RecordingHud {
 			host.remove();
 		},
 	};
-}
-
-function formatElapsed(elapsedMs: number): string {
-	const totalSeconds = Math.floor(elapsedMs / 1000);
-	const minutes = Math.floor(totalSeconds / 60);
-	const seconds = totalSeconds % 60;
-	return `${minutes}:${seconds.toString().padStart(2, "0")}`;
 }
 
 function listCapturableVideos(): VideoDescriptor[] {

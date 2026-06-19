@@ -11,27 +11,28 @@ import {
 import type {
 	ComponentType,
 	Dispatch,
+	JSX,
 	ReactNode,
 	SetStateAction,
 	SVGProps,
 } from "react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import type { CaptureTone } from "@/shared/capture-presentation";
 import {
 	getCapturePresentation,
 	getStatusBadgeClass,
 } from "@/shared/capture-presentation";
+import {
+	isFilePickerAbortError,
+	MP4_FILE_PICKER_TYPES,
+} from "@/shared/file-system";
 import { createCaptureReadableStream, listCaptures } from "@/shared/storage";
-import type { CaptureMetadata, PortMessage } from "@/shared/types";
+import type {
+	CaptureMetadata,
+	CaptureProgress,
+	PortMessage,
+} from "@/shared/types";
 import { formatBytes, formatDuration } from "@/shared/video";
-
-type SaveFilePickerOptions = {
-	suggestedName?: string;
-	startIn?: string;
-	types?: {
-		description?: string;
-		accept: Record<string, string[]>;
-	}[];
-};
 
 type CaptureDetailProps = {
 	capture: CaptureMetadata;
@@ -46,7 +47,7 @@ type CaptureDetailProps = {
 type CaptureAlertProps = {
 	children: ReactNode;
 	className?: string;
-	tone: "info" | "success" | "warning" | "error";
+	tone: CaptureTone;
 };
 
 type StatProps = {
@@ -55,21 +56,17 @@ type StatProps = {
 	compact?: boolean;
 };
 
-const MP4_FILE_PICKER_TYPES = [
-	{
-		description: "MP4 video",
-		accept: { "video/mp4": [".mp4"] },
-	},
-];
-declare global {
-	interface Window {
-		showSaveFilePicker?: (
-			options?: SaveFilePickerOptions,
-		) => Promise<FileSystemFileHandle>;
-	}
-}
+type StatusBadgeProps = {
+	capture: CaptureMetadata;
+};
 
-function App() {
+type AlertPresentation = {
+	Icon: ComponentType<SVGProps<SVGSVGElement>>;
+	alertClassName: string;
+	iconClassName: string;
+};
+
+function App(): JSX.Element {
 	const [captures, setCaptures] = useState<CaptureMetadata[]>([]);
 	const [selectedId, setSelectedId] = useState<string | null>(
 		new URLSearchParams(location.search).get("captureId"),
@@ -84,10 +81,8 @@ function App() {
 		null,
 	);
 
-	const selected = useMemo(
-		() => captures.find((capture) => capture.id === selectedId) ?? captures[0],
-		[captures, selectedId],
-	);
+	const selected =
+		captures.find((capture) => capture.id === selectedId) ?? captures[0];
 
 	const reload = useCallback(async () => {
 		try {
@@ -100,26 +95,15 @@ function App() {
 		}
 	}, []);
 
-	const upsertCapture = useCallback((capture: CaptureMetadata) => {
-		setCaptures((current) => {
-			const without = current.filter((item) => item.id !== capture.id);
-			return [capture, ...without].sort((a, b) => b.startedAt - a.startedAt);
-		});
-	}, []);
-
 	useEffect(() => {
 		void reload();
 		const port = browser.runtime.connect({ name: "captures" });
 		port.postMessage({ type: "CAPTURES_SUBSCRIBE" });
 		port.onMessage.addListener((event: PortMessage) => {
-			handlePortMessage(event, {
-				setCaptures,
-				setSelectedId,
-				upsertCapture,
-			});
+			handlePortMessage(event, setCaptures, setSelectedId);
 		});
 		return () => port.disconnect();
-	}, [reload, upsertCapture]);
+	}, [reload]);
 
 	useEffect(() => {
 		document.title = selected
@@ -172,7 +156,7 @@ function App() {
 			const writable = await file.createWritable();
 			await createCaptureReadableStream(capture).pipeTo(writable);
 		} catch (error) {
-			if (error instanceof DOMException && error.name === "AbortError") {
+			if (isFilePickerAbortError(error)) {
 				return;
 			}
 			throw error;
@@ -308,7 +292,7 @@ function CaptureDetail({
 	onStop,
 	onDownload,
 	onDelete,
-}: CaptureDetailProps) {
+}: CaptureDetailProps): JSX.Element {
 	const isRecording = capture.status === "recording";
 	const isDirectFile = capture.storageMode === "direct-file";
 	const presentation = getCapturePresentation(capture);
@@ -420,7 +404,11 @@ function CaptureDetail({
 	);
 }
 
-function CaptureAlert({ children, className, tone }: CaptureAlertProps) {
+function CaptureAlert({
+	children,
+	className,
+	tone,
+}: CaptureAlertProps): JSX.Element {
 	const { Icon, alertClassName, iconClassName } = getAlertPresentation(tone);
 	return (
 		<div
@@ -436,11 +424,7 @@ function CaptureAlert({ children, className, tone }: CaptureAlertProps) {
 	);
 }
 
-function getAlertPresentation(tone: "info" | "success" | "warning" | "error"): {
-	Icon: ComponentType<SVGProps<SVGSVGElement>>;
-	alertClassName: string;
-	iconClassName: string;
-} {
+function getAlertPresentation(tone: CaptureTone): AlertPresentation {
 	switch (tone) {
 		case "success":
 			return {
@@ -469,7 +453,7 @@ function getAlertPresentation(tone: "info" | "success" | "warning" | "error"): {
 	}
 }
 
-function StatusBadge({ capture }: { capture: CaptureMetadata }) {
+function StatusBadge({ capture }: StatusBadgeProps): JSX.Element {
 	const presentation = getCapturePresentation(capture);
 	return (
 		<span className={getStatusBadgeClass(capture.status, presentation.tone)}>
@@ -478,44 +462,32 @@ function StatusBadge({ capture }: { capture: CaptureMetadata }) {
 	);
 }
 
-function getProgressSummary(capture: CaptureMetadata) {
+function getProgressSummary(capture: CaptureMetadata): string {
 	const { label } = getCapturePresentation(capture);
 	return `${label} / ${formatDuration(capture.elapsedMs)} / ${formatBytes(capture.sizeBytes)}`;
 }
 
 function handlePortMessage(
 	event: PortMessage,
-	handlers: {
-		setCaptures: Dispatch<SetStateAction<CaptureMetadata[]>>;
-		setSelectedId: Dispatch<SetStateAction<string | null>>;
-		upsertCapture: (capture: CaptureMetadata) => void;
-	},
-) {
+	setCaptures: Dispatch<SetStateAction<CaptureMetadata[]>>,
+	setSelectedId: Dispatch<SetStateAction<string | null>>,
+): void {
 	switch (event.type) {
 		case "CAPTURE_CREATED":
 		case "CAPTURE_UPDATED":
-			handlers.upsertCapture(event.metadata);
-			handlers.setSelectedId((current) => current ?? event.metadata.id);
+			setCaptures((current) => upsertCapture(current, event.metadata));
+			setSelectedId((current) => current ?? event.metadata.id);
 			return;
 		case "CAPTURE_PROGRESS":
-			handlers.setCaptures((current) =>
-				current.map((capture) =>
-					capture.id === event.progress.id
-						? {
-								...capture,
-								...event.progress,
-								thumbnailDataUrl:
-									event.progress.thumbnailDataUrl ?? capture.thumbnailDataUrl,
-							}
-						: capture,
-				),
+			setCaptures((current) =>
+				current.map((capture) => applyCaptureProgress(capture, event.progress)),
 			);
 			return;
 		case "CAPTURE_DELETED":
-			handlers.setCaptures((current) =>
+			setCaptures((current) =>
 				current.filter((capture) => capture.id !== event.captureId),
 			);
-			handlers.setSelectedId((current) =>
+			setSelectedId((current) =>
 				current === event.captureId ? null : current,
 			);
 			return;
@@ -524,7 +496,29 @@ function handlePortMessage(
 	}
 }
 
-function Stat({ label, value, compact = false }: StatProps) {
+function upsertCapture(
+	captures: CaptureMetadata[],
+	capture: CaptureMetadata,
+): CaptureMetadata[] {
+	const remaining = captures.filter((item) => item.id !== capture.id);
+	return [capture, ...remaining].sort((a, b) => b.startedAt - a.startedAt);
+}
+
+function applyCaptureProgress(
+	capture: CaptureMetadata,
+	progress: CaptureProgress,
+): CaptureMetadata {
+	if (capture.id !== progress.id) {
+		return capture;
+	}
+	return {
+		...capture,
+		...progress,
+		thumbnailDataUrl: progress.thumbnailDataUrl ?? capture.thumbnailDataUrl,
+	};
+}
+
+function Stat({ label, value, compact = false }: StatProps): JSX.Element {
 	return (
 		<div className="rounded-box bg-base-100 p-4">
 			<p className="text-base-content/60 text-xs">{label}</p>

@@ -13,6 +13,10 @@ type StoredChunk = {
 	size: number;
 };
 
+function getChunkId(captureId: string, index: number): string {
+	return `${captureId}:${index.toString().padStart(8, "0")}`;
+}
+
 function requestToPromise<T>(request: IDBRequest<T>): Promise<T> {
 	return new Promise((resolve, reject) => {
 		request.onsuccess = () => resolve(request.result);
@@ -85,7 +89,7 @@ export async function appendCaptureChunk(input: {
 	const db = await openCaptureDb();
 	const tx = db.transaction(CHUNKS_STORE, "readwrite");
 	const chunk: StoredChunk = {
-		id: `${input.captureId}:${input.index.toString().padStart(8, "0")}`,
+		id: getChunkId(input.captureId, input.index),
 		...input,
 	};
 	tx.objectStore(CHUNKS_STORE).put(chunk);
@@ -102,7 +106,7 @@ export async function appendCaptureChunkWithMetadata(input: {
 	const db = await openCaptureDb();
 	const tx = db.transaction([CAPTURES_STORE, CHUNKS_STORE], "readwrite");
 	const chunk: StoredChunk = {
-		id: `${input.metadata.id}:${input.index.toString().padStart(8, "0")}`,
+		id: getChunkId(input.metadata.id, input.index),
 		captureId: input.metadata.id,
 		index: input.index,
 		chunk: input.chunk,
@@ -153,7 +157,7 @@ export function createCaptureReadableStream(
 	let db: IDBDatabase | null = null;
 	let nextIndex = 0;
 
-	function closeDb() {
+	function closeDb(): void {
 		db?.close();
 		db = null;
 	}
@@ -169,7 +173,7 @@ export function createCaptureReadableStream(
 
 				db ??= await openCaptureDb();
 				const tx = db.transaction(CHUNKS_STORE, "readonly");
-				const id = `${metadata.id}:${nextIndex.toString().padStart(8, "0")}`;
+				const id = getChunkId(metadata.id, nextIndex);
 				const chunk = await requestToPromise<StoredChunk | undefined>(
 					tx.objectStore(CHUNKS_STORE).get(id),
 				);

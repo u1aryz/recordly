@@ -55,30 +55,33 @@ export default defineBackground(() => {
 });
 
 function connectCapturesPage(port: Browser.runtime.Port): void {
-	let connected = true;
 	capturePorts.add(port);
 	port.onDisconnect.addListener(() => {
-		connected = false;
 		capturePorts.delete(port);
 	});
-	port.onMessage.addListener((message) => {
-		if ((message as PortMessage).type !== "CAPTURES_SUBSCRIBE") {
+	port.onMessage.addListener((message: PortMessage) => {
+		if (message.type !== "CAPTURES_SUBSCRIBE") {
 			return;
 		}
-		void listCaptures()
-			.then((captures) => {
-				if (!connected) {
-					return;
-				}
-				for (const capture of captures) {
-					postToPort(port, {
-						type: "CAPTURE_UPDATED",
-						metadata: capture,
-					});
-				}
-			})
-			.catch(() => undefined);
+		void sendStoredCaptures(port);
 	});
+}
+
+async function sendStoredCaptures(port: Browser.runtime.Port): Promise<void> {
+	try {
+		const captures = await listCaptures();
+		if (!capturePorts.has(port)) {
+			return;
+		}
+		for (const capture of captures) {
+			postToPort(port, {
+				type: "CAPTURE_UPDATED",
+				metadata: capture,
+			});
+		}
+	} catch {
+		return;
+	}
 }
 
 function connectCaptureStream(port: Browser.runtime.Port): void {
@@ -93,7 +96,7 @@ function connectCaptureStream(port: Browser.runtime.Port): void {
 async function handleMessage(
 	message: ExtensionMessage,
 	sender: Browser.runtime.MessageSender,
-) {
+): Promise<{ ok: boolean }> {
 	switch (message.type) {
 		case "OPEN_CAPTURES":
 			await openCapturesPage(message.captureId, true);
@@ -125,7 +128,7 @@ async function handleMessage(
 async function handleCaptureStreamMessage(
 	message: CaptureStreamPortMessage,
 	sender?: Browser.runtime.MessageSender,
-) {
+): Promise<void> {
 	switch (message.type) {
 		case "CAPTURE_STARTED":
 			await startCapture(message.metadata, sender);
@@ -142,7 +145,7 @@ async function handleCaptureStreamMessage(
 async function startCapture(
 	metadata: CaptureMetadata,
 	sender?: Browser.runtime.MessageSender,
-) {
+): Promise<void> {
 	const next: CaptureMetadata = {
 		...metadata,
 		tabId: sender?.tab?.id ?? metadata.tabId,
@@ -159,10 +162,10 @@ async function startCapture(
 	await openCapturesPage(next.id, false);
 }
 
-async function updateCaptureProgress(message: CaptureProgressMessage) {
-	const current =
-		activeCaptures.get(message.captureId) ??
-		(await findStored(message.captureId));
+async function updateCaptureProgress(
+	message: CaptureProgressMessage,
+): Promise<void> {
+	const current = await getCurrentCapture(message.captureId);
 	if (current?.status !== "recording") {
 		return;
 	}
@@ -177,33 +180,30 @@ async function updateCaptureProgress(message: CaptureProgressMessage) {
 	broadcastProgress(next);
 }
 
-async function stopStoredCapture(captureId: string) {
-	const current =
-		activeCaptures.get(captureId) ?? (await findStored(captureId));
+async function stopStoredCapture(captureId: string): Promise<void> {
+	const current = await getCurrentCapture(captureId);
 	if (current?.status !== "recording") {
 		return;
 	}
-	await browser.tabs
-		.sendMessage(current.tabId, {
+	try {
+		await browser.tabs.sendMessage(current.tabId, {
 			type: "STOP_CAPTURE",
 			captureId,
-		})
-		.catch(async () => {
-			await finishCapture({
-				type: "CAPTURE_FINISHED",
-				captureId,
-				status: "stopped",
-				fileStatus: "unknown",
-				stopReason: "source_closed",
-				elapsedMs: current.elapsedMs,
-			});
 		});
+	} catch {
+		await finishCapture({
+			type: "CAPTURE_FINISHED",
+			captureId,
+			status: "stopped",
+			fileStatus: "unknown",
+			stopReason: "source_closed",
+			elapsedMs: current.elapsedMs,
+		});
+	}
 }
 
-async function finishCapture(message: CaptureFinishedMessage) {
-	const current =
-		activeCaptures.get(message.captureId) ??
-		(await findStored(message.captureId));
+async function finishCapture(message: CaptureFinishedMessage): Promise<void> {
+	const current = await getCurrentCapture(message.captureId);
 	if (!current) {
 		return;
 	}
@@ -222,7 +222,7 @@ async function finishCapture(message: CaptureFinishedMessage) {
 	broadcast({ type: "CAPTURE_UPDATED", metadata: next });
 }
 
-async function restoreCaptureState() {
+async function restoreCaptureState(): Promise<void> {
 	const captures = await listCaptures();
 	for (const capture of captures) {
 		if (capture.status !== "recording") {
@@ -242,19 +242,19 @@ async function restoreCaptureState() {
 	await updateCaptureBadge();
 }
 
-async function updateCaptureBadge() {
-	const count = Array.from(activeCaptures.values()).filter(
-		(capture) => capture.status === "recording",
-	).length;
+async function updateCaptureBadge(): Promise<void> {
+	const count = activeCaptures.size;
 	await browser.action.setBadgeBackgroundColor({ color: "#dc2626" });
 	await browser.action.setBadgeText({ text: count > 0 ? String(count) : "" });
 }
 
-async function findStored(id: string) {
-	return getCapture(id);
+async function getCurrentCapture(
+	id: string,
+): Promise<CaptureMetadata | undefined> {
+	return activeCaptures.get(id) ?? getCapture(id);
 }
 
-function broadcastProgress(capture: CaptureMetadata) {
+function broadcastProgress(capture: CaptureMetadata): void {
 	broadcast({
 		type: "CAPTURE_PROGRESS",
 		progress: {
@@ -282,13 +282,13 @@ function isCaptureStreamPortMessage(
 	);
 }
 
-function broadcast(message: PortMessage) {
+function broadcast(message: PortMessage): void {
 	for (const port of capturePorts) {
 		postToPort(port, message);
 	}
 }
 
-function postToPort(port: Browser.runtime.Port, message: PortMessage) {
+function postToPort(port: Browser.runtime.Port, message: PortMessage): void {
 	try {
 		port.postMessage(message);
 	} catch {
@@ -296,10 +296,12 @@ function postToPort(port: Browser.runtime.Port, message: PortMessage) {
 	}
 }
 
-async function openCapturesPage(captureId?: string, active = true) {
-	const url = browser.runtime.getURL(
-		`/captures.html${captureId ? `?captureId=${encodeURIComponent(captureId)}` : ""}`,
-	);
+async function openCapturesPage(
+	captureId?: string,
+	active = true,
+): Promise<void> {
+	const query = captureId ? `?captureId=${encodeURIComponent(captureId)}` : "";
+	const url = browser.runtime.getURL(`/captures.html${query}`);
 	const tabs = await browser.tabs.query({
 		url: browser.runtime.getURL("/captures.html*"),
 	});

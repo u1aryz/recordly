@@ -1,6 +1,11 @@
 import type { VideoDescriptor } from "./types";
 
 const VIDEO_ID_ATTR = "data-vcap-id";
+const MP4_MIME_TYPE_CANDIDATES = [
+	'video/mp4;codecs="avc1.42E01E,mp4a.40.2"',
+	'video/mp4;codecs="avc1.42E01E"',
+	"video/mp4",
+];
 
 export function getOrCreateVideoId(video: HTMLVideoElement): string {
 	const existing = video.getAttribute(VIDEO_ID_ATTR);
@@ -105,17 +110,13 @@ function getVideoCaptureStream(
 }
 
 export function getMp4MimeType(): string | null {
-	const candidates = [
-		'video/mp4;codecs="avc1.42E01E,mp4a.40.2"',
-		'video/mp4;codecs="avc1.42E01E"',
-		"video/mp4",
-	];
 	if (!("MediaRecorder" in globalThis)) {
 		return null;
 	}
 	return (
-		candidates.find((mimeType) => MediaRecorder.isTypeSupported(mimeType)) ??
-		null
+		MP4_MIME_TYPE_CANDIDATES.find((mimeType) =>
+			MediaRecorder.isTypeSupported(mimeType),
+		) ?? null
 	);
 }
 

@@ -4,6 +4,7 @@ import {
 	CursorArrowRaysIcon,
 	FilmIcon,
 } from "@heroicons/react/24/outline";
+import type { JSX } from "react";
 import { useCallback, useEffect, useState } from "react";
 import { listCaptures } from "@/shared/storage";
 import type { VideoDescriptor } from "@/shared/types";
@@ -16,7 +17,18 @@ type PopupState = {
 	recordingCount: number;
 };
 
-function App() {
+async function getActiveTabId(): Promise<number> {
+	const [tab] = await browser.tabs.query({
+		active: true,
+		currentWindow: true,
+	});
+	if (tab?.id == null) {
+		throw new Error("現在のタブを取得できませんでした");
+	}
+	return tab.id;
+}
+
+function App(): JSX.Element {
 	const [state, setState] = useState<PopupState>({
 		loading: true,
 		videos: [],
@@ -27,22 +39,11 @@ function App() {
 	const historyLabel =
 		state.recordingCount > 0 ? `録画中 ${state.recordingCount}件` : "履歴";
 
-	const getActiveTab = useCallback(async () => {
-		const [tab] = await browser.tabs.query({
-			active: true,
-			currentWindow: true,
-		});
-		if (!tab?.id) {
-			throw new Error("現在のタブを取得できませんでした");
-		}
-		return tab;
-	}, []);
-
 	const refreshVideos = useCallback(async () => {
 		setState((current) => ({ ...current, loading: true, error: undefined }));
 		try {
-			const tab = await getActiveTab();
-			const response = await browser.tabs.sendMessage(tab.id as number, {
+			const tabId = await getActiveTabId();
+			const response = await browser.tabs.sendMessage(tabId, {
 				type: "LIST_VIDEOS",
 			});
 			const captures = await listCaptures();
@@ -62,15 +63,15 @@ function App() {
 					"このページでは拡張を実行できないか、動画がまだ検出されていません。",
 			});
 		}
-	}, [getActiveTab]);
+	}, []);
 
 	useEffect(() => {
 		void refreshVideos();
 	}, [refreshVideos]);
 
 	async function startPicker() {
-		const tab = await getActiveTab();
-		await browser.tabs.sendMessage(tab.id as number, { type: "START_PICKER" });
+		const tabId = await getActiveTabId();
+		await browser.tabs.sendMessage(tabId, { type: "START_PICKER" });
 		window.close();
 	}
 
