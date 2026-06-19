@@ -11,11 +11,8 @@
 	"scripts": {
 		"prepare": "lefthook install",
 		"dev": "wxt",
-		"dev:firefox": "wxt -b firefox",
 		"build": "wxt build",
-		"build:firefox": "wxt build -b firefox",
 		"zip": "wxt zip",
-		"zip:firefox": "wxt zip -b firefox",
 		"typecheck": "tsc --noEmit",
 		"test": "vitest run",
 		"format": "biome check --write --unsafe",

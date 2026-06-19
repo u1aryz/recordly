@@ -22,9 +22,7 @@ Recordly は、Web ページ上の動画を選択し、キャプチャして MP4
 
 - `pnpm install`: 依存関係をインストールします。
 - `pnpm dev`: Chromium/Chrome 向けに WXT 開発サーバーを起動します。
-- `pnpm dev:firefox`: Firefox 向けに WXT 開発サーバーを起動します。
 - `pnpm build`: Chromium/Chrome 向けに拡張機能をビルドします。
-- `pnpm build:firefox`: Firefox 向けに拡張機能をビルドします。
 - `pnpm typecheck`: TypeScript の型チェックを実行します。
 - `pnpm test`: Vitest のテストを実行します。
 - `pnpm format`: Biome による check と自動修正を実行します。
