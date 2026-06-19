@@ -117,6 +117,28 @@ function App(): JSX.Element {
 		}
 	}, [selected?.status]);
 
+	useEffect(() => {
+		function handleKeyDown(event: KeyboardEvent) {
+			if (
+				(event.key !== "ArrowUp" && event.key !== "ArrowDown") ||
+				event.altKey ||
+				event.ctrlKey ||
+				event.metaKey ||
+				event.shiftKey ||
+				isEditableTarget(event.target)
+			) {
+				return;
+			}
+
+			event.preventDefault();
+			const key = event.key as "ArrowUp" | "ArrowDown";
+			setSelectedId((current) => getAdjacentCaptureId(captures, current, key));
+		}
+
+		window.addEventListener("keydown", handleKeyDown);
+		return () => window.removeEventListener("keydown", handleKeyDown);
+	}, [captures]);
+
 	async function stopCapture(capture: CaptureMetadata) {
 		if (stoppingCaptureId) {
 			return;
@@ -230,6 +252,7 @@ function App(): JSX.Element {
 					) : null}
 					{captures.map((capture) => (
 						<button
+							aria-current={capture.id === selected?.id ? "true" : undefined}
 							className={`w-full rounded-box border p-3 text-left ${
 								capture.id === selected?.id
 									? "border-primary bg-primary/10"
@@ -281,6 +304,39 @@ function App(): JSX.Element {
 				</section>
 			</div>
 		</main>
+	);
+}
+
+export function getAdjacentCaptureId(
+	captures: CaptureMetadata[],
+	selectedId: string | null,
+	key: "ArrowUp" | "ArrowDown",
+): string | null {
+	if (captures.length === 0) {
+		return null;
+	}
+
+	const selectedIndex = captures.findIndex(
+		(capture) => capture.id === selectedId,
+	);
+	const currentIndex = selectedIndex === -1 ? 0 : selectedIndex;
+	const offset = key === "ArrowUp" ? -1 : 1;
+	const nextIndex = Math.min(
+		Math.max(currentIndex + offset, 0),
+		captures.length - 1,
+	);
+	return captures[nextIndex]?.id ?? null;
+}
+
+function isEditableTarget(target: EventTarget | null): boolean {
+	if (!(target instanceof HTMLElement)) {
+		return false;
+	}
+	return (
+		target.isContentEditable ||
+		target instanceof HTMLInputElement ||
+		target instanceof HTMLTextAreaElement ||
+		target instanceof HTMLSelectElement
 	);
 }
 
