@@ -117,10 +117,34 @@ function App(): JSX.Element {
 		}
 	}, [selected?.status]);
 
+	const deleteSelectedCapture = useCallback(
+		async (capture: CaptureMetadata) => {
+			if (deletingCaptureId || capture.status === "recording") {
+				return;
+			}
+
+			setDeletingCaptureId(capture.id);
+			try {
+				await browser.runtime.sendMessage({
+					type: "DELETE_CAPTURE",
+					captureId: capture.id,
+				});
+				setCaptures((current) =>
+					current.filter((item) => item.id !== capture.id),
+				);
+				setSelectedId((current) => (current === capture.id ? null : current));
+			} finally {
+				setDeletingCaptureId((current) =>
+					current === capture.id ? null : current,
+				);
+			}
+		},
+		[deletingCaptureId],
+	);
+
 	useEffect(() => {
 		function handleKeyDown(event: KeyboardEvent) {
 			if (
-				(event.key !== "ArrowUp" && event.key !== "ArrowDown") ||
 				event.altKey ||
 				event.ctrlKey ||
 				event.metaKey ||
@@ -130,14 +154,29 @@ function App(): JSX.Element {
 				return;
 			}
 
-			event.preventDefault();
-			const key = event.key as "ArrowUp" | "ArrowDown";
-			setSelectedId((current) => getAdjacentCaptureId(captures, current, key));
+			if (event.key === "ArrowUp" || event.key === "ArrowDown") {
+				event.preventDefault();
+				const key = event.key;
+				setSelectedId((current) =>
+					getAdjacentCaptureId(captures, current, key),
+				);
+				return;
+			}
+
+			if (
+				isCaptureDeleteKey(event.key) &&
+				selected &&
+				selected.status !== "recording" &&
+				!deletingCaptureId
+			) {
+				event.preventDefault();
+				void deleteSelectedCapture(selected);
+			}
 		}
 
 		window.addEventListener("keydown", handleKeyDown);
 		return () => window.removeEventListener("keydown", handleKeyDown);
-	}, [captures]);
+	}, [captures, deletingCaptureId, selected, deleteSelectedCapture]);
 
 	async function stopCapture(capture: CaptureMetadata) {
 		if (stoppingCaptureId) {
@@ -184,28 +223,6 @@ function App(): JSX.Element {
 			throw error;
 		} finally {
 			setIsDownloading(false);
-		}
-	}
-
-	async function deleteSelectedCapture(capture: CaptureMetadata) {
-		if (deletingCaptureId || capture.status === "recording") {
-			return;
-		}
-
-		setDeletingCaptureId(capture.id);
-		try {
-			await browser.runtime.sendMessage({
-				type: "DELETE_CAPTURE",
-				captureId: capture.id,
-			});
-			setCaptures((current) =>
-				current.filter((item) => item.id !== capture.id),
-			);
-			setSelectedId((current) => (current === capture.id ? null : current));
-		} finally {
-			setDeletingCaptureId((current) =>
-				current === capture.id ? null : current,
-			);
 		}
 	}
 
@@ -326,6 +343,10 @@ export function getAdjacentCaptureId(
 		captures.length - 1,
 	);
 	return captures[nextIndex]?.id ?? null;
+}
+
+export function isCaptureDeleteKey(key: string): boolean {
+	return key === "Delete" || key === "Backspace";
 }
 
 function isEditableTarget(target: EventTarget | null): boolean {

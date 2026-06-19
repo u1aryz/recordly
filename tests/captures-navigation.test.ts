@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { getAdjacentCaptureId } from "@/entrypoints/captures/App";
+import {
+	getAdjacentCaptureId,
+	isCaptureDeleteKey,
+} from "@/entrypoints/captures/App";
 import type { CaptureMetadata } from "@/shared/types";
 
 const captures = [
@@ -26,5 +29,11 @@ describe("captures keyboard navigation", () => {
 	it("uses the first capture when the current selection is missing", () => {
 		expect(getAdjacentCaptureId(captures, null, "ArrowDown")).toBe("middle");
 		expect(getAdjacentCaptureId([], null, "ArrowDown")).toBeNull();
+	});
+
+	it("recognizes delete keys on Mac and other keyboards", () => {
+		expect(isCaptureDeleteKey("Backspace")).toBe(true);
+		expect(isCaptureDeleteKey("Delete")).toBe(true);
+		expect(isCaptureDeleteKey("Enter")).toBe(false);
 	});
 });
