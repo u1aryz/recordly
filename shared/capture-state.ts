@@ -9,6 +9,10 @@ export function createCaptureMetadata(input: {
 	width: number;
 	height: number;
 	thumbnailDataUrl?: string;
+	status?: CaptureMetadata["status"];
+	fileStatus?: CaptureMetadata["fileStatus"];
+	storageMode?: CaptureMetadata["storageMode"];
+	scope?: CaptureMetadata["scope"];
 }): CaptureMetadata {
 	const id = crypto.randomUUID();
 	const startedAt = Date.now();
@@ -22,7 +26,8 @@ export function createCaptureMetadata(input: {
 		pageUrl: input.pageUrl,
 		title: input.title,
 		startedAt,
-		status: "recording",
+		status: input.status ?? "recording",
+		fileStatus: input.fileStatus,
 		mimeType: input.mimeType,
 		fileName: `${safeTitle || "capture"}-${new Date(startedAt).toISOString().replace(/[:.]/g, "-")}.mp4`,
 		sizeBytes: 0,
@@ -31,6 +36,8 @@ export function createCaptureMetadata(input: {
 		height: input.height,
 		thumbnailDataUrl: input.thumbnailDataUrl,
 		chunkCount: 0,
+		storageMode: input.storageMode,
+		scope: input.scope,
 	};
 }
 
@@ -50,6 +57,7 @@ export function finishCapture(
 	metadata: CaptureMetadata,
 	input: {
 		status: "stopped" | "error" | "complete";
+		fileStatus?: CaptureMetadata["fileStatus"];
 		elapsedMs: number;
 		stopReason?: StopReason;
 		errorMessage?: string;
@@ -58,6 +66,7 @@ export function finishCapture(
 	return {
 		...metadata,
 		status: input.status,
+		fileStatus: input.fileStatus ?? metadata.fileStatus,
 		elapsedMs: input.elapsedMs,
 		endedAt: Date.now(),
 		stopReason: input.stopReason,

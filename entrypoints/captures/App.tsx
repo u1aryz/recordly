@@ -1,6 +1,6 @@
 import {
 	ArrowDownTrayIcon,
-	ArrowPathIcon,
+	CheckCircleIcon,
 	ExclamationTriangleIcon,
 	FilmIcon,
 	InformationCircleIcon,
@@ -16,6 +16,10 @@ import type {
 	SVGProps,
 } from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+	getCapturePresentation,
+	getStatusBadgeClass,
+} from "@/shared/capture-presentation";
 import { createCaptureReadableStream, listCaptures } from "@/shared/storage";
 import type { CaptureMetadata, PortMessage } from "@/shared/types";
 import { formatBytes, formatDuration } from "@/shared/video";
@@ -29,13 +33,34 @@ type SaveFilePickerOptions = {
 	}[];
 };
 
+type CaptureDetailProps = {
+	capture: CaptureMetadata;
+	isDeleting: boolean;
+	isDownloading: boolean;
+	isStopping: boolean;
+	onStop: () => void;
+	onDownload: () => void;
+	onDelete: () => void;
+};
+
+type CaptureAlertProps = {
+	children: ReactNode;
+	className?: string;
+	tone: "info" | "success" | "warning" | "error";
+};
+
+type StatProps = {
+	label: string;
+	value: string;
+	compact?: boolean;
+};
+
 const MP4_FILE_PICKER_TYPES = [
 	{
 		description: "MP4 video",
 		accept: { "video/mp4": [".mp4"] },
 	},
 ];
-
 declare global {
 	interface Window {
 		showSaveFilePicker?: (
@@ -51,6 +76,13 @@ function App() {
 	);
 	const [message, setMessage] = useState<string | null>(null);
 	const [isDownloading, setIsDownloading] = useState(false);
+	const [stoppingCaptureId, setStoppingCaptureId] = useState<string | null>(
+		null,
+	);
+	const [loadError, setLoadError] = useState(false);
+	const [deletingCaptureId, setDeletingCaptureId] = useState<string | null>(
+		null,
+	);
 
 	const selected = useMemo(
 		() => captures.find((capture) => capture.id === selectedId) ?? captures[0],
@@ -58,9 +90,14 @@ function App() {
 	);
 
 	const reload = useCallback(async () => {
-		const stored = await listCaptures();
-		setCaptures(stored);
-		setSelectedId((current) => current ?? stored[0]?.id ?? null);
+		try {
+			const stored = await listCaptures();
+			setCaptures(stored);
+			setSelectedId((current) => current ?? stored[0]?.id ?? null);
+			setLoadError(false);
+		} catch {
+			setLoadError(true);
+		}
 	}, []);
 
 	const upsertCapture = useCallback((capture: CaptureMetadata) => {
@@ -85,20 +122,30 @@ function App() {
 	}, [reload, upsertCapture]);
 
 	useEffect(() => {
-		setMessage(null);
-	}, []);
-
-	useEffect(() => {
 		document.title = selected
 			? `${getProgressSummary(selected)} - Recordly Captures`
 			: "Recordly Captures";
 	}, [selected]);
 
+	useEffect(() => {
+		if (selected?.status !== "recording") {
+			setStoppingCaptureId(null);
+		}
+	}, [selected?.status]);
+
 	async function stopCapture(capture: CaptureMetadata) {
-		await browser.tabs.sendMessage(capture.tabId, {
-			type: "STOP_CAPTURE",
-			captureId: capture.id,
-		});
+		if (stoppingCaptureId) {
+			return;
+		}
+		setStoppingCaptureId(capture.id);
+		try {
+			await browser.runtime.sendMessage({
+				type: "STOP_CAPTURE",
+				captureId: capture.id,
+			});
+		} catch {
+			setStoppingCaptureId(null);
+		}
 	}
 
 	async function downloadCapture(capture: CaptureMetadata) {
@@ -135,21 +182,31 @@ function App() {
 	}
 
 	async function deleteSelectedCapture(capture: CaptureMetadata) {
-		if (capture.status === "recording") {
-			await stopCapture(capture);
+		if (deletingCaptureId || capture.status === "recording") {
+			return;
 		}
-		await browser.runtime.sendMessage({
-			type: "DELETE_CAPTURE",
-			captureId: capture.id,
-		});
-		setCaptures((current) => current.filter((item) => item.id !== capture.id));
-		setSelectedId((current) => (current === capture.id ? null : current));
+
+		setDeletingCaptureId(capture.id);
+		try {
+			await browser.runtime.sendMessage({
+				type: "DELETE_CAPTURE",
+				captureId: capture.id,
+			});
+			setCaptures((current) =>
+				current.filter((item) => item.id !== capture.id),
+			);
+			setSelectedId((current) => (current === capture.id ? null : current));
+		} finally {
+			setDeletingCaptureId((current) =>
+				current === capture.id ? null : current,
+			);
+		}
 	}
 
 	return (
 		<main className="min-h-screen bg-base-100 text-base-content">
 			<header className="border-base-300 border-b bg-base-200">
-				<div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
+				<div className="mx-auto max-w-6xl px-6 py-4">
 					<div>
 						<h1 className="flex flex-wrap items-center gap-2 font-semibold text-xl">
 							<span>Recordly Captures</span>
@@ -160,18 +217,28 @@ function App() {
 							) : null}
 						</h1>
 						<p className="text-base-content/65 text-sm">
-							録画の進捗確認、停止、保存済みファイルのダウンロードを行います。
+							動画キャプチャの進捗確認、停止、履歴管理を行います。
 						</p>
 					</div>
-					<button className="btn btn-sm" type="button" onClick={reload}>
-						<ArrowPathIcon className="h-4 w-4" />
-						再読み込み
-					</button>
 				</div>
 			</header>
 
 			<div className="mx-auto grid max-w-6xl gap-5 px-6 py-6 md:grid-cols-[320px_1fr]">
 				<aside className="space-y-2">
+					{loadError ? (
+						<CaptureAlert tone="error">
+							<span>
+								履歴を読み込めませんでした。
+								<button
+									className="btn btn-link btn-sm px-1"
+									type="button"
+									onClick={reload}
+								>
+									再試行
+								</button>
+							</span>
+						</CaptureAlert>
+					) : null}
 					{captures.length === 0 ? (
 						<CaptureAlert tone="info">
 							まだキャプチャはありません。
@@ -193,7 +260,7 @@ function App() {
 									<FilmIcon className="h-4 w-4 shrink-0 text-base-content/55" />
 									<span className="truncate">{capture.title}</span>
 								</span>
-								<StatusBadge status={capture.status} />
+								<StatusBadge capture={capture} />
 							</div>
 							<p className="mt-1 text-base-content/60 text-xs">
 								{new Date(capture.startedAt).toLocaleString()}
@@ -210,7 +277,9 @@ function App() {
 					{selected ? (
 						<CaptureDetail
 							capture={selected}
+							isDeleting={deletingCaptureId === selected.id}
 							isDownloading={isDownloading}
+							isStopping={stoppingCaptureId === selected.id}
 							onDelete={() => deleteSelectedCapture(selected)}
 							onDownload={() => downloadCapture(selected)}
 							onStop={() => stopCapture(selected)}
@@ -233,18 +302,16 @@ function App() {
 
 function CaptureDetail({
 	capture,
+	isDeleting,
 	isDownloading,
+	isStopping,
 	onStop,
 	onDownload,
 	onDelete,
-}: {
-	capture: CaptureMetadata;
-	isDownloading: boolean;
-	onStop: () => void;
-	onDownload: () => void;
-	onDelete: () => void;
-}) {
+}: CaptureDetailProps) {
 	const isRecording = capture.status === "recording";
+	const isDirectFile = capture.storageMode === "direct-file";
+	const presentation = getCapturePresentation(capture);
 	return (
 		<div>
 			<div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-4">
@@ -254,8 +321,15 @@ function CaptureDetail({
 						{capture.pageUrl}
 					</p>
 				</div>
-				<StatusBadge status={capture.status} />
+				<StatusBadge capture={capture} />
 			</div>
+
+			<CaptureAlert className="mt-4" tone={presentation.tone}>
+				<span>
+					<strong className="block">{presentation.title}</strong>
+					<span className="mt-1 block text-sm">{presentation.description}</span>
+				</span>
+			</CaptureAlert>
 
 			<div className="mt-5 grid gap-5 lg:grid-cols-[minmax(260px,420px)_1fr]">
 				<div className="aspect-video overflow-hidden rounded-box bg-neutral">
@@ -275,28 +349,34 @@ function CaptureDetail({
 					<Stat label="経過時間" value={formatDuration(capture.elapsedMs)} />
 					<Stat label="ファイルサイズ" value={formatBytes(capture.sizeBytes)} />
 					<Stat label="解像度" value={`${capture.width} x ${capture.height}`} />
-					<Stat label="チャンク" value={`${capture.chunkCount}`} />
+					<Stat label="ファイル名" value={capture.fileName} compact />
 				</div>
 			</div>
 
-			{capture.stopReason && !capture.errorMessage ? (
-				<CaptureAlert className="mt-4" tone="warning">
-					停止理由: {translateStopReason(capture.stopReason)}
-				</CaptureAlert>
-			) : null}
-			{capture.errorMessage ? (
-				<CaptureAlert className="mt-4" tone="error">
-					{capture.errorMessage}
-				</CaptureAlert>
+			{isDirectFile && !isRecording ? (
+				<p className="mt-4 text-base-content/65 text-sm">
+					録画開始時に選択した保存先を確認してください。ブラウザの制限により、
+					Recordlyから保存先フォルダーは表示できません。
+				</p>
 			) : null}
 
 			<div className="mt-6 flex flex-wrap gap-2">
 				{isRecording ? (
-					<button className="btn btn-warning" type="button" onClick={onStop}>
-						<StopIcon className="h-5 w-5" />
-						停止
+					<button
+						className="btn btn-warning"
+						disabled={isStopping}
+						type="button"
+						onClick={onStop}
+					>
+						{isStopping ? (
+							<span className="loading loading-spinner loading-sm" />
+						) : (
+							<StopIcon className="h-5 w-5" />
+						)}
+						{isStopping ? "保存して終了中…" : "停止して保存"}
 					</button>
-				) : (
+				) : null}
+				{!isRecording && !isDirectFile ? (
 					<button
 						className="btn btn-primary"
 						disabled={isDownloading}
@@ -311,30 +391,42 @@ function CaptureDetail({
 						) : (
 							<ArrowDownTrayIcon className="h-5 w-5" />
 						)}
-						ダウンロード
+						MP4を保存
 					</button>
-				)}
-				<button className="btn btn-error" type="button" onClick={onDelete}>
-					<TrashIcon className="h-5 w-5" />
-					削除
+				) : null}
+				<button
+					className="btn btn-error"
+					disabled={isDeleting || isRecording}
+					type="button"
+					onClick={onDelete}
+				>
+					{isDeleting ? (
+						<span
+							aria-hidden="true"
+							className="loading loading-spinner loading-sm"
+						/>
+					) : (
+						<TrashIcon className="h-5 w-5" />
+					)}
+					{isDirectFile ? "履歴から削除" : "削除"}
 				</button>
 			</div>
+			{isDirectFile && !isRecording ? (
+				<p className="mt-2 text-base-content/60 text-xs">
+					履歴を削除しても、保存済みのMP4ファイルは削除されません。
+				</p>
+			) : null}
 		</div>
 	);
 }
 
-function CaptureAlert({
-	children,
-	className,
-	tone,
-}: {
-	children: ReactNode;
-	className?: string;
-	tone: "info" | "warning" | "error";
-}) {
-	const { Icon, iconClassName } = getAlertPresentation(tone);
+function CaptureAlert({ children, className, tone }: CaptureAlertProps) {
+	const { Icon, alertClassName, iconClassName } = getAlertPresentation(tone);
 	return (
-		<div className={`alert alert-soft ${className ?? ""}`} role="alert">
+		<div
+			className={`alert alert-soft ${alertClassName} ${className ?? ""}`}
+			role="alert"
+		>
 			<Icon
 				aria-hidden="true"
 				className={`h-5 w-5 shrink-0 ${iconClassName}`}
@@ -344,48 +436,51 @@ function CaptureAlert({
 	);
 }
 
-function getAlertPresentation(tone: "info" | "warning" | "error"): {
+function getAlertPresentation(tone: "info" | "success" | "warning" | "error"): {
 	Icon: ComponentType<SVGProps<SVGSVGElement>>;
+	alertClassName: string;
 	iconClassName: string;
 } {
 	switch (tone) {
+		case "success":
+			return {
+				Icon: CheckCircleIcon,
+				alertClassName: "alert-success",
+				iconClassName: "text-success",
+			};
 		case "warning":
 			return {
 				Icon: ExclamationTriangleIcon,
+				alertClassName: "alert-warning",
 				iconClassName: "text-warning",
 			};
 		case "error":
 			return {
 				Icon: XCircleIcon,
+				alertClassName: "alert-error",
 				iconClassName: "text-error",
 			};
 		default:
 			return {
 				Icon: InformationCircleIcon,
+				alertClassName: "alert-info",
 				iconClassName: "text-info",
 			};
 	}
 }
 
-function StatusBadge({ status }: { status: CaptureMetadata["status"] }) {
-	const { className, label } = getStatusPresentation(status);
-	return <span className={className}>{label}</span>;
+function StatusBadge({ capture }: { capture: CaptureMetadata }) {
+	const presentation = getCapturePresentation(capture);
+	return (
+		<span className={getStatusBadgeClass(capture.status, presentation.tone)}>
+			{presentation.label}
+		</span>
+	);
 }
 
 function getProgressSummary(capture: CaptureMetadata) {
-	const { label } = getStatusPresentation(capture.status);
+	const { label } = getCapturePresentation(capture);
 	return `${label} / ${formatDuration(capture.elapsedMs)} / ${formatBytes(capture.sizeBytes)}`;
-}
-
-function getStatusPresentation(status: CaptureMetadata["status"]) {
-	switch (status) {
-		case "recording":
-			return { className: "badge badge-primary", label: "録画中" };
-		case "error":
-			return { className: "badge badge-error", label: "エラー" };
-		default:
-			return { className: "badge", label: "停止済み" };
-	}
 }
 
 function handlePortMessage(
@@ -429,25 +524,17 @@ function handlePortMessage(
 	}
 }
 
-function Stat({ label, value }: { label: string; value: string }) {
+function Stat({ label, value, compact = false }: StatProps) {
 	return (
 		<div className="rounded-box bg-base-100 p-4">
 			<p className="text-base-content/60 text-xs">{label}</p>
-			<p className="mt-1 font-semibold text-xl">{value}</p>
+			<p
+				className={`mt-1 break-all font-semibold ${compact ? "text-sm" : "text-xl"}`}
+			>
+				{value}
+			</p>
 		</div>
 	);
-}
-
-function translateStopReason(reason: string) {
-	const map: Record<string, string> = {
-		user: "ユーザー操作",
-		resolution_changed: "解像度変更",
-		source_closed: "元タブが閉じられました",
-		video_removed: "video がページから削除されました",
-		unsupported: "ブラウザ非対応",
-		error: "録画エラー",
-	};
-	return map[reason] ?? reason;
 }
 
 export default App;

@@ -8,10 +8,9 @@ export function isExtensionMessage(value: unknown): value is ExtensionMessage {
 	return (
 		type === "START_PICKER" ||
 		type === "LIST_VIDEOS" ||
-		type === "START_CAPTURE" ||
 		type === "STOP_CAPTURE" ||
 		type === "CAPTURE_STARTED" ||
-		type === "CAPTURE_CHUNK" ||
+		type === "CAPTURE_PROGRESS" ||
 		type === "CAPTURE_FINISHED" ||
 		type === "OPEN_CAPTURES" ||
 		type === "DELETE_CAPTURE"

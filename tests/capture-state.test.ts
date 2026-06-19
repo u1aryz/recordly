@@ -25,6 +25,26 @@ describe("capture state", () => {
 		expect(metadata.status).toBe("recording");
 	});
 
+	it("creates direct-file metadata for element capture", () => {
+		const metadata = createCaptureMetadata({
+			videoId: "video-id",
+			tabId: 1,
+			pageUrl: "https://example.test",
+			title: "Large Demo",
+			mimeType: "video/mp4",
+			width: 1920,
+			height: 1080,
+			status: "recording",
+			fileStatus: "writing",
+			storageMode: "direct-file",
+			scope: "element",
+		});
+		expect(metadata.status).toBe("recording");
+		expect(metadata.fileStatus).toBe("writing");
+		expect(metadata.storageMode).toBe("direct-file");
+		expect(metadata.scope).toBe("element");
+	});
+
 	it("applies progress and terminal states", () => {
 		const metadata = createCaptureMetadata({
 			videoId: "video-id",
@@ -48,5 +68,13 @@ describe("capture state", () => {
 		});
 		expect(stopped.status).toBe("stopped");
 		expect(stopped.stopReason).toBe("resolution_changed");
+		const completed = finishCapture(progressed, {
+			status: "complete",
+			fileStatus: "saved",
+			elapsedMs: 6000,
+			stopReason: "user",
+		});
+		expect(completed.status).toBe("complete");
+		expect(completed.fileStatus).toBe("saved");
 	});
 });

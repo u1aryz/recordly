@@ -1,12 +1,18 @@
 export type CaptureStatus = "recording" | "stopped" | "error" | "complete";
 
+export type CaptureFileStatus = "writing" | "saved" | "failed" | "unknown";
+
 export type StopReason =
 	| "user"
 	| "resolution_changed"
 	| "source_closed"
+	| "video_ended"
 	| "video_removed"
 	| "unsupported"
-	| "error";
+	| "error"
+	| "tab_capture_failed"
+	| "target_unavailable"
+	| "write_failed";
 
 export type VideoDescriptor = {
 	id: string;
@@ -32,6 +38,7 @@ export type CaptureMetadata = {
 	startedAt: number;
 	endedAt?: number;
 	status: CaptureStatus;
+	fileStatus?: CaptureFileStatus;
 	stopReason?: StopReason;
 	errorMessage?: string;
 	mimeType: string;
@@ -42,6 +49,8 @@ export type CaptureMetadata = {
 	height: number;
 	thumbnailDataUrl?: string;
 	chunkCount: number;
+	storageMode?: "indexeddb" | "direct-file";
+	scope?: "element" | "tab";
 };
 
 export type CaptureProgress = Pick<
@@ -64,11 +73,6 @@ export type ListVideosMessage = {
 	type: "LIST_VIDEOS";
 };
 
-export type StartCaptureMessage = {
-	type: "START_CAPTURE";
-	videoId: string;
-};
-
 export type StopCaptureMessage = {
 	type: "STOP_CAPTURE";
 	captureId: string;
@@ -79,18 +83,19 @@ export type CaptureStartedMessage = {
 	metadata: CaptureMetadata;
 };
 
-export type CaptureChunkMessage = {
-	type: "CAPTURE_CHUNK";
+export type CaptureProgressMessage = {
+	type: "CAPTURE_PROGRESS";
 	captureId: string;
-	chunkBase64: string;
-	size: number;
+	sizeBytes: number;
 	elapsedMs: number;
+	chunkCount: number;
 };
 
 export type CaptureFinishedMessage = {
 	type: "CAPTURE_FINISHED";
 	captureId: string;
 	status: Exclude<CaptureStatus, "recording">;
+	fileStatus: Exclude<CaptureFileStatus, "writing">;
 	stopReason?: StopReason;
 	errorMessage?: string;
 	elapsedMs: number;
@@ -109,17 +114,16 @@ export type DeleteCaptureMessage = {
 export type ExtensionMessage =
 	| StartPickerMessage
 	| ListVideosMessage
-	| StartCaptureMessage
 	| StopCaptureMessage
 	| CaptureStartedMessage
-	| CaptureChunkMessage
+	| CaptureProgressMessage
 	| CaptureFinishedMessage
 	| OpenCapturesMessage
 	| DeleteCaptureMessage;
 
 export type CaptureStreamPortMessage =
 	| CaptureStartedMessage
-	| CaptureChunkMessage
+	| CaptureProgressMessage
 	| CaptureFinishedMessage;
 
 export type PortMessage =
