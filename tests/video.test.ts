@@ -58,4 +58,21 @@ describe("video helpers", () => {
 		expect(result.stream).toBeNull();
 		expect(result.errorMessage).toContain("保護");
 	});
+
+	it("returns a short actionable message when captureStream has no tracks", () => {
+		const video = document.createElement("video");
+		video.captureStream = vi.fn(
+			() =>
+				({
+					getTracks: () => [],
+				}) as unknown as MediaStream,
+		);
+
+		const result = createVideoCaptureStream(video);
+
+		expect(result.stream).toBeNull();
+		expect(result.errorMessage).toBe(
+			"録画できる映像・音声がありません。動画を再生してからお試しください。",
+		);
+	});
 });

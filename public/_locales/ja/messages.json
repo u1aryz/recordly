@@ -25,6 +25,9 @@
 	"noVideosDetected": {
 		"message": "動画を検出できませんでした。動画を再生してから更新してください。"
 	},
+	"captureStreamHasNoTracks": {
+		"message": "録画できる映像・音声がありません。動画を再生してからお試しください。"
+	},
 	"paused": { "message": "一時停止" },
 	"playing": { "message": "再生中" },
 	"liveOrUnknown": { "message": "ライブ／不明" },

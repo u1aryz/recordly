@@ -124,19 +124,23 @@ function createVideoPicker(): VideoPicker {
 				background: rgba(26, 115, 232, 0.08);
 				pointer-events: none;
 			}
-				.toolbar {
-					position: fixed;
-					display: flex;
-					align-items: center;
-					gap: 8px;
-					max-width: calc(100vw - 16px);
-					padding: 7px 8px;
+			.toolbar {
+				position: fixed;
+				display: flex;
+				flex-direction: column;
+				max-width: calc(100vw - 16px);
 				border-radius: 6px;
 				background: #172033;
 				color: #f8fbff;
 				font: 12px/1.35 ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 				box-shadow: 0 12px 32px rgba(0, 0, 0, 0.24);
 				pointer-events: auto;
+			}
+			.toolbar-main {
+				display: flex;
+				align-items: center;
+				gap: 8px;
+				padding: 7px 8px;
 			}
 			.instructions {
 				position: fixed;
@@ -153,10 +157,10 @@ function createVideoPicker(): VideoPicker {
 			}
 			.label { font-weight: 700; color: #9fd0ff; white-space: nowrap; }
 			.meta { color: #d7e2f0; white-space: nowrap; }
-				.message {
-					max-width: 240px;
-					color: #ffcc80;
-				}
+			.message {
+				padding: 0 8px 7px;
+				color: #ffcc80;
+			}
 			button {
 				border: 0;
 				border-radius: 4px;
@@ -174,12 +178,14 @@ function createVideoPicker(): VideoPicker {
 		</div>
 		<div class="frame" hidden></div>
 		<div class="toolbar" hidden>
-			<span class="label">video</span>
-			<span class="meta"></span>
-			<span class="message" hidden></span>
+			<div class="toolbar-main">
+				<span class="label">video</span>
+				<span class="meta"></span>
 				<button class="start" type="button">保存先を選択して録画開始</button>
 				<button class="cancel" type="button">キャンセル</button>
 			</div>
+			<div class="message" hidden></div>
+		</div>
 	`;
 
 	const instructions = shadow.querySelector<HTMLElement>(".instructions");

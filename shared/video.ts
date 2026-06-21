@@ -1,3 +1,4 @@
+import { t } from "@/utils/i18n";
 import type { VideoDescriptor } from "./types";
 
 const VIDEO_ID_ATTR = "data-vcap-id";
@@ -88,7 +89,14 @@ export function createVideoCaptureStream(video: HTMLVideoElement): {
 	}
 
 	try {
-		return { stream: captureStream() };
+		const stream = captureStream();
+		if (stream.getTracks().length === 0) {
+			return {
+				stream: null,
+				errorMessage: t("captureStreamHasNoTracks"),
+			};
+		}
+		return { stream };
 	} catch (error) {
 		return {
 			stream: null,

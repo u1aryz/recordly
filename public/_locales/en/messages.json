@@ -25,6 +25,9 @@
 	"noVideosDetected": {
 		"message": "No videos detected. Play a video, then refresh."
 	},
+	"captureStreamHasNoTracks": {
+		"message": "No video or audio is available to record. Play the video and try again."
+	},
 	"paused": { "message": "Paused" },
 	"playing": { "message": "Playing" },
 	"liveOrUnknown": { "message": "live/unknown" },
