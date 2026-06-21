@@ -399,7 +399,7 @@ function CaptureDetail({
 						/>
 					</div>
 				) : null}
-				<dl className="grid overflow-hidden rounded-box border border-base-300 bg-base-100 sm:grid-cols-3">
+				<dl className="overflow-hidden rounded-box border border-base-300 bg-base-100">
 					<CaptureMetric
 						label={t("elapsedTime")}
 						value={formatDuration(capture.elapsedMs)}
@@ -609,9 +609,9 @@ function applyCaptureProgress(
 
 function CaptureMetric({ label, value }: CaptureMetricProps): JSX.Element {
 	return (
-		<div className="border-base-300 border-b p-4 last:border-b-0 sm:border-r sm:border-b-0 sm:last:border-r-0">
+		<div className="flex items-baseline justify-between gap-4 border-base-300 border-b p-4 last:border-b-0">
 			<dt className="text-base-content/60 text-xs">{label}</dt>
-			<dd className="mt-1 font-semibold text-base">{value}</dd>
+			<dd className="text-right font-semibold text-base">{value}</dd>
 		</div>
 	);
 }
