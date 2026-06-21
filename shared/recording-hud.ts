@@ -1,3 +1,4 @@
+import { t } from "../utils/i18n";
 import type { CaptureMetadata } from "./types";
 import { formatDuration } from "./video";
 
@@ -130,9 +131,9 @@ export function createRecordingHudManager(
 				.item { transition: none; }
 			}
 		</style>
-		<section class="panel" aria-label="録画状況">
+		<section class="panel" aria-label="${t("recordingStatus")}">
 			<header class="header">
-				<span class="heading"><span class="dot">●</span> 録画状況</span>
+				<span class="heading"><span class="dot">●</span> ${t("recordingStatus")}</span>
 				<span class="summary"></span>
 			</header>
 			<div class="list"></div>
@@ -156,7 +157,7 @@ export function createRecordingHudManager(
 			}
 		}
 		if (summary) {
-			summary.textContent = `録画中 ${recordingCount}件`;
+			summary.textContent = t("recordingCount", String(recordingCount));
 		}
 	}
 
@@ -195,10 +196,10 @@ export function createRecordingHudManager(
 					<span class="time">0:00</span>
 				</div>
 				<p class="meta"></p>
-				<p class="detail">選択した保存先へ記録中です。</p>
+				<p class="detail">${t("recordingToDestination")}</p>
 				<div class="actions">
-					<button class="open" type="button">状況を開く</button>
-					<button class="stop" type="button">停止して保存</button>
+					<button class="open" type="button">${t("openStatus")}</button>
+					<button class="stop" type="button">${t("stopAndSave")}</button>
 				</div>
 			</div>
 		`;
@@ -271,7 +272,7 @@ export function createRecordingHudManager(
 				return;
 			}
 			row.time.textContent = formatDuration(elapsedMs);
-			row.detail.textContent = "MP4ファイルを確定しています。";
+			row.detail.textContent = t("finalizingMp4");
 			row.stopButton.disabled = true;
 		},
 		finish(captureId, message, tone) {

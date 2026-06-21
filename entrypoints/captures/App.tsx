@@ -33,6 +33,7 @@ import type {
 	PortMessage,
 } from "@/shared/types";
 import { formatBytes, formatDuration } from "@/shared/video";
+import { t } from "@/utils/i18n";
 
 type CaptureDetailProps = {
 	capture: CaptureMetadata;
@@ -197,12 +198,12 @@ function App(): JSX.Element {
 			return;
 		}
 		if (capture.sizeBytes === 0 || capture.chunkCount === 0) {
-			setMessage("保存済みデータがありません。");
+			setMessage(t("noSavedData"));
 			return;
 		}
 
 		if (!window.showSaveFilePicker) {
-			setMessage("このブラウザではストリーミング保存に対応していません。");
+			setMessage(t("streamingSaveUnsupported"));
 			return;
 		}
 
@@ -229,7 +230,7 @@ function App(): JSX.Element {
 		<main className="flex min-h-screen flex-col bg-base-100 text-base-content">
 			<header className="border-base-300 border-b bg-base-200">
 				<div className="mx-auto max-w-6xl px-6 py-4">
-					<h1 className="font-semibold text-xl">Recordly Captures</h1>
+					<h1 className="font-semibold text-xl">{t("capturesTitle")}</h1>
 				</div>
 			</header>
 
@@ -238,21 +239,19 @@ function App(): JSX.Element {
 					{loadError ? (
 						<CaptureAlert tone="error">
 							<span>
-								履歴を読み込めませんでした。
+								{t("historyLoadFailed")}
 								<button
 									className="btn btn-link btn-sm px-1"
 									type="button"
 									onClick={reload}
 								>
-									再試行
+									{t("retry")}
 								</button>
 							</span>
 						</CaptureAlert>
 					) : null}
 					{captures.length === 0 ? (
-						<CaptureAlert tone="info">
-							まだキャプチャはありません。
-						</CaptureAlert>
+						<CaptureAlert tone="info">{t("noCaptures")}</CaptureAlert>
 					) : null}
 					<div className="space-y-2 md:min-h-0 md:flex-1 md:overflow-y-auto md:pr-1">
 						{captures.map((capture) => (
@@ -298,7 +297,7 @@ function App(): JSX.Element {
 						/>
 					) : (
 						<div className="flex h-80 items-center justify-center text-base-content/60">
-							キャプチャを選択してください。
+							{t("selectCapture")}
 						</div>
 					)}
 					{message ? (
@@ -402,15 +401,15 @@ function CaptureDetail({
 				) : null}
 				<dl className="grid overflow-hidden rounded-box border border-base-300 bg-base-100 sm:grid-cols-3">
 					<CaptureMetric
-						label="経過時間"
+						label={t("elapsedTime")}
 						value={formatDuration(capture.elapsedMs)}
 					/>
 					<CaptureMetric
-						label="ファイルサイズ"
+						label={t("fileSize")}
 						value={formatBytes(capture.sizeBytes)}
 					/>
 					<CaptureMetric
-						label="解像度"
+						label={t("resolution")}
 						value={`${capture.width} x ${capture.height}`}
 					/>
 				</dl>
@@ -418,7 +417,7 @@ function CaptureDetail({
 
 			{isDirectFile && !isRecording ? (
 				<p className="mt-4 text-base-content/65 text-sm">
-					MP4は録画開始時に選択した保存先にあります。
+					{t("mp4AtSelectedDestination")}
 				</p>
 			) : null}
 
@@ -435,7 +434,7 @@ function CaptureDetail({
 						) : (
 							<StopIcon className="h-5 w-5" />
 						)}
-						{isStopping ? "保存して終了中…" : "停止して保存"}
+						{isStopping ? t("stoppingAndSaving") : t("stopAndSave")}
 					</button>
 				) : null}
 				{!isRecording && !isDirectFile ? (
@@ -453,7 +452,7 @@ function CaptureDetail({
 						) : (
 							<ArrowDownTrayIcon className="h-5 w-5" />
 						)}
-						MP4を保存
+						{t("saveMp4")}
 					</button>
 				) : null}
 				{!isRecording ? (
@@ -471,7 +470,7 @@ function CaptureDetail({
 						) : (
 							<TrashIcon className="h-5 w-5" />
 						)}
-						{isDirectFile ? "履歴から削除" : "削除"}
+						{isDirectFile ? t("removeFromHistory") : t("delete")}
 					</button>
 				) : null}
 			</div>

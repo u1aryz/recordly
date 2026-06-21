@@ -1,0 +1,105 @@
+{
+	"extName": { "message": "Recordly" },
+	"extDescription": {
+		"message": "ページ上の動画を選択し、MP4としてキャプチャします。"
+	},
+	"popupTitle": { "message": "Recordly" },
+	"activeTabUnavailable": { "message": "現在のタブを取得できませんでした。" },
+	"recordingCount": {
+		"message": "録画中 $COUNT$件",
+		"placeholders": { "count": { "content": "$1" } }
+	},
+	"history": { "message": "履歴" },
+	"pageUnavailable": {
+		"message": "このページでは拡張を実行できないか、動画がまだ検出されていません。"
+	},
+	"popupDescription": {
+		"message": "ページ上の video を選んで MP4 キャプチャします。"
+	},
+	"selectVideoOnPage": { "message": "ページ上で録画する動画を選ぶ" },
+	"stepSelectVideo": { "message": "動画を選択" },
+	"stepChooseDestination": { "message": "保存先を指定" },
+	"stepStartRecording": { "message": "録画開始" },
+	"detectedVideos": { "message": "検出済み動画" },
+	"refresh": { "message": "更新" },
+	"noVideosDetected": {
+		"message": "動画を検出できませんでした。動画を再生してから更新してください。"
+	},
+	"paused": { "message": "一時停止" },
+	"playing": { "message": "再生中" },
+	"liveOrUnknown": { "message": "ライブ／不明" },
+	"capturesTitle": { "message": "Recordly キャプチャ" },
+	"noSavedData": { "message": "保存済みデータがありません。" },
+	"streamingSaveUnsupported": {
+		"message": "このブラウザではストリーミング保存に対応していません。"
+	},
+	"historyLoadFailed": { "message": "履歴を読み込めませんでした。" },
+	"retry": { "message": "再試行" },
+	"noCaptures": { "message": "まだキャプチャはありません。" },
+	"selectCapture": { "message": "キャプチャを選択してください。" },
+	"elapsedTime": { "message": "経過時間" },
+	"fileSize": { "message": "ファイルサイズ" },
+	"resolution": { "message": "解像度" },
+	"mp4AtSelectedDestination": {
+		"message": "MP4は録画開始時に選択した保存先にあります。"
+	},
+	"stoppingAndSaving": { "message": "保存して終了中…" },
+	"stopAndSave": { "message": "停止して保存" },
+	"saveMp4": { "message": "MP4を保存" },
+	"removeFromHistory": { "message": "履歴から削除" },
+	"delete": { "message": "削除" },
+	"recordingStatus": { "message": "録画状況" },
+	"recordingToDestination": { "message": "選択した保存先へ記録中です。" },
+	"openStatus": { "message": "状況を開く" },
+	"finalizingMp4": { "message": "MP4ファイルを確定しています。" },
+	"statusRecording": { "message": "録画中" },
+	"recordingAndSaving": { "message": "録画中・ファイルへ保存中" },
+	"recordingAndSavingDescription": {
+		"message": "録画データを、開始時に選択した保存先へ書き込んでいます。"
+	},
+	"statusSaveFailed": { "message": "保存失敗" },
+	"saveFailedTitle": { "message": "MP4を保存できませんでした" },
+	"saveFailedDescription": {
+		"message": "ファイルへの書き込み中に問題が発生しました。"
+	},
+	"statusNeedsReview": { "message": "要確認" },
+	"saveStatusUnknownTitle": { "message": "保存状態を確認できません" },
+	"saveStatusUnknownDescription": {
+		"message": "録画元との接続が先に切れたため、MP4の保存完了を確認できませんでした。選択した保存先を確認してください。"
+	},
+	"statusPartiallySaved": { "message": "途中まで保存" },
+	"partiallySavedTitle": { "message": "停止までの内容を保存しました" },
+	"partiallySavedDescription": {
+		"message": "$REASON$。録画開始時に選択した保存先へ、停止までの内容を保存しています。",
+		"placeholders": { "reason": { "content": "$1" } }
+	},
+	"statusSaved": { "message": "保存完了" },
+	"savedTitle": { "message": "MP4の保存が完了しました" },
+	"savedAfterVideoEnded": {
+		"message": "対象動画の再生終了に合わせて録画を終了し、MP4を保存しました。"
+	},
+	"savedDescription": {
+		"message": "録画開始時に選択した保存先へMP4を保存しました。"
+	},
+	"stopReasonUser": { "message": "ユーザー操作で停止しました" },
+	"stopReasonResolutionChanged": {
+		"message": "動画の解像度が変わったため自動停止しました"
+	},
+	"stopReasonSourceClosed": {
+		"message": "録画元のページまたはストリームが閉じられました"
+	},
+	"stopReasonVideoEnded": { "message": "対象動画の再生が終了しました" },
+	"stopReasonVideoRemoved": {
+		"message": "対象動画がページからなくなったため自動停止しました"
+	},
+	"stopReasonUnsupported": {
+		"message": "ブラウザが録画方式に対応していません"
+	},
+	"stopReasonError": { "message": "録画中にエラーが発生しました" },
+	"stopReasonTabCaptureFailed": { "message": "タブ録画を開始できませんでした" },
+	"stopReasonTargetUnavailable": {
+		"message": "対象タブを利用できませんでした"
+	},
+	"stopReasonWriteFailed": { "message": "ファイルへの書き込みに失敗しました" },
+	"stopReasonDefault": { "message": "録画を終了しました" }
+}

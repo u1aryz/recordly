@@ -1,11 +1,107 @@
 {
-	"extName": {
-		"message": "Recordly"
-	},
+	"extName": { "message": "Recordly" },
 	"extDescription": {
 		"message": "Pick a video on the page and capture it as MP4."
 	},
-	"popupTitle": {
-		"message": "Recordly"
-	}
+	"popupTitle": { "message": "Recordly" },
+	"activeTabUnavailable": { "message": "Could not access the active tab." },
+	"recordingCount": {
+		"message": "$COUNT$ recording",
+		"placeholders": { "count": { "content": "$1" } }
+	},
+	"history": { "message": "History" },
+	"pageUnavailable": {
+		"message": "The extension cannot run on this page, or no video has been detected yet."
+	},
+	"popupDescription": {
+		"message": "Select a video on the page and capture it as MP4."
+	},
+	"selectVideoOnPage": { "message": "Select a video to record on this page" },
+	"stepSelectVideo": { "message": "Select video" },
+	"stepChooseDestination": { "message": "Choose destination" },
+	"stepStartRecording": { "message": "Start recording" },
+	"detectedVideos": { "message": "Detected videos" },
+	"refresh": { "message": "Refresh" },
+	"noVideosDetected": {
+		"message": "No videos detected. Play a video, then refresh."
+	},
+	"paused": { "message": "Paused" },
+	"playing": { "message": "Playing" },
+	"liveOrUnknown": { "message": "live/unknown" },
+	"capturesTitle": { "message": "Recordly Captures" },
+	"noSavedData": { "message": "There is no saved data." },
+	"streamingSaveUnsupported": {
+		"message": "This browser does not support streaming file saves."
+	},
+	"historyLoadFailed": { "message": "Could not load capture history." },
+	"retry": { "message": "Retry" },
+	"noCaptures": { "message": "No captures yet." },
+	"selectCapture": { "message": "Select a capture." },
+	"elapsedTime": { "message": "Elapsed time" },
+	"fileSize": { "message": "File size" },
+	"resolution": { "message": "Resolution" },
+	"mp4AtSelectedDestination": {
+		"message": "The MP4 is in the destination selected when recording started."
+	},
+	"stoppingAndSaving": { "message": "Stopping and saving…" },
+	"stopAndSave": { "message": "Stop and save" },
+	"saveMp4": { "message": "Save MP4" },
+	"removeFromHistory": { "message": "Remove from history" },
+	"delete": { "message": "Delete" },
+	"recordingStatus": { "message": "Recording status" },
+	"recordingToDestination": {
+		"message": "Recording to the selected destination."
+	},
+	"openStatus": { "message": "Open status" },
+	"finalizingMp4": { "message": "Finalizing the MP4 file." },
+	"statusRecording": { "message": "Recording" },
+	"recordingAndSaving": { "message": "Recording and saving to file" },
+	"recordingAndSavingDescription": {
+		"message": "Recording data is being written to the destination selected at the start."
+	},
+	"statusSaveFailed": { "message": "Save failed" },
+	"saveFailedTitle": { "message": "Could not save the MP4" },
+	"saveFailedDescription": {
+		"message": "A problem occurred while writing the file."
+	},
+	"statusNeedsReview": { "message": "Check required" },
+	"saveStatusUnknownTitle": { "message": "Could not confirm the save status" },
+	"saveStatusUnknownDescription": {
+		"message": "The connection to the recording source ended before the MP4 save could be confirmed. Check the selected destination."
+	},
+	"statusPartiallySaved": { "message": "Partially saved" },
+	"partiallySavedTitle": { "message": "Saved content up to the stop point" },
+	"partiallySavedDescription": {
+		"message": "$REASON$. Content up to the stop point has been saved to the destination selected when recording started.",
+		"placeholders": { "reason": { "content": "$1" } }
+	},
+	"statusSaved": { "message": "Saved" },
+	"savedTitle": { "message": "MP4 saved" },
+	"savedAfterVideoEnded": {
+		"message": "Recording stopped when the video ended, and the MP4 was saved."
+	},
+	"savedDescription": {
+		"message": "The MP4 was saved to the destination selected when recording started."
+	},
+	"stopReasonUser": { "message": "Stopped by the user" },
+	"stopReasonResolutionChanged": {
+		"message": "Stopped automatically because the video resolution changed"
+	},
+	"stopReasonSourceClosed": {
+		"message": "The source page or stream was closed"
+	},
+	"stopReasonVideoEnded": { "message": "The selected video ended" },
+	"stopReasonVideoRemoved": {
+		"message": "Stopped automatically because the selected video was removed from the page"
+	},
+	"stopReasonUnsupported": {
+		"message": "The browser does not support this recording method"
+	},
+	"stopReasonError": { "message": "An error occurred while recording" },
+	"stopReasonTabCaptureFailed": { "message": "Could not start tab recording" },
+	"stopReasonTargetUnavailable": {
+		"message": "The target tab was unavailable"
+	},
+	"stopReasonWriteFailed": { "message": "Could not write to the file" },
+	"stopReasonDefault": { "message": "Recording ended" }
 }

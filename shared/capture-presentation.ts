@@ -1,3 +1,4 @@
+import { t } from "../utils/i18n";
 import type {
 	CaptureFileStatus,
 	CaptureMetadata,
@@ -14,17 +15,17 @@ export type CapturePresentation = {
 	tone: CaptureTone;
 };
 
-const STOP_REASON_LABELS: Record<StopReason, string> = {
-	user: "ユーザー操作で停止しました",
-	resolution_changed: "動画の解像度が変わったため自動停止しました",
-	source_closed: "録画元のページまたはストリームが閉じられました",
-	video_ended: "対象動画の再生が終了しました",
-	video_removed: "対象動画がページからなくなったため自動停止しました",
-	unsupported: "ブラウザが録画方式に対応していません",
-	error: "録画中にエラーが発生しました",
-	tab_capture_failed: "タブ録画を開始できませんでした",
-	target_unavailable: "対象タブを利用できませんでした",
-	write_failed: "ファイルへの書き込みに失敗しました",
+const STOP_REASON_KEYS: Record<StopReason, Parameters<typeof t>[0]> = {
+	user: "stopReasonUser",
+	resolution_changed: "stopReasonResolutionChanged",
+	source_closed: "stopReasonSourceClosed",
+	video_ended: "stopReasonVideoEnded",
+	video_removed: "stopReasonVideoRemoved",
+	unsupported: "stopReasonUnsupported",
+	error: "stopReasonError",
+	tab_capture_failed: "stopReasonTabCaptureFailed",
+	target_unavailable: "stopReasonTargetUnavailable",
+	write_failed: "stopReasonWriteFailed",
 };
 
 export function getEffectiveFileStatus(
@@ -54,45 +55,46 @@ export function getCapturePresentation(
 	const fileStatus = getEffectiveFileStatus(capture);
 	if (capture.status === "recording") {
 		return {
-			label: "録画中",
-			title: "録画中・ファイルへ保存中",
-			description: "録画データを、開始時に選択した保存先へ書き込んでいます。",
+			label: t("statusRecording"),
+			title: t("recordingAndSaving"),
+			description: t("recordingAndSavingDescription"),
 			tone: "info",
 		};
 	}
 	if (fileStatus === "failed") {
 		return {
-			label: "保存失敗",
-			title: "MP4を保存できませんでした",
-			description:
-				capture.errorMessage ?? "ファイルへの書き込み中に問題が発生しました。",
+			label: t("statusSaveFailed"),
+			title: t("saveFailedTitle"),
+			description: capture.errorMessage ?? t("saveFailedDescription"),
 			tone: "error",
 		};
 	}
 	if (fileStatus === "unknown") {
 		return {
-			label: "要確認",
-			title: "保存状態を確認できません",
-			description:
-				"録画元との接続が先に切れたため、MP4の保存完了を確認できませんでした。選択した保存先を確認してください。",
+			label: t("statusNeedsReview"),
+			title: t("saveStatusUnknownTitle"),
+			description: t("saveStatusUnknownDescription"),
 			tone: "warning",
 		};
 	}
 	if (capture.status === "stopped") {
 		return {
-			label: "途中まで保存",
-			title: "停止までの内容を保存しました",
-			description: `${translateStopReason(capture.stopReason)}。録画開始時に選択した保存先へ、停止までの内容を保存しています。`,
+			label: t("statusPartiallySaved"),
+			title: t("partiallySavedTitle"),
+			description: t(
+				"partiallySavedDescription",
+				translateStopReason(capture.stopReason),
+			),
 			tone: "warning",
 		};
 	}
 	return {
-		label: "保存完了",
-		title: "MP4の保存が完了しました",
+		label: t("statusSaved"),
+		title: t("savedTitle"),
 		description:
 			capture.stopReason === "video_ended"
-				? "対象動画の再生終了に合わせて録画を終了し、MP4を保存しました。"
-				: "録画開始時に選択した保存先へMP4を保存しました。",
+				? t("savedAfterVideoEnded")
+				: t("savedDescription"),
 		tone: "success",
 	};
 }
@@ -117,5 +119,5 @@ export function getStatusBadgeClass(
 }
 
 export function translateStopReason(reason?: StopReason): string {
-	return reason ? STOP_REASON_LABELS[reason] : "録画を終了しました";
+	return reason ? t(STOP_REASON_KEYS[reason]) : t("stopReasonDefault");
 }
