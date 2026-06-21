@@ -50,10 +50,9 @@ type CaptureAlertProps = {
 	tone: CaptureTone;
 };
 
-type StatProps = {
+type CaptureMetricProps = {
 	label: string;
 	value: string;
-	compact?: boolean;
 };
 
 type StatusBadgeProps = {
@@ -230,19 +229,7 @@ function App(): JSX.Element {
 		<main className="flex min-h-screen flex-col bg-base-100 text-base-content">
 			<header className="border-base-300 border-b bg-base-200">
 				<div className="mx-auto max-w-6xl px-6 py-4">
-					<div>
-						<h1 className="flex flex-wrap items-center gap-2 font-semibold text-xl">
-							<span>Recordly Captures</span>
-							{selected ? (
-								<span className="text-base-content/65 text-sm">
-									{getProgressSummary(selected)}
-								</span>
-							) : null}
-						</h1>
-						<p className="text-base-content/65 text-sm">
-							動画キャプチャの進捗確認、停止、履歴管理を行います。
-						</p>
-					</div>
+					<h1 className="font-semibold text-xl">Recordly Captures</h1>
 				</div>
 			</header>
 
@@ -291,8 +278,7 @@ function App(): JSX.Element {
 									{new Date(capture.startedAt).toLocaleString()}
 								</p>
 								<p className="mt-2 text-xs">
-									{formatDuration(capture.elapsedMs)} /{" "}
-									{formatBytes(capture.sizeBytes)}
+									{formatDuration(capture.elapsedMs)}
 								</p>
 							</button>
 						))}
@@ -375,51 +361,64 @@ function CaptureDetail({
 	const isRecording = capture.status === "recording";
 	const isDirectFile = capture.storageMode === "direct-file";
 	const presentation = getCapturePresentation(capture);
+	const shouldShowStatusAlert =
+		presentation.tone === "warning" || presentation.tone === "error";
 	return (
 		<div>
 			<div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-4">
 				<div className="min-w-0">
 					<h2 className="break-words font-semibold text-lg">{capture.title}</h2>
 					<p className="truncate text-base-content/65 text-sm">
-						{capture.pageUrl}
+						{getPageHost(capture.pageUrl)}
 					</p>
 				</div>
 				<StatusBadge capture={capture} />
 			</div>
 
-			<CaptureAlert className="mt-4" tone={presentation.tone}>
-				<span>
-					<strong className="block">{presentation.title}</strong>
-					<span className="mt-1 block text-sm">{presentation.description}</span>
-				</span>
-			</CaptureAlert>
+			{shouldShowStatusAlert ? (
+				<CaptureAlert className="mt-4" tone={presentation.tone}>
+					<span>
+						<strong className="block">{presentation.title}</strong>
+						<span className="mt-1 block text-sm">
+							{presentation.description}
+						</span>
+					</span>
+				</CaptureAlert>
+			) : null}
 
-			<div className="mt-5 grid gap-5 lg:grid-cols-[minmax(260px,420px)_1fr]">
-				<div className="aspect-video overflow-hidden rounded-box bg-neutral">
-					{capture.thumbnailDataUrl ? (
+			<div
+				className={getCaptureContentClassName(
+					Boolean(capture.thumbnailDataUrl),
+				)}
+			>
+				{capture.thumbnailDataUrl ? (
+					<div className="aspect-video overflow-hidden rounded-box bg-neutral">
 						<img
 							alt=""
 							className="h-full w-full object-contain"
 							src={capture.thumbnailDataUrl}
 						/>
-					) : (
-						<div className="flex h-full items-center justify-center text-neutral-content">
-							No thumbnail
-						</div>
-					)}
-				</div>
-				<div className="grid gap-3 sm:grid-cols-2">
-					<Stat label="経過時間" value={formatDuration(capture.elapsedMs)} />
-					<Stat label="ファイルサイズ" value={formatBytes(capture.sizeBytes)} />
-					<Stat label="解像度" value={`${capture.width} x ${capture.height}`} />
-					<Stat label="ファイル名" value={capture.fileName} compact />
-				</div>
+					</div>
+				) : null}
+				<dl className="grid overflow-hidden rounded-box border border-base-300 bg-base-100 sm:grid-cols-3">
+					<CaptureMetric
+						label="経過時間"
+						value={formatDuration(capture.elapsedMs)}
+					/>
+					<CaptureMetric
+						label="ファイルサイズ"
+						value={formatBytes(capture.sizeBytes)}
+					/>
+					<CaptureMetric
+						label="解像度"
+						value={`${capture.width} x ${capture.height}`}
+					/>
+				</dl>
 			</div>
 
 			{isDirectFile && !isRecording ? (
 				<p className="mt-4 text-base-content/65 text-sm">
-					録画開始時に選択した保存先を確認してください。ブラウザの制限により、
-					Recordlyから保存先フォルダーは表示できません。
+					MP4は録画開始時に選択した保存先にあります。
 				</p>
 			) : null}
 
@@ -458,7 +457,7 @@ function CaptureDetail({
 					</button>
 				) : null}
 				<button
-					className="btn btn-error"
+					className="btn btn-ghost btn-sm text-error"
 					disabled={isDeleting || isRecording}
 					type="button"
 					onClick={onDelete}
@@ -474,11 +473,6 @@ function CaptureDetail({
 					{isDirectFile ? "履歴から削除" : "削除"}
 				</button>
 			</div>
-			{isDirectFile && !isRecording ? (
-				<p className="mt-2 text-base-content/60 text-xs">
-					履歴を削除しても、保存済みのMP4ファイルは削除されません。
-				</p>
-			) : null}
 		</div>
 	);
 }
@@ -546,6 +540,21 @@ function getProgressSummary(capture: CaptureMetadata): string {
 	return `${label} / ${formatDuration(capture.elapsedMs)} / ${formatBytes(capture.sizeBytes)}`;
 }
 
+export function getPageHost(pageUrl: string): string {
+	try {
+		return new URL(pageUrl).host || pageUrl;
+	} catch {
+		return pageUrl;
+	}
+}
+
+function getCaptureContentClassName(hasThumbnail: boolean): string {
+	if (hasThumbnail) {
+		return "mt-5 grid gap-5 lg:grid-cols-[minmax(260px,420px)_1fr]";
+	}
+	return "mt-5 grid gap-5";
+}
+
 function handlePortMessage(
 	event: PortMessage,
 	setCaptures: Dispatch<SetStateAction<CaptureMetadata[]>>,
@@ -597,15 +606,11 @@ function applyCaptureProgress(
 	};
 }
 
-function Stat({ label, value, compact = false }: StatProps): JSX.Element {
+function CaptureMetric({ label, value }: CaptureMetricProps): JSX.Element {
 	return (
-		<div className="rounded-box bg-base-100 p-4">
-			<p className="text-base-content/60 text-xs">{label}</p>
-			<p
-				className={`mt-1 break-all font-semibold ${compact ? "text-sm" : "text-xl"}`}
-			>
-				{value}
-			</p>
+		<div className="border-base-300 border-b p-4 last:border-b-0 sm:border-r sm:border-b-0 sm:last:border-r-0">
+			<dt className="text-base-content/60 text-xs">{label}</dt>
+			<dd className="mt-1 font-semibold text-base">{value}</dd>
 		</div>
 	);
 }

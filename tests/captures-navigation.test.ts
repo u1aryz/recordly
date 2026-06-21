@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
 	getAdjacentCaptureId,
+	getPageHost,
 	isCaptureDeleteKey,
 } from "@/entrypoints/captures/App";
 import type { CaptureMetadata } from "@/shared/types";
@@ -35,5 +36,13 @@ describe("captures keyboard navigation", () => {
 		expect(isCaptureDeleteKey("Backspace")).toBe(true);
 		expect(isCaptureDeleteKey("Delete")).toBe(true);
 		expect(isCaptureDeleteKey("Enter")).toBe(false);
+	});
+
+	it("shows the host for valid page URLs", () => {
+		expect(getPageHost("https://example.test/watch?v=1")).toBe("example.test");
+	});
+
+	it("keeps an invalid page URL unchanged", () => {
+		expect(getPageHost("unknown page")).toBe("unknown page");
 	});
 });
