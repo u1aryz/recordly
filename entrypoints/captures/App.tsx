@@ -456,22 +456,24 @@ function CaptureDetail({
 						MP4を保存
 					</button>
 				) : null}
-				<button
-					className="btn btn-ghost text-error"
-					disabled={isDeleting || isRecording}
-					type="button"
-					onClick={onDelete}
-				>
-					{isDeleting ? (
-						<span
-							aria-hidden="true"
-							className="loading loading-spinner loading-sm"
-						/>
-					) : (
-						<TrashIcon className="h-5 w-5" />
-					)}
-					{isDirectFile ? "履歴から削除" : "削除"}
-				</button>
+				{!isRecording ? (
+					<button
+						className="btn btn-ghost text-error"
+						disabled={isDeleting}
+						type="button"
+						onClick={onDelete}
+					>
+						{isDeleting ? (
+							<span
+								aria-hidden="true"
+								className="loading loading-spinner loading-sm"
+							/>
+						) : (
+							<TrashIcon className="h-5 w-5" />
+						)}
+						{isDirectFile ? "履歴から削除" : "削除"}
+					</button>
+				) : null}
 			</div>
 		</div>
 	);
