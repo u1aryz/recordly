@@ -6,6 +6,12 @@ Recordly は Web ページ上の動画を選択し、キャプチャして保存
 
 動画の選択、キャプチャの開始、進捗確認、停止後のダウンロードまでを拡張機能内で行えます。
 
+## 対応ブラウザ
+
+Recordly は Chromium/Chrome 向けです。Firefox には対応していません。
+
+録画したデータを保存先へ直接書き込む File System Access API（`showSaveFilePicker`）と、`MediaRecorder` による MP4 出力を前提としており、Firefox ではこれらの必要な機能を同じ構成で利用できないためです。
+
 ## 前提条件
 
 - mise
