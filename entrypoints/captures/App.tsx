@@ -16,7 +16,7 @@ import type {
 	SetStateAction,
 	SVGProps,
 } from "react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { CaptureTone } from "@/shared/capture-presentation";
 import {
 	getCapturePresentation,
@@ -80,9 +80,11 @@ function App(): JSX.Element {
 	const [deletingCaptureId, setDeletingCaptureId] = useState<string | null>(
 		null,
 	);
+	const selectedCaptureRef = useRef<HTMLButtonElement>(null);
 
 	const selected =
 		captures.find((capture) => capture.id === selectedId) ?? captures[0];
+	const selectedCaptureId = selected?.id;
 
 	const reload = useCallback(async () => {
 		try {
@@ -116,6 +118,15 @@ function App(): JSX.Element {
 			setStoppingCaptureId(null);
 		}
 	}, [selected?.status]);
+
+	useEffect(() => {
+		if (!selectedCaptureId) {
+			return;
+		}
+		selectedCaptureRef.current?.scrollIntoView({
+			block: "nearest",
+		});
+	}, [selectedCaptureId]);
 
 	const deleteSelectedCapture = useCallback(
 		async (capture: CaptureMetadata) => {
@@ -263,6 +274,11 @@ function App(): JSX.Element {
 										: "border-base-300 bg-base-200"
 								}`}
 								key={capture.id}
+								ref={
+									capture.id === selectedCaptureId
+										? selectedCaptureRef
+										: undefined
+								}
 								type="button"
 								onClick={() => setSelectedId(capture.id)}
 							>
