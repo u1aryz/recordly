@@ -268,7 +268,7 @@ function App(): JSX.Element {
 						{captures.map((capture) => (
 							<button
 								aria-current={capture.id === selected?.id ? "true" : undefined}
-								className={`w-full rounded-box border p-3 text-left ${
+								className={`w-full scroll-m-4 rounded-box border p-3 text-left ${
 									capture.id === selected?.id
 										? "border-primary bg-primary/10"
 										: "border-base-300 bg-base-200"
