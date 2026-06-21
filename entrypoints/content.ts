@@ -4,6 +4,10 @@ import {
 	MP4_FILE_PICKER_TYPES,
 } from "@/shared/file-system";
 import { isExtensionMessage } from "@/shared/message";
+import {
+	createRecordingHudManager,
+	type RecordingHudManager,
+} from "@/shared/recording-hud";
 import type {
 	CaptureFinishedMessage,
 	CaptureMetadata,
@@ -15,7 +19,6 @@ import {
 	createVideoCaptureStream,
 	describeVideo,
 	findVideoFromPoint,
-	formatDuration,
 	getMp4MimeType,
 	listVideos,
 } from "@/shared/video";
@@ -31,7 +34,6 @@ type ActiveRecording = {
 	writeQueue: Promise<void>;
 	queuedBytes: number;
 	finishSent: boolean;
-	hud: RecordingHud;
 	stopReason?: StopReason;
 	errorMessage?: string;
 };
@@ -45,22 +47,25 @@ type VideoPicker = {
 	destroy: () => void;
 };
 
-type RecordingHud = {
-	update: (elapsedMs: number, stopping?: boolean) => void;
-	finish: (message: string, tone: "success" | "warning" | "error") => void;
-	destroy: () => void;
-};
-
 const CAPTURE_CHUNK_TIMESLICE_MS = 3000;
 const MAX_CAPTURE_CHUNK_BYTES = 42 * 1024 * 1024;
 const MAX_QUEUED_WRITE_BYTES = 128 * 1024 * 1024;
 const activeRecordings = new Map<string, ActiveRecording>();
+let recordingHud: RecordingHudManager | undefined;
 
 export default defineContentScript({
 	matches: ["<all_urls>"],
 	allFrames: false,
 	runAt: "document_idle",
 	main(ctx) {
+		recordingHud = createRecordingHudManager({
+			onOpen(captureId) {
+				void browser.runtime.sendMessage({ type: "OPEN_CAPTURES", captureId });
+			},
+			onStop(captureId) {
+				stopCapture(captureId, "user");
+			},
+		});
 		const picker = createVideoPicker();
 
 		browser.runtime.onMessage.addListener((message: unknown) => {
@@ -93,6 +98,8 @@ export default defineContentScript({
 				"error",
 				"拡張機能が更新されたため録画を終了しました。",
 			);
+			recordingHud?.destroy();
+			recordingHud = undefined;
 		});
 	},
 });
@@ -307,6 +314,14 @@ async function startRecording(
 	}
 
 	const descriptor = describeVideo(video);
+	const existing = findActiveRecordingByVideoId(descriptor.id);
+	if (existing) {
+		recordingHud?.highlight(existing.metadata.id);
+		return {
+			ok: false,
+			reason: "この動画はすでに録画中です。",
+		};
+	}
 	const mimeType = getMp4MimeType();
 	if (!mimeType) {
 		return {
@@ -381,9 +396,9 @@ async function startRecording(
 		writeQueue: Promise.resolve(),
 		queuedBytes: 0,
 		finishSent: false,
-		hud: createRecordingHud(metadata.id),
 	};
 	activeRecordings.set(metadata.id, active);
+	recordingHud?.add(metadata);
 	bindRecordingEvents(active, video);
 	try {
 		recorder.start(CAPTURE_CHUNK_TIMESLICE_MS);
@@ -393,15 +408,26 @@ async function startRecording(
 		port.disconnect();
 		stopStream(stream);
 		await writable.abort();
-		active.hud.destroy();
+		recordingHud?.remove(metadata.id);
 		return {
 			ok: false,
 			reason: getErrorMessage(error, "MediaRecorder の開始に失敗しました。"),
 		};
 	}
 	postCaptureStreamMessage(port, { type: "CAPTURE_STARTED", metadata });
-	active.hud.update(0);
+	recordingHud?.update(metadata.id, 0);
 	return { ok: true };
+}
+
+function findActiveRecordingByVideoId(
+	videoId: string,
+): ActiveRecording | undefined {
+	for (const active of activeRecordings.values()) {
+		if (active.metadata.videoId === videoId && !active.finishSent) {
+			return active;
+		}
+	}
+	return undefined;
 }
 
 function bindRecordingEvents(
@@ -482,7 +508,7 @@ async function writeChunk(active: ActiveRecording, blob: Blob): Promise<void> {
 		elapsedMs: performance.now() - active.startedAt,
 		chunkCount: active.metadata.chunkCount + 1,
 	};
-	active.hud.update(active.metadata.elapsedMs);
+	recordingHud?.update(active.metadata.id, active.metadata.elapsedMs);
 	postCaptureStreamMessage(active.port, {
 		type: "CAPTURE_PROGRESS",
 		captureId: active.metadata.id,
@@ -504,7 +530,7 @@ function stopCapture(
 	window.clearInterval(active.resolutionTimer);
 	active.stopReason = stopReason;
 	active.errorMessage = errorMessage;
-	active.hud.update(performance.now() - active.startedAt, true);
+	recordingHud?.markStopping(captureId, performance.now() - active.startedAt);
 	if (active.recorder.state !== "inactive") {
 		active.recorder.requestData();
 		active.recorder.stop();
@@ -547,7 +573,7 @@ async function finishRecording(active: ActiveRecording): Promise<void> {
 			elapsedMs: performance.now() - active.startedAt,
 		});
 		const hudResult = getHudResult(stopReason, active.errorMessage);
-		active.hud.finish(hudResult.message, hudResult.tone);
+		recordingHud?.finish(active.metadata.id, hudResult.message, hudResult.tone);
 	} catch (error) {
 		await active.writable.abort().catch(() => undefined);
 		postCaptureStreamMessage(active.port, {
@@ -562,7 +588,8 @@ async function finishRecording(active: ActiveRecording): Promise<void> {
 			),
 			elapsedMs: performance.now() - active.startedAt,
 		});
-		active.hud.finish(
+		recordingHud?.finish(
+			active.metadata.id,
 			getErrorMessage(error, "録画ファイルを保存できませんでした。"),
 			"error",
 		);
@@ -640,112 +667,6 @@ function getHudResult(
 		return { message: getCompletionMessage(reason), tone: "warning" };
 	}
 	return { message: getCompletionMessage(reason), tone: "success" };
-}
-
-function createRecordingHud(captureId: string): RecordingHud {
-	const host = document.createElement("div");
-	host.style.position = "fixed";
-	host.style.right = "16px";
-	host.style.bottom = "16px";
-	host.style.zIndex = "2147483647";
-	const shadow = host.attachShadow({ mode: "open" });
-	shadow.innerHTML = `
-		<style>
-			:host { all: initial; }
-			.panel {
-				box-sizing: border-box;
-				width: min(340px, calc(100vw - 32px));
-				padding: 12px;
-				border: 1px solid rgba(255, 255, 255, 0.14);
-				border-radius: 10px;
-				background: #172033;
-				color: #f8fbff;
-				font: 13px/1.45 ui-sans-serif, system-ui, sans-serif;
-				box-shadow: 0 16px 40px rgba(0, 0, 0, 0.3);
-				pointer-events: auto;
-			}
-			.row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-			.title { font-weight: 750; }
-			.dot { color: #ff6262; }
-			.detail { margin: 5px 0 0; color: #cbd7e7; }
-			.actions { display: flex; gap: 8px; margin-top: 10px; }
-			button {
-				border: 0;
-				border-radius: 5px;
-				padding: 6px 9px;
-				font: inherit;
-				font-weight: 700;
-				cursor: pointer;
-			}
-			.open { background: #d9e8fb; color: #172033; }
-			.stop { background: #ffcc80; color: #2b1b00; }
-			button:disabled { cursor: wait; opacity: 0.65; }
-			.success { border-color: #55c98f; }
-			.warning { border-color: #ffcc80; }
-			.error { border-color: #ff7575; }
-		</style>
-		<div class="panel">
-			<div class="row">
-				<span class="title"><span class="dot">●</span> 録画中</span>
-				<span class="time">0:00</span>
-			</div>
-			<p class="detail">選択した保存先へ記録中です。</p>
-			<div class="actions">
-				<button class="open" type="button">状況を開く</button>
-				<button class="stop" type="button">停止して保存</button>
-			</div>
-		</div>
-	`;
-	const panel = shadow.querySelector<HTMLElement>(".panel");
-	const title = shadow.querySelector<HTMLElement>(".title");
-	const time = shadow.querySelector<HTMLElement>(".time");
-	const detail = shadow.querySelector<HTMLElement>(".detail");
-	const actions = shadow.querySelector<HTMLElement>(".actions");
-	const openButton = shadow.querySelector<HTMLButtonElement>(".open");
-	const stopButton = shadow.querySelector<HTMLButtonElement>(".stop");
-	document.documentElement.append(host);
-
-	openButton?.addEventListener("click", () => {
-		void browser.runtime.sendMessage({ type: "OPEN_CAPTURES", captureId });
-	});
-	stopButton?.addEventListener("click", () => {
-		stopCapture(captureId, "user");
-	});
-
-	let removeTimer: number | undefined;
-	return {
-		update(elapsedMs, stopping = false) {
-			if (time) {
-				time.textContent = formatDuration(elapsedMs);
-			}
-			if (stopping && title && detail && stopButton) {
-				title.textContent = "保存して終了中…";
-				detail.textContent = "MP4ファイルを確定しています。";
-				stopButton.disabled = true;
-			}
-		},
-		finish(message, tone) {
-			panel?.classList.add(tone);
-			if (title) {
-				title.textContent =
-					tone === "error" ? "保存できませんでした" : "録画を終了しました";
-			}
-			if (detail) {
-				detail.textContent = message;
-			}
-			if (time) {
-				time.textContent = "";
-			}
-			actions?.remove();
-			removeTimer = window.setTimeout(() => host.remove(), 8000);
-		},
-		destroy() {
-			if (removeTimer) {
-				window.clearTimeout(removeTimer);
-			}
-			host.remove();
-		},
-	};
 }
 
 function listCapturableVideos(): VideoDescriptor[] {
