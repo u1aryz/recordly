@@ -12,6 +12,7 @@ import type {
 	CaptureStreamPortMessage,
 	ExtensionMessage,
 	PortMessage,
+	StopReason,
 } from "@/shared/types";
 
 const capturePorts = new Set<Browser.runtime.Port>();
@@ -38,19 +39,14 @@ export default defineBackground(() => {
 	});
 
 	browser.tabs.onRemoved.addListener((tabId) => {
-		for (const capture of activeCaptures.values()) {
-			if (capture.tabId !== tabId || capture.status !== "recording") {
-				continue;
-			}
-			void finishCapture({
-				type: "CAPTURE_FINISHED",
-				captureId: capture.id,
-				status: "stopped",
-				fileStatus: "unknown",
-				stopReason: "source_closed",
-				elapsedMs: capture.elapsedMs,
-			});
+		finishCapturesForTab(tabId, "source_closed");
+	});
+
+	browser.tabs.onUpdated.addListener((tabId, changeInfo) => {
+		if (changeInfo.status !== "loading") {
+			return;
 		}
+		finishCapturesForTab(tabId, "source_closed");
 	});
 });
 
@@ -220,6 +216,22 @@ async function finishCapture(message: CaptureFinishedMessage): Promise<void> {
 	await putCapture(next);
 	await updateCaptureBadge();
 	broadcast({ type: "CAPTURE_UPDATED", metadata: next });
+}
+
+function finishCapturesForTab(tabId: number, stopReason: StopReason): void {
+	for (const capture of activeCaptures.values()) {
+		if (capture.tabId !== tabId || capture.status !== "recording") {
+			continue;
+		}
+		void finishCapture({
+			type: "CAPTURE_FINISHED",
+			captureId: capture.id,
+			status: "stopped",
+			fileStatus: "unknown",
+			stopReason,
+			elapsedMs: capture.elapsedMs,
+		});
+	}
 }
 
 async function restoreCaptureState(): Promise<void> {
