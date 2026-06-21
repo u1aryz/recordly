@@ -227,7 +227,7 @@ function App(): JSX.Element {
 	}
 
 	return (
-		<main className="min-h-screen bg-base-100 text-base-content">
+		<main className="flex min-h-screen flex-col bg-base-100 text-base-content">
 			<header className="border-base-300 border-b bg-base-200">
 				<div className="mx-auto max-w-6xl px-6 py-4">
 					<div>
@@ -246,8 +246,8 @@ function App(): JSX.Element {
 				</div>
 			</header>
 
-			<div className="mx-auto grid max-w-6xl gap-5 px-6 py-6 md:grid-cols-[320px_1fr]">
-				<aside className="space-y-2">
+			<div className="mx-auto grid w-full max-w-6xl gap-5 px-6 py-6 md:min-h-0 md:flex-1 md:grid-cols-[320px_1fr] md:items-start">
+				<aside className="space-y-2 md:flex md:h-full md:min-h-0 md:flex-col">
 					{loadError ? (
 						<CaptureAlert tone="error">
 							<span>
@@ -267,37 +267,39 @@ function App(): JSX.Element {
 							まだキャプチャはありません。
 						</CaptureAlert>
 					) : null}
-					{captures.map((capture) => (
-						<button
-							aria-current={capture.id === selected?.id ? "true" : undefined}
-							className={`w-full rounded-box border p-3 text-left ${
-								capture.id === selected?.id
-									? "border-primary bg-primary/10"
-									: "border-base-300 bg-base-200"
-							}`}
-							key={capture.id}
-							type="button"
-							onClick={() => setSelectedId(capture.id)}
-						>
-							<div className="flex items-center justify-between gap-2">
-								<span className="flex min-w-0 flex-1 items-center gap-2 font-medium text-sm">
-									<FilmIcon className="h-4 w-4 shrink-0 text-base-content/55" />
-									<span className="truncate">{capture.title}</span>
-								</span>
-								<StatusBadge capture={capture} />
-							</div>
-							<p className="mt-1 text-base-content/60 text-xs">
-								{new Date(capture.startedAt).toLocaleString()}
-							</p>
-							<p className="mt-2 text-xs">
-								{formatDuration(capture.elapsedMs)} /{" "}
-								{formatBytes(capture.sizeBytes)}
-							</p>
-						</button>
-					))}
+					<div className="space-y-2 md:min-h-0 md:flex-1 md:overflow-y-auto md:pr-1">
+						{captures.map((capture) => (
+							<button
+								aria-current={capture.id === selected?.id ? "true" : undefined}
+								className={`w-full rounded-box border p-3 text-left ${
+									capture.id === selected?.id
+										? "border-primary bg-primary/10"
+										: "border-base-300 bg-base-200"
+								}`}
+								key={capture.id}
+								type="button"
+								onClick={() => setSelectedId(capture.id)}
+							>
+								<div className="flex items-center justify-between gap-2">
+									<span className="flex min-w-0 flex-1 items-center gap-2 font-medium text-sm">
+										<FilmIcon className="h-4 w-4 shrink-0 text-base-content/55" />
+										<span className="truncate">{capture.title}</span>
+									</span>
+									<StatusBadge capture={capture} />
+								</div>
+								<p className="mt-1 text-base-content/60 text-xs">
+									{new Date(capture.startedAt).toLocaleString()}
+								</p>
+								<p className="mt-2 text-xs">
+									{formatDuration(capture.elapsedMs)} /{" "}
+									{formatBytes(capture.sizeBytes)}
+								</p>
+							</button>
+						))}
+					</div>
 				</aside>
 
-				<section className="rounded-box border border-base-300 bg-base-200 p-5">
+				<section className="rounded-box border border-base-300 bg-base-200 p-5 md:sticky md:top-6">
 					{selected ? (
 						<CaptureDetail
 							capture={selected}
