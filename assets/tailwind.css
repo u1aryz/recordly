@@ -34,3 +34,28 @@
 	--depth: 1;
 	--noise: 0;
 }
+
+@keyframes capture-delete-rejected {
+	0%,
+	100% {
+		transform: translateX(0);
+	}
+	20%,
+	60% {
+		transform: translateX(-0.25rem);
+	}
+	40%,
+	80% {
+		transform: translateX(0.25rem);
+	}
+}
+
+.capture-delete-rejected {
+	animation: capture-delete-rejected 220ms ease-in-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.capture-delete-rejected {
+		animation: none;
+	}
+}

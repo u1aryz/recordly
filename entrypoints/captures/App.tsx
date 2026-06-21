@@ -80,6 +80,10 @@ function App(): JSX.Element {
 	const [deletingCaptureId, setDeletingCaptureId] = useState<string | null>(
 		null,
 	);
+	const [rejectedDeleteCaptureId, setRejectedDeleteCaptureId] = useState<
+		string | null
+	>(null);
+	const rejectedDeleteFrameRef = useRef<number | null>(null);
 	const selectedCaptureRef = useRef<HTMLButtonElement>(null);
 
 	const selected =
@@ -128,6 +132,25 @@ function App(): JSX.Element {
 		});
 	}, [selectedCaptureId]);
 
+	useEffect(() => {
+		return () => {
+			if (rejectedDeleteFrameRef.current !== null) {
+				cancelAnimationFrame(rejectedDeleteFrameRef.current);
+			}
+		};
+	}, []);
+
+	const rejectRecordingDelete = useCallback((captureId: string) => {
+		if (rejectedDeleteFrameRef.current !== null) {
+			cancelAnimationFrame(rejectedDeleteFrameRef.current);
+		}
+		setRejectedDeleteCaptureId(null);
+		rejectedDeleteFrameRef.current = requestAnimationFrame(() => {
+			setRejectedDeleteCaptureId(captureId);
+			rejectedDeleteFrameRef.current = null;
+		});
+	}, []);
+
 	const deleteSelectedCapture = useCallback(
 		async (capture: CaptureMetadata) => {
 			if (deletingCaptureId || capture.status === "recording") {
@@ -174,20 +197,28 @@ function App(): JSX.Element {
 				return;
 			}
 
-			if (
-				isCaptureDeleteKey(event.key) &&
-				selected &&
-				selected.status !== "recording" &&
-				!deletingCaptureId
-			) {
+			if (isCaptureDeleteKey(event.key) && selected) {
 				event.preventDefault();
+				if (selected.status === "recording") {
+					rejectRecordingDelete(selected.id);
+					return;
+				}
+				if (deletingCaptureId) {
+					return;
+				}
 				void deleteSelectedCapture(selected);
 			}
 		}
 
 		window.addEventListener("keydown", handleKeyDown);
 		return () => window.removeEventListener("keydown", handleKeyDown);
-	}, [captures, deletingCaptureId, selected, deleteSelectedCapture]);
+	}, [
+		captures,
+		deletingCaptureId,
+		selected,
+		deleteSelectedCapture,
+		rejectRecordingDelete,
+	]);
 
 	async function stopCapture(capture: CaptureMetadata) {
 		if (stoppingCaptureId) {
@@ -272,6 +303,10 @@ function App(): JSX.Element {
 									capture.id === selected?.id
 										? "border-primary bg-primary/10"
 										: "border-base-300 bg-base-200"
+								} ${
+									capture.id === rejectedDeleteCaptureId
+										? "capture-delete-rejected"
+										: ""
 								}`}
 								key={capture.id}
 								ref={
@@ -280,6 +315,11 @@ function App(): JSX.Element {
 										: undefined
 								}
 								type="button"
+								onAnimationEnd={() => {
+									if (capture.id === rejectedDeleteCaptureId) {
+										setRejectedDeleteCaptureId(null);
+									}
+								}}
 								onClick={() => setSelectedId(capture.id)}
 							>
 								<div className="flex items-center justify-between gap-2">
