@@ -256,7 +256,7 @@ async function restoreCaptureState(): Promise<void> {
 
 async function updateCaptureBadge(): Promise<void> {
 	const count = activeCaptures.size;
-	await browser.action.setBadgeBackgroundColor({ color: "#dc2626" });
+	await browser.action.setBadgeBackgroundColor({ color: "#21a47c" });
 	await browser.action.setBadgeText({ text: count > 0 ? String(count) : "" });
 }
 
