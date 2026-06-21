@@ -457,7 +457,7 @@ function CaptureDetail({
 					</button>
 				) : null}
 				<button
-					className="btn btn-ghost btn-sm text-error"
+					className="btn btn-ghost text-error"
 					disabled={isDeleting || isRecording}
 					type="button"
 					onClick={onDelete}
