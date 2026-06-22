@@ -170,6 +170,12 @@ function App(): JSX.Element {
 					type: "DELETE_CAPTURE",
 					captureId: capture.id,
 				});
+				removeCaptureFromView(
+					capture.id,
+					latestCapturesRef.current,
+					setCaptures,
+					setSelectedId,
+				);
 			} finally {
 				setDeletingCaptureId((current) =>
 					current === capture.id ? null : current,
@@ -649,18 +655,32 @@ function handlePortMessage(
 			);
 			return;
 		case "CAPTURE_DELETED":
-			setCaptures((current) =>
-				current.filter((capture) => capture.id !== event.captureId),
-			);
-			setSelectedId((current) =>
-				current === event.captureId
-					? getCaptureIdAfterDeletion(currentCaptures, event.captureId)
-					: current,
+			removeCaptureFromView(
+				event.captureId,
+				currentCaptures,
+				setCaptures,
+				setSelectedId,
 			);
 			return;
 		case "CAPTURES_SUBSCRIBE":
 			return;
 	}
+}
+
+function removeCaptureFromView(
+	captureId: string,
+	currentCaptures: CaptureMetadata[],
+	setCaptures: Dispatch<SetStateAction<CaptureMetadata[]>>,
+	setSelectedId: Dispatch<SetStateAction<string | null>>,
+): void {
+	setCaptures((current) =>
+		current.filter((capture) => capture.id !== captureId),
+	);
+	setSelectedId((current) =>
+		current === captureId
+			? getCaptureIdAfterDeletion(currentCaptures, captureId)
+			: current,
+	);
 }
 
 function upsertCapture(
