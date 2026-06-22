@@ -298,7 +298,7 @@ function App(): JSX.Element {
 					{captures.length === 0 ? (
 						<CaptureAlert tone="info">{t("noCaptures")}</CaptureAlert>
 					) : null}
-					<div className="space-y-2 md:min-h-0 md:flex-1 md:overflow-y-auto md:pr-1">
+					<div className="space-y-2 md:min-h-0 md:flex-1 md:overflow-y-auto md:px-1">
 						{captures.map((capture) => (
 							<button
 								aria-current={capture.id === selected?.id ? "true" : undefined}
