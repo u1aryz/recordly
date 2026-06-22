@@ -85,6 +85,8 @@ function App(): JSX.Element {
 	>(null);
 	const rejectedDeleteFrameRef = useRef<number | null>(null);
 	const selectedCaptureRef = useRef<HTMLButtonElement>(null);
+	const latestCapturesRef = useRef(captures);
+	latestCapturesRef.current = captures;
 
 	const selected =
 		captures.find((capture) => capture.id === selectedId) ?? captures[0];
@@ -106,7 +108,12 @@ function App(): JSX.Element {
 		const port = browser.runtime.connect({ name: "captures" });
 		port.postMessage({ type: "CAPTURES_SUBSCRIBE" });
 		port.onMessage.addListener((event: PortMessage) => {
-			handlePortMessage(event, setCaptures, setSelectedId);
+			handlePortMessage(
+				event,
+				latestCapturesRef.current,
+				setCaptures,
+				setSelectedId,
+			);
 		});
 		return () => port.disconnect();
 	}, [reload]);
@@ -163,10 +170,6 @@ function App(): JSX.Element {
 					type: "DELETE_CAPTURE",
 					captureId: capture.id,
 				});
-				setCaptures((current) =>
-					current.filter((item) => item.id !== capture.id),
-				);
-				setSelectedId((current) => (current === capture.id ? null : current));
 			} finally {
 				setDeletingCaptureId((current) =>
 					current === capture.id ? null : current,
@@ -392,6 +395,22 @@ export function isCaptureDeleteKey(key: string): boolean {
 	return key === "Delete" || key === "Backspace";
 }
 
+export function getCaptureIdAfterDeletion(
+	captures: CaptureMetadata[],
+	deletedId: string,
+): string | null {
+	const deletedIndex = captures.findIndex(
+		(capture) => capture.id === deletedId,
+	);
+	if (deletedIndex === -1) {
+		return captures[0]?.id ?? null;
+	}
+
+	const captureBelow = captures[deletedIndex + 1];
+	const captureAbove = captures[deletedIndex - 1];
+	return captureBelow?.id ?? captureAbove?.id ?? null;
+}
+
 function isEditableTarget(target: EventTarget | null): boolean {
 	if (!(target instanceof HTMLElement)) {
 		return false;
@@ -614,6 +633,7 @@ function getCaptureContentClassName(hasThumbnail: boolean): string {
 
 function handlePortMessage(
 	event: PortMessage,
+	currentCaptures: CaptureMetadata[],
 	setCaptures: Dispatch<SetStateAction<CaptureMetadata[]>>,
 	setSelectedId: Dispatch<SetStateAction<string | null>>,
 ): void {
@@ -633,7 +653,9 @@ function handlePortMessage(
 				current.filter((capture) => capture.id !== event.captureId),
 			);
 			setSelectedId((current) =>
-				current === event.captureId ? null : current,
+				current === event.captureId
+					? getCaptureIdAfterDeletion(currentCaptures, event.captureId)
+					: current,
 			);
 			return;
 		case "CAPTURES_SUBSCRIBE":

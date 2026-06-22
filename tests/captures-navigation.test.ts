@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
 	getAdjacentCaptureId,
+	getCaptureIdAfterDeletion,
 	getPageHost,
 	isCaptureDeleteKey,
 } from "@/entrypoints/captures/App";
@@ -12,7 +13,7 @@ const captures = [
 	{ id: "oldest" },
 ] as CaptureMetadata[];
 
-describe("captures keyboard navigation", () => {
+describe("captures selection", () => {
 	it("moves the selection with the up and down arrow keys", () => {
 		expect(getAdjacentCaptureId(captures, "middle", "ArrowUp")).toBe("newest");
 		expect(getAdjacentCaptureId(captures, "middle", "ArrowDown")).toBe(
@@ -36,6 +37,16 @@ describe("captures keyboard navigation", () => {
 		expect(isCaptureDeleteKey("Backspace")).toBe(true);
 		expect(isCaptureDeleteKey("Delete")).toBe(true);
 		expect(isCaptureDeleteKey("Enter")).toBe(false);
+	});
+
+	it("selects the capture below the deleted capture", () => {
+		expect(getCaptureIdAfterDeletion(captures, "middle")).toBe("oldest");
+		expect(getCaptureIdAfterDeletion(captures, "newest")).toBe("middle");
+	});
+
+	it("selects the capture above when deleting the last capture", () => {
+		expect(getCaptureIdAfterDeletion(captures, "oldest")).toBe("middle");
+		expect(getCaptureIdAfterDeletion([captures[0]], "newest")).toBeNull();
 	});
 
 	it("shows the host for valid page URLs", () => {
