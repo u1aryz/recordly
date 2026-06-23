@@ -120,7 +120,7 @@ function createVideoPicker(): VideoPicker {
 			${INJECTED_UI_THEME_CSS}
 			.frame {
 				position: fixed;
-				border: 2px solid var(--primary);
+				border: 2px solid var(--base-100);
 				background: color-mix(in oklch, var(--primary) 10%, transparent);
 				box-shadow:
 					0 0 0 1px color-mix(in oklch, var(--base-100) 65%, transparent),
