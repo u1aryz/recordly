@@ -83,12 +83,14 @@ function App(): JSX.Element {
 	}
 
 	return (
-		<main className="w-[400px] bg-base-100 text-base-content">
-			<header className="border-base-300 border-b bg-base-200 px-4 py-3">
+		<main className="w-[400px] overflow-hidden bg-base-100 text-base-content">
+			<header className="border-base-300 border-b bg-base-200 px-5 py-4">
 				<div className="flex items-center justify-between gap-3">
-					<div className="min-w-0">
-						<h1 className="truncate font-semibold text-base">Recordly</h1>
-						<p className="text-base-content/65 text-xs">
+					<div className="min-w-0 space-y-0.5">
+						<h1 className="truncate font-bold text-lg tracking-tight">
+							Recordly
+						</h1>
+						<p className="truncate text-base-content/65 text-xs">
 							{t("popupDescription")}
 						</p>
 					</div>
@@ -103,35 +105,41 @@ function App(): JSX.Element {
 				</div>
 			</header>
 
-			<section className="space-y-4 p-4">
-				<button
-					className="btn btn-primary btn-block"
-					disabled={!canStartPicker}
-					type="button"
-					onClick={startPicker}
-				>
-					<CursorArrowRaysIcon className="h-5 w-5" />
-					{t("selectVideoOnPage")}
-				</button>
+			<section className="space-y-5 p-5">
+				<div className="card card-border bg-base-200 shadow-sm">
+					<div className="card-body gap-4 p-4">
+						<button
+							className="btn btn-primary btn-block shadow-sm"
+							disabled={!canStartPicker}
+							type="button"
+							onClick={startPicker}
+						>
+							<CursorArrowRaysIcon className="h-5 w-5" />
+							{t("selectVideoOnPage")}
+						</button>
 
-				<ol className="grid grid-cols-3 gap-2 text-center text-base-content/65 text-xs">
-					<li>
-						<span className="badge badge-sm mb-1">1</span>
-						<p>{t("stepSelectVideo")}</p>
-					</li>
-					<li>
-						<span className="badge badge-sm mb-1">2</span>
-						<p>{t("stepChooseDestination")}</p>
-					</li>
-					<li>
-						<span className="badge badge-sm mb-1">3</span>
-						<p>{t("stepStartRecording")}</p>
-					</li>
-				</ol>
+						<ol className="grid grid-cols-3 divide-x divide-base-300 text-center text-base-content/65 text-xs">
+							<li className="flex flex-col items-center gap-1.5 px-1">
+								<span className="badge badge-sm">1</span>
+								<p className="leading-tight">{t("stepSelectVideo")}</p>
+							</li>
+							<li className="flex flex-col items-center gap-1.5 px-1">
+								<span className="badge badge-sm">2</span>
+								<p className="leading-tight">{t("stepChooseDestination")}</p>
+							</li>
+							<li className="flex flex-col items-center gap-1.5 px-1">
+								<span className="badge badge-sm">3</span>
+								<p className="leading-tight">{t("stepStartRecording")}</p>
+							</li>
+						</ol>
+					</div>
+				</div>
 
-				<div className="flex items-center justify-between border-base-300 border-b pb-2">
-					<h2 className="flex items-center gap-2 font-medium text-sm">
-						<FilmIcon className="h-4 w-4 text-base-content/55" />
+				<div className="flex items-center justify-between gap-3">
+					<h2 className="flex items-center gap-2 font-semibold text-sm">
+						<span className="grid size-7 place-items-center rounded-field bg-base-200">
+							<FilmIcon className="h-4 w-4 text-base-content/55" />
+						</span>
 						{t("detectedVideos")}
 					</h2>
 					<button
@@ -160,14 +168,14 @@ function App(): JSX.Element {
 					<div className="alert text-xs">{t("noVideosDetected")}</div>
 				) : null}
 
-				<ul className="max-h-[360px] space-y-2 overflow-y-auto pr-1">
+				<ul className="list max-h-[360px] gap-2 overflow-y-auto pr-1">
 					{state.videos.map((video, index) => (
 						<li
-							className="rounded-box border border-base-300 bg-base-100 p-3 shadow-sm"
+							className="block list-row rounded-box border border-base-300 bg-base-100 p-3.5 shadow-sm"
 							key={video.id}
 						>
 							<div className="min-w-0">
-								<div className="flex min-w-0 items-center gap-2">
+								<div className="flex min-w-0 items-start justify-between gap-3">
 									<p className="truncate font-medium text-sm">
 										{video.title || `Video ${index + 1}`}
 									</p>
@@ -179,7 +187,7 @@ function App(): JSX.Element {
 										{video.paused ? t("paused") : t("playing")}
 									</span>
 								</div>
-								<div className="mt-2 flex flex-wrap gap-1.5">
+								<div className="mt-2.5 flex flex-wrap gap-1.5">
 									<span className="badge badge-primary badge-sm badge-outline bg-primary/10 font-medium">
 										{video.width || "?"} x {video.height || "?"}
 									</span>

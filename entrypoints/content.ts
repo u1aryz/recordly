@@ -3,6 +3,7 @@ import {
 	isFilePickerAbortError,
 	MP4_FILE_PICKER_TYPES,
 } from "@/shared/file-system";
+import { INJECTED_UI_THEME_CSS } from "@/shared/injected-ui-theme";
 import { isExtensionMessage } from "@/shared/message";
 import {
 	createRecordingHudManager,
@@ -116,12 +117,14 @@ function createVideoPicker(): VideoPicker {
 	const shadow = host.attachShadow({ mode: "open" });
 	shadow.innerHTML = `
 		<style>
-			:host { all: initial; }
+			${INJECTED_UI_THEME_CSS}
 			.frame {
 				position: fixed;
-				box-sizing: border-box;
-				border: 2px solid #1a73e8;
-				background: rgba(26, 115, 232, 0.08);
+				border: 2px solid var(--primary);
+				background: color-mix(in oklch, var(--primary) 10%, transparent);
+				box-shadow:
+					0 0 0 1px color-mix(in oklch, var(--base-100) 65%, transparent),
+					0 0 0 4px color-mix(in oklch, var(--primary) 18%, transparent);
 				pointer-events: none;
 			}
 			.toolbar {
@@ -129,49 +132,99 @@ function createVideoPicker(): VideoPicker {
 				display: flex;
 				flex-direction: column;
 				max-width: calc(100vw - 16px);
-				border-radius: 6px;
-				background: #172033;
-				color: #f8fbff;
+				overflow: hidden;
+				border: 1px solid var(--base-300);
+				border-radius: 8px;
+				background: var(--base-100);
+				color: var(--base-content);
 				font: 12px/1.35 ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-				box-shadow: 0 12px 32px rgba(0, 0, 0, 0.24);
+				box-shadow: 0 16px 40px color-mix(in oklch, black 42%, transparent);
 				pointer-events: auto;
 			}
 			.toolbar-main {
 				display: flex;
 				align-items: center;
 				gap: 8px;
-				padding: 7px 8px;
+				padding: 8px;
 			}
 			.instructions {
 				position: fixed;
 				top: 12px;
 				left: 50%;
 				transform: translateX(-50%);
-				padding: 8px 12px;
-				border-radius: 6px;
-				background: #172033;
-				color: #f8fbff;
+				max-width: calc(100vw - 24px);
+				padding: 9px 13px;
+				border: 1px solid var(--base-300);
+				border-radius: 8px;
+				background: var(--base-100);
+				color: var(--base-content);
 				font: 600 12px/1.4 ui-sans-serif, system-ui, sans-serif;
-				box-shadow: 0 10px 28px rgba(0, 0, 0, 0.22);
+				box-shadow: 0 12px 32px color-mix(in oklch, black 38%, transparent);
 				pointer-events: none;
+				white-space: nowrap;
 			}
-			.label { font-weight: 700; color: #9fd0ff; white-space: nowrap; }
-			.meta { color: #d7e2f0; white-space: nowrap; }
+			.instructions span { color: color-mix(in oklch, var(--base-content) 62%, transparent); }
+			.label {
+				padding: 3px 6px;
+				border: 1px solid color-mix(in oklch, var(--primary) 45%, transparent);
+				border-radius: 4px;
+				background: color-mix(in oklch, var(--primary) 12%, transparent);
+				color: var(--primary);
+				font-weight: 700;
+				letter-spacing: 0.04em;
+				white-space: nowrap;
+			}
+			.meta {
+				color: color-mix(in oklch, var(--base-content) 72%, transparent);
+				white-space: nowrap;
+			}
 			.message {
-				padding: 0 8px 7px;
-				color: #ffcc80;
+				padding: 8px 10px;
+				border-top: 1px solid var(--base-300);
+				background: var(--base-200);
+				color: var(--warning);
 			}
 			button {
-				border: 0;
-				border-radius: 4px;
-				padding: 5px 8px;
+				min-height: 30px;
+				border: 1px solid transparent;
+				border-radius: 8px;
+				padding: 5px 10px;
 				font: inherit;
 				font-weight: 700;
 				cursor: pointer;
 			}
 			button:disabled { cursor: wait; opacity: 0.65; }
-			.start { background: #8bd450; color: #132000; }
-			.cancel { background: transparent; color: #d7e2f0; }
+			button:focus-visible {
+				outline: 2px solid var(--primary);
+				outline-offset: 2px;
+			}
+			.start {
+				background: var(--primary);
+				color: var(--primary-content);
+			}
+			.start:hover:not(:disabled) {
+				background: color-mix(in oklch, var(--primary) 88%, white);
+			}
+			.cancel {
+				border-color: var(--base-300);
+				background: var(--base-200);
+				color: color-mix(in oklch, var(--base-content) 78%, transparent);
+			}
+			.cancel:hover {
+				background: var(--base-300);
+				color: var(--base-content);
+			}
+			@media (max-width: 560px) {
+				.toolbar-main { flex-wrap: wrap; }
+				.meta {
+					order: 3;
+					width: 100%;
+				}
+				.instructions {
+					text-align: center;
+					white-space: normal;
+				}
+			}
 		</style>
 		<div class="instructions" hidden>
 			録画する動画にカーソルを合わせてください　<span>Escでキャンセル</span>
