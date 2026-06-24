@@ -17,8 +17,16 @@
 		"message": "ページ上の video を選んで MP4 キャプチャします。"
 	},
 	"selectVideoOnPage": { "message": "ページ上で録画する動画を選ぶ" },
+	"pickerInstructions": {
+		"message": "録画する動画にカーソルを合わせてください"
+	},
+	"pickerCancelHint": { "message": "Escでキャンセル" },
+	"chooseFolderAndRecord": {
+		"message": "保存フォルダを選択して録画開始"
+	},
+	"cancel": { "message": "キャンセル" },
 	"stepSelectVideo": { "message": "動画を選択" },
-	"stepChooseDestination": { "message": "保存先を指定" },
+	"stepChooseDestination": { "message": "保存フォルダを選択" },
 	"stepStartRecording": { "message": "録画開始" },
 	"detectedVideos": { "message": "検出済み動画" },
 	"refresh": { "message": "更新" },
@@ -42,9 +50,13 @@
 	"selectCapture": { "message": "キャプチャを選択してください。" },
 	"elapsedTime": { "message": "経過時間" },
 	"fileSize": { "message": "ファイルサイズ" },
+	"fileCount": { "message": "ファイル数" },
 	"resolution": { "message": "解像度" },
 	"mp4AtSelectedDestination": {
 		"message": "MP4は録画開始時に選択した保存先にあります。"
+	},
+	"mp4PartsAtSelectedDestination": {
+		"message": "MP4は選択したフォルダに part-001、part-002…として保存されています。"
 	},
 	"stoppingAndSaving": { "message": "保存して終了中…" },
 	"stopAndSave": { "message": "停止して保存" },
@@ -52,13 +64,19 @@
 	"removeFromHistory": { "message": "履歴から削除" },
 	"delete": { "message": "削除" },
 	"recordingStatus": { "message": "録画状況" },
-	"recordingToDestination": { "message": "選択した保存先へ記録中です。" },
+	"recordingToDestination": {
+		"message": "選択したフォルダへ約2GiB単位で分割保存中です。"
+	},
+	"recordingPart": {
+		"message": "$PART$つ目を録画中",
+		"placeholders": { "part": { "content": "$1" } }
+	},
 	"openStatus": { "message": "状況を開く" },
 	"finalizingMp4": { "message": "MP4ファイルを確定しています。" },
 	"statusRecording": { "message": "録画中" },
 	"recordingAndSaving": { "message": "録画中・ファイルへ保存中" },
 	"recordingAndSavingDescription": {
-		"message": "録画データを、開始時に選択した保存先へ書き込んでいます。"
+		"message": "録画データを、選択したフォルダへ約2GiB単位で分割して書き込んでいます。"
 	},
 	"statusSaveFailed": { "message": "保存失敗" },
 	"saveFailedTitle": { "message": "MP4を保存できませんでした" },
@@ -82,7 +100,10 @@
 		"message": "対象動画の再生終了に合わせて録画を終了し、MP4を保存しました。"
 	},
 	"savedDescription": {
-		"message": "録画開始時に選択した保存先へMP4を保存しました。"
+		"message": "選択したフォルダへ分割MP4を保存しました。"
+	},
+	"savedPartsAfterError": {
+		"message": "録画を終了しました。確定済みのパートは保存されています。"
 	},
 	"stopReasonUser": { "message": "ユーザー操作で停止しました" },
 	"stopReasonResolutionChanged": {

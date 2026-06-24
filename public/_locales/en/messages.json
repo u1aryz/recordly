@@ -17,8 +17,16 @@
 		"message": "Select a video on the page and capture it as MP4."
 	},
 	"selectVideoOnPage": { "message": "Select a video to record on this page" },
+	"pickerInstructions": {
+		"message": "Move the pointer over the video to record"
+	},
+	"pickerCancelHint": { "message": "Press Esc to cancel" },
+	"chooseFolderAndRecord": {
+		"message": "Choose folder and start recording"
+	},
+	"cancel": { "message": "Cancel" },
 	"stepSelectVideo": { "message": "Select video" },
-	"stepChooseDestination": { "message": "Choose destination" },
+	"stepChooseDestination": { "message": "Choose save folder" },
 	"stepStartRecording": { "message": "Start recording" },
 	"detectedVideos": { "message": "Detected videos" },
 	"refresh": { "message": "Refresh" },
@@ -42,9 +50,13 @@
 	"selectCapture": { "message": "Select a capture." },
 	"elapsedTime": { "message": "Elapsed time" },
 	"fileSize": { "message": "File size" },
+	"fileCount": { "message": "Files" },
 	"resolution": { "message": "Resolution" },
 	"mp4AtSelectedDestination": {
 		"message": "The MP4 is in the destination selected when recording started."
+	},
+	"mp4PartsAtSelectedDestination": {
+		"message": "The MP4 files are saved in the selected folder as part-001, part-002, and so on."
 	},
 	"stoppingAndSaving": { "message": "Stopping and saving…" },
 	"stopAndSave": { "message": "Stop and save" },
@@ -53,14 +65,18 @@
 	"delete": { "message": "Delete" },
 	"recordingStatus": { "message": "Recording status" },
 	"recordingToDestination": {
-		"message": "Recording to the selected destination."
+		"message": "Recording to the selected folder in approximately 2 GiB parts."
+	},
+	"recordingPart": {
+		"message": "Recording part $PART$.",
+		"placeholders": { "part": { "content": "$1" } }
 	},
 	"openStatus": { "message": "Open status" },
 	"finalizingMp4": { "message": "Finalizing the MP4 file." },
 	"statusRecording": { "message": "Recording" },
 	"recordingAndSaving": { "message": "Recording and saving to file" },
 	"recordingAndSavingDescription": {
-		"message": "Recording data is being written to the destination selected at the start."
+		"message": "Recording data is being split into approximately 2 GiB files in the selected folder."
 	},
 	"statusSaveFailed": { "message": "Save failed" },
 	"saveFailedTitle": { "message": "Could not save the MP4" },
@@ -84,7 +100,10 @@
 		"message": "Recording stopped when the video ended, and the MP4 was saved."
 	},
 	"savedDescription": {
-		"message": "The MP4 was saved to the destination selected when recording started."
+		"message": "The split MP4 files were saved to the selected folder."
+	},
+	"savedPartsAfterError": {
+		"message": "Recording ended. The finalized parts remain saved."
 	},
 	"stopReasonUser": { "message": "Stopped by the user" },
 	"stopReasonResolutionChanged": {

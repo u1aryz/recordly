@@ -49,8 +49,11 @@ export type CaptureMetadata = {
 	height: number;
 	thumbnailDataUrl?: string;
 	chunkCount: number;
-	storageMode?: "indexeddb" | "direct-file";
+	storageMode?: "indexeddb" | "direct-file" | "segmented-files";
 	scope?: "element" | "tab";
+	partCount?: number;
+	savedPartCount?: number;
+	currentPartSizeBytes?: number;
 };
 
 export type CaptureProgress = Pick<
@@ -60,6 +63,9 @@ export type CaptureProgress = Pick<
 	| "sizeBytes"
 	| "elapsedMs"
 	| "chunkCount"
+	| "partCount"
+	| "savedPartCount"
+	| "currentPartSizeBytes"
 	| "stopReason"
 	| "errorMessage"
 	| "thumbnailDataUrl"
@@ -89,6 +95,9 @@ export type CaptureProgressMessage = {
 	sizeBytes: number;
 	elapsedMs: number;
 	chunkCount: number;
+	partCount?: number;
+	savedPartCount?: number;
+	currentPartSizeBytes?: number;
 };
 
 export type CaptureFinishedMessage = {
@@ -99,6 +108,11 @@ export type CaptureFinishedMessage = {
 	stopReason?: StopReason;
 	errorMessage?: string;
 	elapsedMs: number;
+	sizeBytes?: number;
+	chunkCount?: number;
+	partCount?: number;
+	savedPartCount?: number;
+	currentPartSizeBytes?: number;
 };
 
 export type OpenCapturesMessage = {
