@@ -45,6 +45,25 @@ describe("capture state", () => {
 		expect(metadata.scope).toBe("element");
 	});
 
+	it("initializes segmented-file progress", () => {
+		const metadata = createCaptureMetadata({
+			videoId: "video-id",
+			tabId: 1,
+			pageUrl: "https://example.test",
+			title: "Large Demo",
+			mimeType: "video/mp4",
+			width: 1920,
+			height: 1080,
+			storageMode: "segmented-files",
+		});
+
+		expect(metadata).toMatchObject({
+			partCount: 1,
+			savedPartCount: 0,
+			currentPartSizeBytes: 0,
+		});
+	});
+
 	it("applies progress and terminal states", () => {
 		const metadata = createCaptureMetadata({
 			videoId: "video-id",
@@ -59,6 +78,9 @@ describe("capture state", () => {
 			sizeBytes: 1024,
 			elapsedMs: 5000,
 			chunkCount: 2,
+			partCount: undefined,
+			savedPartCount: undefined,
+			currentPartSizeBytes: undefined,
 		});
 		expect(progressed.sizeBytes).toBe(1024);
 		const stopped = finishCapture(progressed, {
@@ -76,5 +98,33 @@ describe("capture state", () => {
 		});
 		expect(completed.status).toBe("complete");
 		expect(completed.fileStatus).toBe("saved");
+	});
+
+	it("applies segmented-file progress", () => {
+		const metadata = createCaptureMetadata({
+			videoId: "video-id",
+			tabId: 1,
+			pageUrl: "https://example.test",
+			title: "Large Demo",
+			mimeType: "video/mp4",
+			width: 1920,
+			height: 1080,
+			storageMode: "segmented-files",
+		});
+
+		const progressed = applyProgress(metadata, {
+			sizeBytes: 2_147_483_649,
+			elapsedMs: 60_000,
+			chunkCount: 100,
+			partCount: 2,
+			savedPartCount: 1,
+			currentPartSizeBytes: 1,
+		});
+
+		expect(progressed).toMatchObject({
+			partCount: 2,
+			savedPartCount: 1,
+			currentPartSizeBytes: 1,
+		});
 	});
 });

@@ -439,7 +439,10 @@ function CaptureDetail({
 	onDelete,
 }: CaptureDetailProps): JSX.Element {
 	const isRecording = capture.status === "recording";
-	const isDirectFile = capture.storageMode === "direct-file";
+	const isDirectFile =
+		capture.storageMode === "direct-file" ||
+		capture.storageMode === "segmented-files";
+	const isSegmented = capture.storageMode === "segmented-files";
 	const presentation = getCapturePresentation(capture);
 	const shouldShowStatusAlert =
 		presentation.tone === "warning" || presentation.tone === "error";
@@ -489,6 +492,12 @@ function CaptureDetail({
 						label={t("fileSize")}
 						value={formatBytes(capture.sizeBytes)}
 					/>
+					{isSegmented ? (
+						<CaptureMetric
+							label={t("fileCount")}
+							value={getPartCountLabel(capture)}
+						/>
+					) : null}
 					<CaptureMetric
 						label={t("resolution")}
 						value={`${capture.width} x ${capture.height}`}
@@ -498,7 +507,9 @@ function CaptureDetail({
 
 			{isDirectFile && !isRecording ? (
 				<p className="mt-4 text-base-content/65 text-sm">
-					{t("mp4AtSelectedDestination")}
+					{isSegmented
+						? t("mp4PartsAtSelectedDestination")
+						: t("mp4AtSelectedDestination")}
 				</p>
 			) : null}
 
@@ -557,6 +568,13 @@ function CaptureDetail({
 			</div>
 		</div>
 	);
+}
+
+function getPartCountLabel(capture: CaptureMetadata): string {
+	if (capture.status === "recording") {
+		return t("recordingPart", String(capture.partCount ?? 1));
+	}
+	return String(capture.savedPartCount ?? capture.partCount ?? 0);
 }
 
 function CaptureAlert({

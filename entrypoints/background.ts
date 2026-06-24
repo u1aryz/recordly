@@ -17,6 +17,8 @@ import type {
 
 const capturePorts = new Set<Browser.runtime.Port>();
 const activeCaptures = new Map<string, CaptureMetadata>();
+const captureStreamQueues = new Map<Browser.runtime.Port, Promise<void>>();
+const captureStreamIds = new Map<Browser.runtime.Port, string>();
 
 export default defineBackground(() => {
 	void restoreCaptureState();
@@ -85,7 +87,24 @@ function connectCaptureStream(port: Browser.runtime.Port): void {
 		if (!isCaptureStreamPortMessage(message)) {
 			return;
 		}
-		void handleCaptureStreamMessage(message, port.sender);
+		if (message.type === "CAPTURE_STARTED") {
+			captureStreamIds.set(port, message.metadata.id);
+		}
+		const previous = captureStreamQueues.get(port) ?? Promise.resolve();
+		const next = previous
+			.then(() => handleCaptureStreamMessage(message, port.sender))
+			.catch(() => undefined);
+		captureStreamQueues.set(port, next);
+	});
+	port.onDisconnect.addListener(() => {
+		const captureId = captureStreamIds.get(port);
+		const previous = captureStreamQueues.get(port) ?? Promise.resolve();
+		captureStreamIds.delete(port);
+		captureStreamQueues.delete(port);
+		if (!captureId) {
+			return;
+		}
+		void previous.then(() => finishDisconnectedCapture(captureId));
 	});
 }
 
@@ -148,7 +167,7 @@ async function startCapture(
 		pageUrl: sender?.tab?.url ?? metadata.pageUrl,
 		status: "recording",
 		fileStatus: "writing",
-		storageMode: "direct-file",
+		storageMode: metadata.storageMode ?? "direct-file",
 		scope: "element",
 	};
 	activeCaptures.set(next.id, next);
@@ -170,6 +189,10 @@ async function updateCaptureProgress(
 		sizeBytes: message.sizeBytes,
 		elapsedMs: message.elapsedMs,
 		chunkCount: message.chunkCount,
+		partCount: message.partCount ?? current.partCount,
+		savedPartCount: message.savedPartCount ?? current.savedPartCount,
+		currentPartSizeBytes:
+			message.currentPartSizeBytes ?? current.currentPartSizeBytes,
 	};
 	activeCaptures.set(next.id, next);
 	await putCapture(next);
@@ -210,12 +233,39 @@ async function finishCapture(message: CaptureFinishedMessage): Promise<void> {
 		stopReason: message.stopReason,
 		errorMessage: message.errorMessage,
 		elapsedMs: message.elapsedMs,
+		sizeBytes: message.sizeBytes ?? current.sizeBytes,
+		chunkCount: message.chunkCount ?? current.chunkCount,
+		partCount: message.partCount ?? current.partCount,
+		savedPartCount: message.savedPartCount ?? current.savedPartCount,
+		currentPartSizeBytes:
+			message.currentPartSizeBytes ?? current.currentPartSizeBytes,
 		endedAt: Date.now(),
 	};
 	activeCaptures.delete(next.id);
 	await putCapture(next);
 	await updateCaptureBadge();
 	broadcast({ type: "CAPTURE_UPDATED", metadata: next });
+}
+
+async function finishDisconnectedCapture(captureId: string): Promise<void> {
+	const current = await getCurrentCapture(captureId);
+	if (current?.status !== "recording") {
+		return;
+	}
+	const hasSavedParts = (current.savedPartCount ?? 0) > 0;
+	await finishCapture({
+		type: "CAPTURE_FINISHED",
+		captureId,
+		status: "stopped",
+		fileStatus: hasSavedParts ? "saved" : "unknown",
+		stopReason: "source_closed",
+		elapsedMs: current.elapsedMs,
+		sizeBytes: current.sizeBytes,
+		chunkCount: current.chunkCount,
+		partCount: current.partCount ?? 1,
+		savedPartCount: current.savedPartCount ?? 0,
+		currentPartSizeBytes: current.currentPartSizeBytes ?? 0,
+	});
 }
 
 function finishCapturesForTab(tabId: number, stopReason: StopReason): void {
@@ -243,7 +293,7 @@ async function restoreCaptureState(): Promise<void> {
 		const next: CaptureMetadata = {
 			...capture,
 			status: "stopped",
-			fileStatus: "unknown",
+			fileStatus: (capture.savedPartCount ?? 0) > 0 ? "saved" : "unknown",
 			stopReason: "source_closed",
 			errorMessage:
 				"拡張機能の再起動により、MP4の保存完了を確認できませんでした。",
@@ -275,6 +325,9 @@ function broadcastProgress(capture: CaptureMetadata): void {
 			sizeBytes: capture.sizeBytes,
 			elapsedMs: capture.elapsedMs,
 			chunkCount: capture.chunkCount,
+			partCount: capture.partCount,
+			savedPartCount: capture.savedPartCount,
+			currentPartSizeBytes: capture.currentPartSizeBytes,
 			thumbnailDataUrl: capture.thumbnailDataUrl,
 		},
 	});

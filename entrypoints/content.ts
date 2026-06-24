@@ -1,7 +1,8 @@
 import { createCaptureMetadata } from "@/shared/capture-state";
 import {
+	createPartFileName,
 	isFilePickerAbortError,
-	MP4_FILE_PICKER_TYPES,
+	shouldSplitPart,
 } from "@/shared/file-system";
 import { INJECTED_UI_THEME_CSS } from "@/shared/injected-ui-theme";
 import { isExtensionMessage } from "@/shared/message";
@@ -26,17 +27,27 @@ import {
 
 type ActiveRecording = {
 	metadata: CaptureMetadata;
-	recorder: MediaRecorder;
 	stream: MediaStream;
-	writable: FileSystemWritableFileStream;
+	directory: FileSystemDirectoryHandle;
+	part: RecordingPart;
 	port: Browser.runtime.Port;
 	startedAt: number;
 	resolutionTimer: number;
-	writeQueue: Promise<void>;
-	queuedBytes: number;
 	finishSent: boolean;
 	stopReason?: StopReason;
 	errorMessage?: string;
+};
+
+type RecordingPart = {
+	index: number;
+	fileName: string;
+	recorder: MediaRecorder;
+	writable: FileSystemWritableFileStream;
+	writeQueue: Promise<void>;
+	sizeBytes: number;
+	chunkCount: number;
+	queuedBytes: number;
+	stopMode?: "rollover" | "finish";
 };
 
 type StartRecordingResult =
@@ -227,15 +238,15 @@ function createVideoPicker(): VideoPicker {
 			}
 		</style>
 		<div class="instructions" hidden>
-			録画する動画にカーソルを合わせてください　<span>Escでキャンセル</span>
+			${t("pickerInstructions")}　<span>${t("pickerCancelHint")}</span>
 		</div>
 		<div class="frame" hidden></div>
 		<div class="toolbar" hidden>
 			<div class="toolbar-main">
 				<span class="label">video</span>
 				<span class="meta"></span>
-				<button class="start" type="button">保存先を選択して録画開始</button>
-				<button class="cancel" type="button">キャンセル</button>
+				<button class="start" type="button">${t("chooseFolderAndRecord")}</button>
+				<button class="cancel" type="button">${t("cancel")}</button>
 			</div>
 			<div class="message" hidden></div>
 		</div>
@@ -365,10 +376,10 @@ function createVideoPicker(): VideoPicker {
 async function startRecording(
 	video: HTMLVideoElement,
 ): Promise<StartRecordingResult> {
-	if (!window.showSaveFilePicker) {
+	if (!window.showDirectoryPicker) {
 		return {
 			ok: false,
-			reason: "このブラウザでは直接ファイル保存に対応していません。",
+			reason: "このブラウザではフォルダへの直接保存に対応していません。",
 		};
 	}
 
@@ -399,16 +410,16 @@ async function startRecording(
 		thumbnailDataUrl: createThumbnail(video),
 		status: "recording",
 		fileStatus: "writing",
-		storageMode: "direct-file",
+		storageMode: "segmented-files",
 		scope: "element",
 	});
 
-	let fileHandle: FileSystemFileHandle;
+	let directory: FileSystemDirectoryHandle;
 	try {
-		fileHandle = await window.showSaveFilePicker({
-			suggestedName: metadata.fileName,
+		directory = await window.showDirectoryPicker({
+			id: "recordly-captures",
+			mode: "readwrite",
 			startIn: "downloads",
-			types: MP4_FILE_PICKER_TYPES,
 		});
 	} catch (error) {
 		if (isFilePickerAbortError(error)) {
@@ -428,14 +439,11 @@ async function startRecording(
 		};
 	}
 
-	let writable: FileSystemWritableFileStream | undefined;
-	let recorder: MediaRecorder | undefined;
+	let part: RecordingPart | undefined;
 	try {
-		writable = await fileHandle.createWritable();
-		recorder = new MediaRecorder(stream, { mimeType });
+		part = await createRecordingPart(directory, metadata, stream, 1);
 	} catch (error) {
 		stopStream(stream);
-		await writable?.abort();
 		return {
 			ok: false,
 			reason: getErrorMessage(error, "MediaRecorder の開始に失敗しました。"),
@@ -446,27 +454,26 @@ async function startRecording(
 	const startedAt = performance.now();
 	const active: ActiveRecording = {
 		metadata,
-		recorder,
 		stream,
-		writable,
+		directory,
+		part,
 		port,
 		startedAt,
 		resolutionTimer: 0,
-		writeQueue: Promise.resolve(),
-		queuedBytes: 0,
 		finishSent: false,
 	};
 	activeRecordings.set(metadata.id, active);
 	recordingHud?.add(metadata);
 	bindRecordingEvents(active, video);
 	try {
-		recorder.start(CAPTURE_CHUNK_TIMESLICE_MS);
+		startPart(active);
 	} catch (error) {
 		window.clearInterval(active.resolutionTimer);
 		activeRecordings.delete(metadata.id);
 		port.disconnect();
 		stopStream(stream);
-		await writable.abort();
+		await part.writable.abort();
+		await removePartFile(directory, part.fileName);
 		recordingHud?.remove(metadata.id);
 		return {
 			ok: false,
@@ -499,19 +506,6 @@ function bindRecordingEvents(
 			stopCapture(captureId, "error", "録画状態の接続が切断されました。");
 		}
 	});
-	active.recorder.ondataavailable = (event) => {
-		enqueueChunk(active, event.data);
-	};
-	active.recorder.onerror = (event) => {
-		stopCapture(
-			captureId,
-			"error",
-			(event as ErrorEvent).message || "録画中にエラーが発生しました。",
-		);
-	};
-	active.recorder.onstop = () => {
-		void finishRecording(active);
-	};
 	video.addEventListener("ended", () => stopCapture(captureId, "video_ended"), {
 		once: true,
 	});
@@ -525,13 +519,64 @@ function bindRecordingEvents(
 	active.resolutionTimer = createResolutionTimer(video, active.metadata);
 }
 
-function enqueueChunk(active: ActiveRecording, blob: Blob): void {
+async function createRecordingPart(
+	directory: FileSystemDirectoryHandle,
+	metadata: CaptureMetadata,
+	stream: MediaStream,
+	index: number,
+): Promise<RecordingPart> {
+	const fileName = createPartFileName(metadata.fileName, metadata.id, index);
+	const fileHandle = await directory.getFileHandle(fileName, { create: true });
+	let writable: FileSystemWritableFileStream | undefined;
+	try {
+		writable = await fileHandle.createWritable();
+		return {
+			index,
+			fileName,
+			recorder: new MediaRecorder(stream, { mimeType: metadata.mimeType }),
+			writable,
+			writeQueue: Promise.resolve(),
+			sizeBytes: 0,
+			chunkCount: 0,
+			queuedBytes: 0,
+		};
+	} catch (error) {
+		await writable?.abort().catch(() => undefined);
+		await removePartFile(directory, fileName);
+		throw error;
+	}
+}
+
+function startPart(active: ActiveRecording): void {
+	const part = active.part;
+	part.recorder.ondataavailable = (event) => {
+		enqueueChunk(active, part, event.data);
+	};
+	part.recorder.onerror = (event) => {
+		stopCapture(
+			active.metadata.id,
+			"error",
+			(event as ErrorEvent).message || "録画中にエラーが発生しました。",
+		);
+	};
+	part.recorder.onstop = () => {
+		void finalizeStoppedPart(active, part);
+	};
+	part.recorder.start(CAPTURE_CHUNK_TIMESLICE_MS);
+	recordingHud?.updatePart(active.metadata.id, part.index);
+}
+
+function enqueueChunk(
+	active: ActiveRecording,
+	part: RecordingPart,
+	blob: Blob,
+): void {
 	if (blob.size <= 0 || active.finishSent) {
 		return;
 	}
 	if (
 		blob.size > MAX_CAPTURE_CHUNK_BYTES ||
-		active.queuedBytes + blob.size > MAX_QUEUED_WRITE_BYTES
+		part.queuedBytes + blob.size > MAX_QUEUED_WRITE_BYTES
 	) {
 		stopCapture(
 			active.metadata.id,
@@ -541,40 +586,47 @@ function enqueueChunk(active: ActiveRecording, blob: Blob): void {
 		return;
 	}
 
-	active.queuedBytes += blob.size;
-	active.writeQueue = active.writeQueue
-		.then(() => writeChunk(active, blob))
+	part.queuedBytes += blob.size;
+	part.writeQueue = part.writeQueue
+		.then(() => writeChunk(active, part, blob))
 		.catch((error: unknown) => {
-			active.stopReason = "write_failed";
-			active.errorMessage = getErrorMessage(
-				error,
-				"録画データの書き込みに失敗しました。",
+			setStopReason(
+				active,
+				"write_failed",
+				getErrorMessage(error, "録画データの書き込みに失敗しました。"),
 			);
-			if (active.recorder.state !== "inactive") {
-				active.recorder.stop();
+			if (part.recorder.state !== "inactive") {
+				part.stopMode = "finish";
+				part.recorder.stop();
 			}
 		})
 		.finally(() => {
-			active.queuedBytes -= blob.size;
+			part.queuedBytes -= blob.size;
 		});
 }
 
-async function writeChunk(active: ActiveRecording, blob: Blob): Promise<void> {
-	await active.writable.write(blob);
+async function writeChunk(
+	active: ActiveRecording,
+	part: RecordingPart,
+	blob: Blob,
+): Promise<void> {
+	await part.writable.write(blob);
+	part.sizeBytes += blob.size;
+	part.chunkCount += 1;
 	active.metadata = {
 		...active.metadata,
 		sizeBytes: active.metadata.sizeBytes + blob.size,
 		elapsedMs: performance.now() - active.startedAt,
 		chunkCount: active.metadata.chunkCount + 1,
+		currentPartSizeBytes: part.sizeBytes,
 	};
 	recordingHud?.update(active.metadata.id, active.metadata.elapsedMs);
-	postCaptureStreamMessage(active.port, {
-		type: "CAPTURE_PROGRESS",
-		captureId: active.metadata.id,
-		sizeBytes: active.metadata.sizeBytes,
-		elapsedMs: active.metadata.elapsedMs,
-		chunkCount: active.metadata.chunkCount,
-	});
+	postProgress(active);
+	if (shouldSplitPart(part.sizeBytes) && !part.stopMode && !active.stopReason) {
+		part.stopMode = "rollover";
+		part.recorder.requestData();
+		part.recorder.stop();
+	}
 }
 
 function stopCapture(
@@ -587,12 +639,13 @@ function stopCapture(
 		return;
 	}
 	window.clearInterval(active.resolutionTimer);
-	active.stopReason = stopReason;
-	active.errorMessage = errorMessage;
+	setStopReason(active, stopReason, errorMessage);
 	recordingHud?.markStopping(captureId, performance.now() - active.startedAt);
-	if (active.recorder.state !== "inactive") {
-		active.recorder.requestData();
-		active.recorder.stop();
+	const part = active.part;
+	if (part.recorder.state !== "inactive") {
+		part.stopMode = "finish";
+		part.recorder.requestData();
+		part.recorder.stop();
 	}
 }
 
@@ -605,6 +658,90 @@ function stopAllRecordings(
 	}
 }
 
+async function finalizeStoppedPart(
+	active: ActiveRecording,
+	part: RecordingPart,
+): Promise<void> {
+	if (active.finishSent || active.part !== part) {
+		return;
+	}
+	try {
+		await part.writeQueue;
+		if (isFatalStopReason(active.stopReason)) {
+			await discardCurrentPart(active, part);
+		} else {
+			await saveCurrentPart(active, part);
+		}
+	} catch (error) {
+		await discardCurrentPart(active, part);
+		setStopReason(
+			active,
+			"write_failed",
+			getErrorMessage(error, "録画ファイルの確定に失敗しました。"),
+		);
+	}
+
+	if (part.stopMode === "rollover" && !active.stopReason) {
+		try {
+			const nextPart = await createRecordingPart(
+				active.directory,
+				active.metadata,
+				active.stream,
+				part.index + 1,
+			);
+			active.part = nextPart;
+			active.metadata = {
+				...active.metadata,
+				partCount: nextPart.index,
+				currentPartSizeBytes: 0,
+			};
+			postProgress(active);
+			startPart(active);
+			return;
+		} catch (error) {
+			setStopReason(
+				active,
+				"write_failed",
+				getErrorMessage(error, "次の録画ファイルを作成できませんでした。"),
+			);
+		}
+	}
+	await finishRecording(active);
+}
+
+async function saveCurrentPart(
+	active: ActiveRecording,
+	part: RecordingPart,
+): Promise<void> {
+	await part.writable.close();
+	active.metadata = {
+		...active.metadata,
+		savedPartCount: (active.metadata.savedPartCount ?? 0) + 1,
+	};
+	postProgress(active);
+}
+
+async function discardCurrentPart(
+	active: ActiveRecording,
+	part: RecordingPart,
+): Promise<void> {
+	await part.writable.abort().catch(() => undefined);
+	await removePartFile(active.directory, part.fileName);
+	discardPartProgress(active, part);
+}
+
+function discardPartProgress(
+	active: ActiveRecording,
+	part: RecordingPart,
+): void {
+	active.metadata = {
+		...active.metadata,
+		sizeBytes: Math.max(0, active.metadata.sizeBytes - part.sizeBytes),
+		chunkCount: Math.max(0, active.metadata.chunkCount - part.chunkCount),
+		currentPartSizeBytes: 0,
+	};
+}
+
 async function finishRecording(active: ActiveRecording): Promise<void> {
 	if (active.finishSent) {
 		return;
@@ -614,48 +751,80 @@ async function finishRecording(active: ActiveRecording): Promise<void> {
 	stopStream(active.stream);
 	const stopReason = active.stopReason;
 	const isFatal = isFatalStopReason(stopReason);
+	const hasSavedParts = (active.metadata.savedPartCount ?? 0) > 0;
 
 	try {
-		await active.writeQueue;
-		if (isFatal) {
-			await active.writable.abort();
-		} else {
-			await active.writable.close();
-		}
 		postCaptureStreamMessage(active.port, {
 			type: "CAPTURE_FINISHED",
 			captureId: active.metadata.id,
-			status: getFinishedStatus(stopReason),
-			fileStatus: isFatal ? "failed" : "saved",
+			status: getFinalStatus(stopReason, hasSavedParts),
+			fileStatus: isFatal && !hasSavedParts ? "failed" : "saved",
 			stopReason: stopReason === "user" ? undefined : stopReason,
 			errorMessage: active.errorMessage,
 			elapsedMs: performance.now() - active.startedAt,
+			sizeBytes: active.metadata.sizeBytes,
+			chunkCount: active.metadata.chunkCount,
+			partCount: active.metadata.partCount ?? 1,
+			savedPartCount: active.metadata.savedPartCount ?? 0,
+			currentPartSizeBytes: active.metadata.currentPartSizeBytes ?? 0,
 		});
-		const hudResult = getHudResult(stopReason, active.errorMessage);
-		recordingHud?.finish(active.metadata.id, hudResult.message, hudResult.tone);
-	} catch (error) {
-		await active.writable.abort().catch(() => undefined);
-		postCaptureStreamMessage(active.port, {
-			type: "CAPTURE_FINISHED",
-			captureId: active.metadata.id,
-			status: "error",
-			fileStatus: "failed",
-			stopReason: "write_failed",
-			errorMessage: getErrorMessage(
-				error,
-				"録画ファイルの確定に失敗しました。",
-			),
-			elapsedMs: performance.now() - active.startedAt,
-		});
-		recordingHud?.finish(
-			active.metadata.id,
-			getErrorMessage(error, "録画ファイルを保存できませんでした。"),
-			"error",
+		const hudResult = getHudResult(
+			stopReason,
+			active.errorMessage,
+			hasSavedParts,
 		);
+		recordingHud?.finish(active.metadata.id, hudResult.message, hudResult.tone);
 	} finally {
 		activeRecordings.delete(active.metadata.id);
 		active.port.disconnect();
 	}
+}
+
+function getFinalStatus(
+	reason: StopReason | undefined,
+	hasSavedParts: boolean,
+): CaptureFinishedMessage["status"] {
+	if (isFatalStopReason(reason) && hasSavedParts) {
+		return "stopped";
+	}
+	return getFinishedStatus(reason);
+}
+
+function postProgress(active: ActiveRecording): void {
+	postCaptureStreamMessage(active.port, createProgressMessage(active));
+}
+
+function createProgressMessage(
+	active: ActiveRecording,
+): CaptureStreamPortMessage {
+	return {
+		type: "CAPTURE_PROGRESS",
+		captureId: active.metadata.id,
+		sizeBytes: active.metadata.sizeBytes,
+		elapsedMs: active.metadata.elapsedMs,
+		chunkCount: active.metadata.chunkCount,
+		partCount: active.metadata.partCount ?? 1,
+		savedPartCount: active.metadata.savedPartCount ?? 0,
+		currentPartSizeBytes: active.metadata.currentPartSizeBytes ?? 0,
+	};
+}
+
+function setStopReason(
+	active: ActiveRecording,
+	reason: StopReason,
+	errorMessage?: string,
+): void {
+	if (!active.stopReason || isFatalStopReason(reason)) {
+		active.stopReason = reason;
+		active.errorMessage = errorMessage;
+	}
+}
+
+async function removePartFile(
+	directory: FileSystemDirectoryHandle,
+	fileName: string,
+): Promise<void> {
+	await directory.removeEntry(fileName).catch(() => undefined);
 }
 
 function createResolutionTimer(
@@ -712,11 +881,18 @@ function getCompletionMessage(reason?: StopReason): string {
 function getHudResult(
 	reason?: StopReason,
 	errorMessage?: string,
+	hasSavedParts = false,
 ): {
 	message: string;
 	tone: "success" | "warning" | "error";
 } {
 	if (isFatalStopReason(reason)) {
+		if (hasSavedParts) {
+			return {
+				message: errorMessage ?? t("savedPartsAfterError"),
+				tone: "warning",
+			};
+		}
 		return {
 			message: errorMessage ?? "録画ファイルを保存できませんでした。",
 			tone: "error",
@@ -730,13 +906,13 @@ function getHudResult(
 
 function listCapturableVideos(): VideoDescriptor[] {
 	const videos = listVideos();
-	if (window.showSaveFilePicker) {
+	if (window.showDirectoryPicker) {
 		return videos;
 	}
 	return videos.map((video) => ({
 		...video,
 		canCapture: false,
-		reason: "このブラウザでは直接ファイル保存に対応していません",
+		reason: "このブラウザではフォルダへの直接保存に対応していません",
 	}));
 }
 

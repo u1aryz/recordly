@@ -36,6 +36,10 @@ export function createCaptureMetadata(input: {
 		height: input.height,
 		thumbnailDataUrl: input.thumbnailDataUrl,
 		chunkCount: 0,
+		partCount: input.storageMode === "segmented-files" ? 1 : undefined,
+		savedPartCount: input.storageMode === "segmented-files" ? 0 : undefined,
+		currentPartSizeBytes:
+			input.storageMode === "segmented-files" ? 0 : undefined,
 		storageMode: input.storageMode,
 		scope: input.scope,
 	};
@@ -43,13 +47,25 @@ export function createCaptureMetadata(input: {
 
 export function applyProgress(
 	metadata: CaptureMetadata,
-	progress: Pick<CaptureProgress, "sizeBytes" | "elapsedMs" | "chunkCount">,
+	progress: Pick<
+		CaptureProgress,
+		| "sizeBytes"
+		| "elapsedMs"
+		| "chunkCount"
+		| "partCount"
+		| "savedPartCount"
+		| "currentPartSizeBytes"
+	>,
 ): CaptureMetadata {
 	return {
 		...metadata,
 		sizeBytes: progress.sizeBytes,
 		elapsedMs: progress.elapsedMs,
 		chunkCount: progress.chunkCount,
+		partCount: progress.partCount ?? metadata.partCount,
+		savedPartCount: progress.savedPartCount ?? metadata.savedPartCount,
+		currentPartSizeBytes:
+			progress.currentPartSizeBytes ?? metadata.currentPartSizeBytes,
 	};
 }
 

@@ -24,6 +24,7 @@ type RecordingHudRow = {
 export type RecordingHudManager = {
 	add: (metadata: CaptureMetadata) => void;
 	update: (captureId: string, elapsedMs: number) => void;
+	updatePart: (captureId: string, partCount: number) => void;
 	markStopping: (captureId: string, elapsedMs: number) => void;
 	finish: (captureId: string, message: string, tone: HudTone) => void;
 	remove: (captureId: string) => void;
@@ -282,6 +283,12 @@ export function createRecordingHudManager(
 			const row = rows.get(captureId);
 			if (row) {
 				row.time.textContent = formatDuration(elapsedMs);
+			}
+		},
+		updatePart(captureId, partCount) {
+			const row = rows.get(captureId);
+			if (row) {
+				row.detail.textContent = t("recordingPart", String(partCount));
 			}
 		},
 		markStopping(captureId, elapsedMs) {
