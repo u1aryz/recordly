@@ -189,10 +189,7 @@ async function updateCaptureProgress(
 		sizeBytes: message.sizeBytes,
 		elapsedMs: message.elapsedMs,
 		chunkCount: message.chunkCount,
-		partCount: message.partCount ?? current.partCount,
-		savedPartCount: message.savedPartCount ?? current.savedPartCount,
-		currentPartSizeBytes:
-			message.currentPartSizeBytes ?? current.currentPartSizeBytes,
+		...getPartProgress(current, message),
 	};
 	activeCaptures.set(next.id, next);
 	await putCapture(next);
@@ -235,16 +232,32 @@ async function finishCapture(message: CaptureFinishedMessage): Promise<void> {
 		elapsedMs: message.elapsedMs,
 		sizeBytes: message.sizeBytes ?? current.sizeBytes,
 		chunkCount: message.chunkCount ?? current.chunkCount,
-		partCount: message.partCount ?? current.partCount,
-		savedPartCount: message.savedPartCount ?? current.savedPartCount,
-		currentPartSizeBytes:
-			message.currentPartSizeBytes ?? current.currentPartSizeBytes,
+		...getPartProgress(current, message),
 		endedAt: Date.now(),
 	};
 	activeCaptures.delete(next.id);
 	await putCapture(next);
 	await updateCaptureBadge();
 	broadcast({ type: "CAPTURE_UPDATED", metadata: next });
+}
+
+function getPartProgress(
+	current: CaptureMetadata,
+	message: {
+		partCount?: number;
+		savedPartCount?: number;
+		currentPartSizeBytes?: number;
+	},
+): Pick<
+	CaptureMetadata,
+	"partCount" | "savedPartCount" | "currentPartSizeBytes"
+> {
+	return {
+		partCount: message.partCount ?? current.partCount,
+		savedPartCount: message.savedPartCount ?? current.savedPartCount,
+		currentPartSizeBytes:
+			message.currentPartSizeBytes ?? current.currentPartSizeBytes,
+	};
 }
 
 async function finishDisconnectedCapture(captureId: string): Promise<void> {

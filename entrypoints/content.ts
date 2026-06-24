@@ -595,10 +595,7 @@ function enqueueChunk(
 				"write_failed",
 				getErrorMessage(error, "録画データの書き込みに失敗しました。"),
 			);
-			if (part.recorder.state !== "inactive") {
-				part.stopMode = "finish";
-				part.recorder.stop();
-			}
+			stopPart(part, "finish");
 		})
 		.finally(() => {
 			part.queuedBytes -= blob.size;
@@ -623,9 +620,7 @@ async function writeChunk(
 	recordingHud?.update(active.metadata.id, active.metadata.elapsedMs);
 	postProgress(active);
 	if (shouldSplitPart(part.sizeBytes) && !part.stopMode && !active.stopReason) {
-		part.stopMode = "rollover";
-		part.recorder.requestData();
-		part.recorder.stop();
+		stopPart(part, "rollover", { requestData: true });
 	}
 }
 
@@ -641,12 +636,22 @@ function stopCapture(
 	window.clearInterval(active.resolutionTimer);
 	setStopReason(active, stopReason, errorMessage);
 	recordingHud?.markStopping(captureId, performance.now() - active.startedAt);
-	const part = active.part;
-	if (part.recorder.state !== "inactive") {
-		part.stopMode = "finish";
-		part.recorder.requestData();
-		part.recorder.stop();
+	stopPart(active.part, "finish", { requestData: true });
+}
+
+function stopPart(
+	part: RecordingPart,
+	stopMode: NonNullable<RecordingPart["stopMode"]>,
+	options: { requestData?: boolean } = {},
+): void {
+	if (part.recorder.state === "inactive") {
+		return;
 	}
+	part.stopMode = stopMode;
+	if (options.requestData) {
+		part.recorder.requestData();
+	}
+	part.recorder.stop();
 }
 
 function stopAllRecordings(
@@ -682,31 +687,42 @@ async function finalizeStoppedPart(
 	}
 
 	if (part.stopMode === "rollover" && !active.stopReason) {
-		try {
-			const nextPart = await createRecordingPart(
-				active.directory,
-				active.metadata,
-				active.stream,
-				part.index + 1,
-			);
-			active.part = nextPart;
-			active.metadata = {
-				...active.metadata,
-				partCount: nextPart.index,
-				currentPartSizeBytes: 0,
-			};
-			postProgress(active);
-			startPart(active);
+		const started = await startNextPart(active, part.index + 1);
+		if (started) {
 			return;
-		} catch (error) {
-			setStopReason(
-				active,
-				"write_failed",
-				getErrorMessage(error, "次の録画ファイルを作成できませんでした。"),
-			);
 		}
 	}
 	await finishRecording(active);
+}
+
+async function startNextPart(
+	active: ActiveRecording,
+	index: number,
+): Promise<boolean> {
+	try {
+		const nextPart = await createRecordingPart(
+			active.directory,
+			active.metadata,
+			active.stream,
+			index,
+		);
+		active.part = nextPart;
+		active.metadata = {
+			...active.metadata,
+			partCount: nextPart.index,
+			currentPartSizeBytes: 0,
+		};
+		postProgress(active);
+		startPart(active);
+		return true;
+	} catch (error) {
+		setStopReason(
+			active,
+			"write_failed",
+			getErrorMessage(error, "次の録画ファイルを作成できませんでした。"),
+		);
+		return false;
+	}
 }
 
 async function saveCurrentPart(
