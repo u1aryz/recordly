@@ -120,15 +120,15 @@ function App(): JSX.Element {
 
 						<ol className="grid grid-cols-3 divide-x divide-base-300 text-center text-base-content/65 text-xs">
 							<li className="flex flex-col items-center gap-1.5 px-1">
-								<span className="badge badge-sm">1</span>
+								<span className="badge badge-soft badge-sm">1</span>
 								<p className="leading-tight">{t("stepSelectVideo")}</p>
 							</li>
 							<li className="flex flex-col items-center gap-1.5 px-1">
-								<span className="badge badge-sm">2</span>
+								<span className="badge badge-soft badge-sm">2</span>
 								<p className="leading-tight">{t("stepChooseDestination")}</p>
 							</li>
 							<li className="flex flex-col items-center gap-1.5 px-1">
-								<span className="badge badge-sm">3</span>
+								<span className="badge badge-soft badge-sm">3</span>
 								<p className="leading-tight">{t("stepStartRecording")}</p>
 							</li>
 						</ol>
@@ -180,18 +180,18 @@ function App(): JSX.Element {
 										{video.title || `Video ${index + 1}`}
 									</p>
 									<span
-										className={`badge badge-xs shrink-0 ${
-											video.paused ? "badge-outline" : "badge-success"
+										className={`badge badge-soft badge-xs shrink-0 ${
+											video.paused ? "" : "badge-success"
 										}`}
 									>
 										{video.paused ? t("paused") : t("playing")}
 									</span>
 								</div>
 								<div className="mt-2.5 flex flex-wrap gap-1.5">
-									<span className="badge badge-primary badge-sm badge-outline bg-primary/10 font-medium">
+									<span className="badge badge-soft badge-primary badge-sm font-medium">
 										{video.width || "?"} x {video.height || "?"}
 									</span>
-									<span className="badge badge-sm border-base-300 bg-base-200 text-base-content/75">
+									<span className="badge badge-soft badge-sm">
 										{video.duration
 											? formatDuration(video.duration * 1000)
 											: t("liveOrUnknown")}

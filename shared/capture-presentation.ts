@@ -104,17 +104,17 @@ export function getStatusBadgeClass(
 	tone: CaptureTone,
 ): string {
 	if (status === "recording") {
-		return "badge badge-primary";
+		return "badge badge-soft badge-primary";
 	}
 	switch (tone) {
 		case "success":
-			return "badge badge-success";
+			return "badge badge-soft badge-success";
 		case "warning":
-			return "badge badge-warning";
+			return "badge badge-soft badge-warning";
 		case "error":
-			return "badge badge-error";
+			return "badge badge-soft badge-error";
 		default:
-			return "badge badge-info";
+			return "badge badge-soft badge-info";
 	}
 }
 
