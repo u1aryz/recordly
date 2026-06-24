@@ -7,6 +7,10 @@ const MP4_MIME_TYPE_CANDIDATES = [
 	'video/mp4;codecs="avc1.42E01E"',
 	"video/mp4",
 ];
+const AUDIO_BITS_PER_SECOND = 192_000;
+const MIN_VIDEO_BITS_PER_SECOND = 4_000_000;
+const MAX_VIDEO_BITS_PER_SECOND = 80_000_000;
+const BITS_PER_PIXEL = 8;
 
 export function getOrCreateVideoId(video: HTMLVideoElement): string {
 	const existing = video.getAttribute(VIDEO_ID_ATTR);
@@ -125,6 +129,27 @@ export function getMp4MimeType(): string | null {
 		MP4_MIME_TYPE_CANDIDATES.find((mimeType) =>
 			MediaRecorder.isTypeSupported(mimeType),
 		) ?? null
+	);
+}
+
+export function createMediaRecorderOptions(
+	mimeType: string,
+	width: number,
+	height: number,
+): MediaRecorderOptions {
+	return {
+		mimeType,
+		audioBitsPerSecond: AUDIO_BITS_PER_SECOND,
+		videoBitsPerSecond: getVideoBitsPerSecond(width, height),
+	};
+}
+
+export function getVideoBitsPerSecond(width: number, height: number): number {
+	const pixels = Math.max(1, width) * Math.max(1, height);
+	const bitsPerSecond = pixels * BITS_PER_PIXEL;
+	return Math.min(
+		MAX_VIDEO_BITS_PER_SECOND,
+		Math.max(MIN_VIDEO_BITS_PER_SECOND, bitsPerSecond),
 	);
 }
 

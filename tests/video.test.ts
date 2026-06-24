@@ -1,10 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
 import {
+	createMediaRecorderOptions,
 	createVideoCaptureStream,
 	findVideoFromPoint,
 	formatBytes,
 	formatDuration,
 	getMp4MimeType,
+	getVideoBitsPerSecond,
 } from "@/shared/video";
 
 describe("video helpers", () => {
@@ -34,6 +36,19 @@ describe("video helpers", () => {
 	it("formats elapsed time and file sizes", () => {
 		expect(formatDuration(65_000)).toBe("1:05");
 		expect(formatBytes(1536)).toBe("1.50 KB");
+	});
+
+	it("creates high quality MediaRecorder options from video dimensions", () => {
+		expect(getVideoBitsPerSecond(1280, 720)).toBe(7_372_800);
+		expect(getVideoBitsPerSecond(1920, 1080)).toBe(16_588_800);
+		expect(getVideoBitsPerSecond(3840, 2160)).toBe(66_355_200);
+		expect(getVideoBitsPerSecond(0, 0)).toBe(4_000_000);
+
+		expect(createMediaRecorderOptions("video/mp4", 1920, 1080)).toEqual({
+			mimeType: "video/mp4",
+			audioBitsPerSecond: 192_000,
+			videoBitsPerSecond: 16_588_800,
+		});
 	});
 
 	it("returns null when MediaRecorder MP4 is unsupported", () => {

@@ -18,6 +18,7 @@ import type {
 	VideoDescriptor,
 } from "@/shared/types";
 import {
+	createMediaRecorderOptions,
 	createVideoCaptureStream,
 	describeVideo,
 	findVideoFromPoint,
@@ -530,10 +531,15 @@ async function createRecordingPart(
 	let writable: FileSystemWritableFileStream | undefined;
 	try {
 		writable = await fileHandle.createWritable();
+		const recorderOptions = createMediaRecorderOptions(
+			metadata.mimeType,
+			metadata.width,
+			metadata.height,
+		);
 		return {
 			index,
 			fileName,
-			recorder: new MediaRecorder(stream, { mimeType: metadata.mimeType }),
+			recorder: new MediaRecorder(stream, recorderOptions),
 			writable,
 			writeQueue: Promise.resolve(),
 			sizeBytes: 0,
