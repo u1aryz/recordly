@@ -14,6 +14,16 @@ export type StopReason =
 	| "target_unavailable"
 	| "write_failed";
 
+export type VideoResolution = {
+	width: number;
+	height: number;
+};
+
+export type ResolutionChange = {
+	from: VideoResolution;
+	to: VideoResolution;
+};
+
 export type VideoDescriptor = {
 	id: string;
 	src: string;
@@ -40,6 +50,7 @@ export type CaptureMetadata = {
 	status: CaptureStatus;
 	fileStatus?: CaptureFileStatus;
 	stopReason?: StopReason;
+	resolutionChange?: ResolutionChange;
 	errorMessage?: string;
 	mimeType: string;
 	fileName: string;
@@ -106,6 +117,7 @@ export type CaptureFinishedMessage = {
 	status: Exclude<CaptureStatus, "recording">;
 	fileStatus: Exclude<CaptureFileStatus, "writing">;
 	stopReason?: StopReason;
+	resolutionChange?: ResolutionChange;
 	errorMessage?: string;
 	elapsedMs: number;
 	sizeBytes?: number;

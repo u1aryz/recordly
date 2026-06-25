@@ -14,8 +14,10 @@ import type {
 	CaptureFinishedMessage,
 	CaptureMetadata,
 	CaptureStreamPortMessage,
+	ResolutionChange,
 	StopReason,
 	VideoDescriptor,
+	VideoResolution,
 } from "@/shared/types";
 import {
 	createMediaRecorderOptions,
@@ -23,6 +25,7 @@ import {
 	describeVideo,
 	findVideoFromPoint,
 	getMp4MimeType,
+	isVideoConnected,
 	listVideos,
 } from "@/shared/video";
 
@@ -63,6 +66,7 @@ type VideoPicker = {
 const CAPTURE_CHUNK_TIMESLICE_MS = 3000;
 const MAX_CAPTURE_CHUNK_BYTES = 42 * 1024 * 1024;
 const MAX_QUEUED_WRITE_BYTES = 128 * 1024 * 1024;
+const VIDEO_REMOVED_GRACE_TICKS = 4;
 const activeRecordings = new Map<string, ActiveRecording>();
 let recordingHud: RecordingHudManager | undefined;
 
@@ -634,12 +638,19 @@ function stopCapture(
 	captureId: string,
 	stopReason: StopReason,
 	errorMessage?: string,
+	resolutionChange?: ResolutionChange,
 ): void {
 	const active = activeRecordings.get(captureId);
 	if (!active || active.finishSent) {
 		return;
 	}
 	window.clearInterval(active.resolutionTimer);
+	if (resolutionChange) {
+		active.metadata = {
+			...active.metadata,
+			resolutionChange,
+		};
+	}
 	setStopReason(active, stopReason, errorMessage);
 	recordingHud?.markStopping(captureId, performance.now() - active.startedAt);
 	stopPart(active.part, "finish", { requestData: true });
@@ -782,6 +793,7 @@ async function finishRecording(active: ActiveRecording): Promise<void> {
 			status: getFinalStatus(stopReason, hasSavedParts),
 			fileStatus: isFatal && !hasSavedParts ? "failed" : "saved",
 			stopReason: stopReason === "user" ? undefined : stopReason,
+			resolutionChange: active.metadata.resolutionChange,
 			errorMessage: active.errorMessage,
 			elapsedMs: performance.now() - active.startedAt,
 			sizeBytes: active.metadata.sizeBytes,
@@ -853,18 +865,44 @@ function createResolutionTimer(
 	video: HTMLVideoElement,
 	metadata: CaptureMetadata,
 ): number {
+	let disconnectedTicks = 0;
 	return window.setInterval(() => {
-		if (!document.contains(video)) {
+		if (!isVideoConnected(video)) {
+			disconnectedTicks += 1;
+			if (disconnectedTicks < VIDEO_REMOVED_GRACE_TICKS) {
+				return;
+			}
 			stopCapture(metadata.id, "video_removed");
 			return;
 		}
-		if (
-			(video.videoWidth || video.clientWidth) !== metadata.width ||
-			(video.videoHeight || video.clientHeight) !== metadata.height
-		) {
-			stopCapture(metadata.id, "resolution_changed");
+		disconnectedTicks = 0;
+		const currentResolution = getCurrentVideoResolution(video);
+		if (hasResolutionChanged(metadata, currentResolution)) {
+			stopCapture(metadata.id, "resolution_changed", undefined, {
+				from: {
+					width: metadata.width,
+					height: metadata.height,
+				},
+				to: currentResolution,
+			});
 		}
 	}, 500);
+}
+
+function getCurrentVideoResolution(video: HTMLVideoElement): VideoResolution {
+	return {
+		width: video.videoWidth || video.clientWidth || 0,
+		height: video.videoHeight || video.clientHeight || 0,
+	};
+}
+
+function hasResolutionChanged(
+	metadata: CaptureMetadata,
+	resolution: VideoResolution,
+): boolean {
+	return (
+		resolution.width !== metadata.width || resolution.height !== metadata.height
+	);
 }
 
 function getFinishedStatus(

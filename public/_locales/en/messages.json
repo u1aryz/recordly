@@ -109,6 +109,13 @@
 	"stopReasonResolutionChanged": {
 		"message": "Stopped automatically because the video resolution changed"
 	},
+	"stopReasonResolutionChangedWithDetails": {
+		"message": "Stopped automatically because the video resolution changed from $FROM$ to $TO$",
+		"placeholders": {
+			"from": { "content": "$1" },
+			"to": { "content": "$2" }
+		}
+	},
 	"stopReasonSourceClosed": {
 		"message": "The source page or stream was closed"
 	},

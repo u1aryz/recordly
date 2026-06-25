@@ -1,4 +1,9 @@
-import type { CaptureMetadata, CaptureProgress, StopReason } from "./types";
+import type {
+	CaptureMetadata,
+	CaptureProgress,
+	ResolutionChange,
+	StopReason,
+} from "./types";
 
 export function createCaptureMetadata(input: {
 	videoId: string;
@@ -76,6 +81,7 @@ export function finishCapture(
 		fileStatus?: CaptureMetadata["fileStatus"];
 		elapsedMs: number;
 		stopReason?: StopReason;
+		resolutionChange?: ResolutionChange;
 		errorMessage?: string;
 	},
 ): CaptureMetadata {
@@ -86,6 +92,7 @@ export function finishCapture(
 		elapsedMs: input.elapsedMs,
 		endedAt: Date.now(),
 		stopReason: input.stopReason,
+		resolutionChange: input.resolutionChange,
 		errorMessage: input.errorMessage,
 	};
 }

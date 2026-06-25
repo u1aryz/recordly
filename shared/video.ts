@@ -80,6 +80,10 @@ export function listVideos(root: ParentNode = document): VideoDescriptor[] {
 	return Array.from(root.querySelectorAll("video")).map(describeVideo);
 }
 
+export function isVideoConnected(video: HTMLVideoElement): boolean {
+	return video.isConnected;
+}
+
 export function createVideoCaptureStream(video: HTMLVideoElement): {
 	stream: MediaStream | null;
 	errorMessage?: string;

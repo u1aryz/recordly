@@ -109,6 +109,13 @@
 	"stopReasonResolutionChanged": {
 		"message": "動画の解像度が変わったため自動停止しました"
 	},
+	"stopReasonResolutionChangedWithDetails": {
+		"message": "動画の解像度が $FROM$ から $TO$ に変わったため自動停止しました",
+		"placeholders": {
+			"from": { "content": "$1" },
+			"to": { "content": "$2" }
+		}
+	},
 	"stopReasonSourceClosed": {
 		"message": "録画元のページまたはストリームが閉じられました"
 	},

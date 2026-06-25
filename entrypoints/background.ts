@@ -43,13 +43,6 @@ export default defineBackground(() => {
 	browser.tabs.onRemoved.addListener((tabId) => {
 		finishCapturesForTab(tabId, "source_closed");
 	});
-
-	browser.tabs.onUpdated.addListener((tabId, changeInfo) => {
-		if (changeInfo.status !== "loading") {
-			return;
-		}
-		finishCapturesForTab(tabId, "source_closed");
-	});
 });
 
 function connectCapturesPage(port: Browser.runtime.Port): void {
@@ -228,6 +221,7 @@ async function finishCapture(message: CaptureFinishedMessage): Promise<void> {
 		status: message.status,
 		fileStatus: message.fileStatus,
 		stopReason: message.stopReason,
+		resolutionChange: message.resolutionChange,
 		errorMessage: message.errorMessage,
 		elapsedMs: message.elapsedMs,
 		sizeBytes: message.sizeBytes ?? current.sizeBytes,
