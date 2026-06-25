@@ -45,6 +45,23 @@ describe("capture presentation", () => {
 		expect(getEffectiveFileStatus(capture)).toBe("saved");
 		expect(getCapturePresentation(capture).label).toBe("保存完了");
 	});
+
+	it("explains the resolution change before and after automatic stop", () => {
+		const capture = {
+			...createDirectCapture(),
+			status: "stopped" as const,
+			fileStatus: "saved" as const,
+			stopReason: "resolution_changed" as const,
+			resolutionChange: {
+				from: { width: 1280, height: 720 },
+				to: { width: 1920, height: 1080 },
+			},
+		};
+
+		expect(getCapturePresentation(capture).description).toContain(
+			"動画の解像度が 1280 x 720 から 1920 x 1080 に変わったため自動停止しました",
+		);
+	});
 });
 
 function createDirectCapture() {

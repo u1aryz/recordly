@@ -4,6 +4,7 @@ import type {
 	CaptureMetadata,
 	CaptureStatus,
 	StopReason,
+	VideoResolution,
 } from "./types";
 
 export type CaptureTone = "info" | "success" | "warning" | "error";
@@ -83,7 +84,7 @@ export function getCapturePresentation(
 			title: t("partiallySavedTitle"),
 			description: t(
 				"partiallySavedDescription",
-				translateStopReason(capture.stopReason),
+				translateStopReason(capture.stopReason, capture),
 			),
 			tone: "warning",
 		};
@@ -118,6 +119,19 @@ export function getStatusBadgeClass(
 	}
 }
 
-export function translateStopReason(reason?: StopReason): string {
+export function translateStopReason(
+	reason?: StopReason,
+	capture?: CaptureMetadata,
+): string {
+	if (reason === "resolution_changed" && capture?.resolutionChange) {
+		return t("stopReasonResolutionChangedWithDetails", [
+			formatResolution(capture.resolutionChange.from),
+			formatResolution(capture.resolutionChange.to),
+		]);
+	}
 	return reason ? t(STOP_REASON_KEYS[reason]) : t("stopReasonDefault");
+}
+
+function formatResolution(resolution: VideoResolution): string {
+	return `${resolution.width} x ${resolution.height}`;
 }

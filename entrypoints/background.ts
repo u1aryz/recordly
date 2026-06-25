@@ -228,6 +228,7 @@ async function finishCapture(message: CaptureFinishedMessage): Promise<void> {
 		status: message.status,
 		fileStatus: message.fileStatus,
 		stopReason: message.stopReason,
+		resolutionChange: message.resolutionChange,
 		errorMessage: message.errorMessage,
 		elapsedMs: message.elapsedMs,
 		sizeBytes: message.sizeBytes ?? current.sizeBytes,
