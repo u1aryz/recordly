@@ -7,6 +7,7 @@ import {
 	formatDuration,
 	getMp4MimeType,
 	getVideoBitsPerSecond,
+	isVideoConnected,
 } from "@/shared/video";
 
 describe("video helpers", () => {
@@ -31,6 +32,20 @@ describe("video helpers", () => {
 			vi.fn(() => [wrapper]),
 		);
 		expect(result).toBe(video);
+	});
+
+	it("treats videos inside connected shadow roots as connected", () => {
+		const host = document.createElement("div");
+		const shadow = host.attachShadow({ mode: "open" });
+		const video = document.createElement("video");
+		shadow.append(video);
+		document.body.append(host);
+
+		expect(document.contains(video)).toBe(false);
+		expect(isVideoConnected(video)).toBe(true);
+
+		host.remove();
+		expect(isVideoConnected(video)).toBe(false);
 	});
 
 	it("formats elapsed time and file sizes", () => {

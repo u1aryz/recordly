@@ -23,6 +23,7 @@ import {
 	describeVideo,
 	findVideoFromPoint,
 	getMp4MimeType,
+	isVideoConnected,
 	listVideos,
 } from "@/shared/video";
 
@@ -63,6 +64,7 @@ type VideoPicker = {
 const CAPTURE_CHUNK_TIMESLICE_MS = 3000;
 const MAX_CAPTURE_CHUNK_BYTES = 42 * 1024 * 1024;
 const MAX_QUEUED_WRITE_BYTES = 128 * 1024 * 1024;
+const VIDEO_REMOVED_GRACE_TICKS = 4;
 const activeRecordings = new Map<string, ActiveRecording>();
 let recordingHud: RecordingHudManager | undefined;
 
@@ -853,11 +855,17 @@ function createResolutionTimer(
 	video: HTMLVideoElement,
 	metadata: CaptureMetadata,
 ): number {
+	let disconnectedTicks = 0;
 	return window.setInterval(() => {
-		if (!document.contains(video)) {
+		if (!isVideoConnected(video)) {
+			disconnectedTicks += 1;
+			if (disconnectedTicks < VIDEO_REMOVED_GRACE_TICKS) {
+				return;
+			}
 			stopCapture(metadata.id, "video_removed");
 			return;
 		}
+		disconnectedTicks = 0;
 		if (
 			(video.videoWidth || video.clientWidth) !== metadata.width ||
 			(video.videoHeight || video.clientHeight) !== metadata.height
