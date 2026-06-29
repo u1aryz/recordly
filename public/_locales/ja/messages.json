@@ -64,6 +64,7 @@
 	"removeFromHistory": { "message": "履歴から削除" },
 	"delete": { "message": "削除" },
 	"recordingStatus": { "message": "録画状況" },
+	"moveRecordingHud": { "message": "ドラッグして録画状況HUDを移動" },
 	"recordingToDestination": {
 		"message": "選択したフォルダへ約2GiB単位で分割保存中です。"
 	},

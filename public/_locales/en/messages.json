@@ -64,6 +64,7 @@
 	"removeFromHistory": { "message": "Remove from history" },
 	"delete": { "message": "Delete" },
 	"recordingStatus": { "message": "Recording status" },
+	"moveRecordingHud": { "message": "Drag to move the recording status HUD" },
 	"recordingToDestination": {
 		"message": "Recording to the selected folder in approximately 2 GiB parts."
 	},

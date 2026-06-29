@@ -151,4 +151,45 @@ describe("recording HUD manager", () => {
 
 		expect(row).not.toHaveClass("highlight");
 	});
+
+	it("restores and saves a dragged position", async () => {
+		const onPositionChange = vi.fn();
+		const manager = createRecordingHudManager({
+			getPosition: () => Promise.resolve({ left: 40, top: 50 }),
+			onOpen: vi.fn(),
+			onPositionChange,
+			onStop: vi.fn(),
+		});
+		manager.add(createMetadata("existing", "Existing"));
+		await Promise.resolve();
+
+		const host = document.querySelector<HTMLElement>(
+			"[data-recordly-recording-hud]",
+		);
+		const header = host?.shadowRoot?.querySelector<HTMLElement>(".header");
+		expect(host?.style.left).toBe("40px");
+		expect(host?.style.top).toBe("50px");
+
+		header?.dispatchEvent(
+			new PointerEvent("pointerdown", {
+				button: 0,
+				clientX: 10,
+				clientY: 10,
+				pointerId: 1,
+			}),
+		);
+		header?.dispatchEvent(
+			new PointerEvent("pointermove", {
+				clientX: 90,
+				clientY: 100,
+				pointerId: 1,
+			}),
+		);
+		header?.dispatchEvent(new PointerEvent("pointerup", { pointerId: 1 }));
+
+		expect(host?.style.left).toBe("80px");
+		expect(host?.style.top).toBe("90px");
+		expect(onPositionChange).toHaveBeenCalledWith({ left: 80, top: 90 });
+		manager.destroy();
+	});
 });

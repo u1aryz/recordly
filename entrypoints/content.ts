@@ -10,6 +10,7 @@ import {
 	createRecordingHudManager,
 	type RecordingHudManager,
 } from "@/shared/recording-hud";
+import { recordingHudPosition } from "@/shared/settings";
 import type {
 	CaptureFinishedMessage,
 	CaptureMetadata,
@@ -76,8 +77,14 @@ export default defineContentScript({
 	runAt: "document_idle",
 	main(ctx) {
 		recordingHud = createRecordingHudManager({
+			getPosition() {
+				return recordingHudPosition.getValue();
+			},
 			onOpen(captureId) {
 				void browser.runtime.sendMessage({ type: "OPEN_CAPTURES", captureId });
+			},
+			onPositionChange(position) {
+				return recordingHudPosition.setValue(position);
 			},
 			onStop(captureId) {
 				stopCapture(captureId, "user");

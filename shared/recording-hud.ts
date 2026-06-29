@@ -1,5 +1,6 @@
 import { t } from "../utils/i18n";
 import { INJECTED_UI_THEME_CSS } from "./injected-ui-theme";
+import type { HudPosition } from "./settings";
 import type { CaptureMetadata } from "./types";
 import { formatDuration } from "./video";
 
@@ -8,6 +9,8 @@ type HudTone = "success" | "warning" | "error";
 type RecordingHudManagerOptions = {
 	onOpen: (captureId: string) => void;
 	onStop: (captureId: string) => void;
+	getPosition?: () => Promise<HudPosition | null>;
+	onPositionChange?: (position: HudPosition) => void | Promise<void>;
 };
 
 type RecordingHudRow = {
@@ -21,6 +24,12 @@ type RecordingHudRow = {
 	recording: boolean;
 };
 
+type DragState = {
+	pointerId: number;
+	offsetX: number;
+	offsetY: number;
+};
+
 export type RecordingHudManager = {
 	add: (metadata: CaptureMetadata) => void;
 	update: (captureId: string, elapsedMs: number) => void;
@@ -29,11 +38,15 @@ export type RecordingHudManager = {
 	finish: (captureId: string, message: string, tone: HudTone) => void;
 	remove: (captureId: string) => void;
 	highlight: (captureId: string) => void;
+	setPosition: (position: HudPosition | null) => void;
 	destroy: () => void;
 };
 
 const RESULT_DISPLAY_MS = 8000;
 const HIGHLIGHT_DISPLAY_MS = 1600;
+const DEFAULT_MARGIN_PX = 16;
+const FALLBACK_PANEL_WIDTH_PX = 390;
+const FALLBACK_PANEL_HEIGHT_PX = 160;
 
 export function createRecordingHudManager(
 	options: RecordingHudManagerOptions,
@@ -41,8 +54,8 @@ export function createRecordingHudManager(
 	const host = document.createElement("div");
 	host.dataset.recordlyRecordingHud = "";
 	host.style.position = "fixed";
-	host.style.right = "16px";
-	host.style.bottom = "16px";
+	host.style.right = `${DEFAULT_MARGIN_PX}px`;
+	host.style.bottom = `${DEFAULT_MARGIN_PX}px`;
 	host.style.zIndex = "2147483647";
 	const shadow = host.attachShadow({ mode: "open" });
 	shadow.innerHTML = `
@@ -67,6 +80,9 @@ export function createRecordingHudManager(
 				padding: 10px 12px;
 				border-bottom: 1px solid var(--base-300);
 				background: var(--base-200);
+				cursor: move;
+				touch-action: none;
+				user-select: none;
 			}
 			.heading { font-weight: 750; }
 			.dot { color: var(--error); }
@@ -151,7 +167,7 @@ export function createRecordingHudManager(
 			}
 		</style>
 		<section class="panel" aria-label="${t("recordingStatus")}">
-			<header class="header">
+			<header class="header" title="${t("moveRecordingHud")}">
 				<span class="heading"><span class="dot">●</span> ${t("recordingStatus")}</span>
 				<span class="summary"></span>
 			</header>
@@ -160,13 +176,117 @@ export function createRecordingHudManager(
 	`;
 	const list = shadow.querySelector<HTMLElement>(".list");
 	const summary = shadow.querySelector<HTMLElement>(".summary");
+	const header = shadow.querySelector<HTMLElement>(".header");
 	const rows = new Map<string, RecordingHudRow>();
+	let currentPosition: HudPosition | null = null;
+	let dragState: DragState | undefined;
+	let destroyed = false;
 
 	function mount(): void {
 		if (!host.isConnected) {
 			document.documentElement.append(host);
+			applyPosition(currentPosition);
 		}
 	}
+
+	function getClampedPosition(left: number, top: number): HudPosition {
+		const rect = host.getBoundingClientRect();
+		const width = rect.width || FALLBACK_PANEL_WIDTH_PX;
+		const height = rect.height || FALLBACK_PANEL_HEIGHT_PX;
+		const maxLeft = Math.max(
+			DEFAULT_MARGIN_PX,
+			window.innerWidth - width - DEFAULT_MARGIN_PX,
+		);
+		const maxTop = Math.max(
+			DEFAULT_MARGIN_PX,
+			window.innerHeight - height - DEFAULT_MARGIN_PX,
+		);
+		return {
+			left: Math.min(Math.max(DEFAULT_MARGIN_PX, left), maxLeft),
+			top: Math.min(Math.max(DEFAULT_MARGIN_PX, top), maxTop),
+		};
+	}
+
+	function applyDefaultPosition(): void {
+		host.style.left = "";
+		host.style.top = "";
+		host.style.right = `${DEFAULT_MARGIN_PX}px`;
+		host.style.bottom = `${DEFAULT_MARGIN_PX}px`;
+	}
+
+	function applyAnchoredPosition(position: HudPosition): void {
+		host.style.left = `${position.left}px`;
+		host.style.top = `${position.top}px`;
+		host.style.right = "";
+		host.style.bottom = "";
+		currentPosition = position;
+	}
+
+	function applyPosition(position: HudPosition | null): void {
+		currentPosition = position;
+		if (!position) {
+			applyDefaultPosition();
+			return;
+		}
+		const next = host.isConnected
+			? getClampedPosition(position.left, position.top)
+			: position;
+		applyAnchoredPosition(next);
+	}
+
+	function beginDrag(event: PointerEvent): void {
+		if (event.button !== 0) {
+			return;
+		}
+		mount();
+		const rect = host.getBoundingClientRect();
+		dragState = {
+			pointerId: event.pointerId,
+			offsetX: event.clientX - rect.left,
+			offsetY: event.clientY - rect.top,
+		};
+		header?.setPointerCapture?.(event.pointerId);
+		event.preventDefault();
+	}
+
+	function moveDrag(event: PointerEvent): void {
+		if (!dragState || event.pointerId !== dragState.pointerId) {
+			return;
+		}
+		applyPosition(
+			getClampedPosition(
+				event.clientX - dragState.offsetX,
+				event.clientY - dragState.offsetY,
+			),
+		);
+	}
+
+	function endDrag(event: PointerEvent): void {
+		if (!dragState || event.pointerId !== dragState.pointerId) {
+			return;
+		}
+		dragState = undefined;
+		header?.releasePointerCapture?.(event.pointerId);
+		if (currentPosition) {
+			void options.onPositionChange?.(currentPosition);
+		}
+	}
+
+	function handleResize(): void {
+		applyPosition(currentPosition);
+	}
+
+	header?.addEventListener("pointerdown", beginDrag);
+	header?.addEventListener("pointermove", moveDrag);
+	header?.addEventListener("pointerup", endDrag);
+	header?.addEventListener("pointercancel", endDrag);
+	window.addEventListener("resize", handleResize);
+
+	void options.getPosition?.().then((position) => {
+		if (!destroyed) {
+			applyPosition(position);
+		}
+	});
 
 	function updateSummary(): void {
 		let recordingCount = 0;
@@ -332,10 +452,15 @@ export function createRecordingHudManager(
 				row.highlightTimer = undefined;
 			}, HIGHLIGHT_DISPLAY_MS);
 		},
+		setPosition(position) {
+			applyPosition(position);
+		},
 		destroy() {
+			destroyed = true;
 			for (const captureId of Array.from(rows.keys())) {
 				remove(captureId);
 			}
+			window.removeEventListener("resize", handleResize);
 			host.remove();
 		},
 	};
