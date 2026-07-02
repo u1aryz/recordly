@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { isExtensionMessage } from "@/shared/message";
+import {
+	isCaptureStreamPortMessage,
+	isExtensionMessage,
+} from "@/shared/message";
 
 describe("isExtensionMessage", () => {
 	it.each([
@@ -29,5 +32,27 @@ describe("isExtensionMessage", () => {
 
 	it("returns false for an object without a type", () => {
 		expect(isExtensionMessage({})).toBe(false);
+	});
+});
+
+describe("isCaptureStreamPortMessage", () => {
+	it.each([
+		"CAPTURE_STARTED",
+		"CAPTURE_PROGRESS",
+		"CAPTURE_FINISHED",
+	])("returns true for type %s", (type) => {
+		expect(isCaptureStreamPortMessage({ type })).toBe(true);
+	});
+
+	it("returns false for a type outside the port message union", () => {
+		expect(isCaptureStreamPortMessage({ type: "LIST_VIDEOS" })).toBe(false);
+	});
+
+	it("returns false for null", () => {
+		expect(isCaptureStreamPortMessage(null)).toBe(false);
+	});
+
+	it("returns false for a non-object value", () => {
+		expect(isCaptureStreamPortMessage("CAPTURE_STARTED")).toBe(false);
 	});
 });

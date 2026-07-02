@@ -77,6 +77,53 @@ export function applyProgress(
 	};
 }
 
+export function normalizeStartedCapture(
+	metadata: CaptureMetadata,
+	sender?: { tabId?: number; url?: string },
+): CaptureMetadata {
+	return {
+		...metadata,
+		tabId: sender?.tabId ?? metadata.tabId,
+		pageUrl: sender?.url ?? metadata.pageUrl,
+		status: "recording",
+		fileStatus: "writing",
+		storageMode: metadata.storageMode ?? "direct-file",
+		scope: "element",
+	};
+}
+
+export function restoreInterruptedCapture(
+	capture: CaptureMetadata,
+	errorMessage: string,
+): CaptureMetadata | undefined {
+	if (capture.status !== "recording") {
+		return undefined;
+	}
+	return {
+		...capture,
+		status: "stopped",
+		fileStatus: (capture.savedPartCount ?? 0) > 0 ? "saved" : "unknown",
+		stopReason: "source_closed",
+		errorMessage,
+		endedAt: Date.now(),
+	};
+}
+
+export function toCaptureProgress(capture: CaptureMetadata): CaptureProgress {
+	return {
+		id: capture.id,
+		status: capture.status,
+		sizeBytes: capture.sizeBytes,
+		elapsedMs: capture.elapsedMs,
+		chunkCount: capture.chunkCount,
+		partCount: capture.partCount,
+		savedPartCount: capture.savedPartCount,
+		currentPartSizeBytes: capture.currentPartSizeBytes,
+		resolutionChanges: capture.resolutionChanges,
+		thumbnailDataUrl: capture.thumbnailDataUrl,
+	};
+}
+
 export function markResolutionChangeFileDiscarded(
 	changes: ResolutionChangeEvent[] | undefined,
 	partIndex: number,
@@ -100,6 +147,12 @@ export function finishCapture(
 		stopReason?: StopReason;
 		resolutionChange?: ResolutionChange;
 		errorMessage?: string;
+		sizeBytes?: number;
+		chunkCount?: number;
+		partCount?: number;
+		savedPartCount?: number;
+		currentPartSizeBytes?: number;
+		resolutionChanges?: ResolutionChangeEvent[];
 	},
 ): CaptureMetadata {
 	return {
@@ -111,5 +164,12 @@ export function finishCapture(
 		stopReason: input.stopReason,
 		resolutionChange: input.resolutionChange,
 		errorMessage: input.errorMessage,
+		sizeBytes: input.sizeBytes ?? metadata.sizeBytes,
+		chunkCount: input.chunkCount ?? metadata.chunkCount,
+		partCount: input.partCount ?? metadata.partCount,
+		savedPartCount: input.savedPartCount ?? metadata.savedPartCount,
+		currentPartSizeBytes:
+			input.currentPartSizeBytes ?? metadata.currentPartSizeBytes,
+		resolutionChanges: input.resolutionChanges ?? metadata.resolutionChanges,
 	};
 }

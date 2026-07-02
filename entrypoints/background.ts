@@ -1,10 +1,21 @@
-import { isExtensionMessage } from "@/shared/message";
+import {
+	applyProgress,
+	finishCapture as finishCaptureMetadata,
+	normalizeStartedCapture,
+	restoreInterruptedCapture,
+	toCaptureProgress,
+} from "@/shared/capture-state";
+import {
+	isCaptureStreamPortMessage,
+	isExtensionMessage,
+} from "@/shared/message";
 import {
 	deleteCapture,
 	getCapture,
 	listCaptures,
 	putCapture,
 } from "@/shared/storage";
+import { createSerialTaskQueue } from "@/shared/task-queue";
 import type {
 	CaptureFinishedMessage,
 	CaptureMetadata,
@@ -18,7 +29,6 @@ import { t } from "@/utils/i18n";
 
 const capturePorts = new Set<Browser.runtime.Port>();
 const activeCaptures = new Map<string, CaptureMetadata>();
-const captureStreamQueues = new Map<Browser.runtime.Port, Promise<void>>();
 const captureStreamIds = new Map<Browser.runtime.Port, string>();
 
 export default defineBackground(() => {
@@ -77,6 +87,7 @@ async function sendStoredCaptures(port: Browser.runtime.Port): Promise<void> {
 }
 
 function connectCaptureStream(port: Browser.runtime.Port): void {
+	const queue = createSerialTaskQueue();
 	port.onMessage.addListener((message) => {
 		if (!isCaptureStreamPortMessage(message)) {
 			return;
@@ -84,21 +95,15 @@ function connectCaptureStream(port: Browser.runtime.Port): void {
 		if (message.type === "CAPTURE_STARTED") {
 			captureStreamIds.set(port, message.metadata.id);
 		}
-		const previous = captureStreamQueues.get(port) ?? Promise.resolve();
-		const next = previous
-			.then(() => handleCaptureStreamMessage(message, port.sender))
-			.catch(() => undefined);
-		captureStreamQueues.set(port, next);
+		queue.enqueue(() => handleCaptureStreamMessage(message, port.sender));
 	});
 	port.onDisconnect.addListener(() => {
 		const captureId = captureStreamIds.get(port);
-		const previous = captureStreamQueues.get(port) ?? Promise.resolve();
 		captureStreamIds.delete(port);
-		captureStreamQueues.delete(port);
 		if (!captureId) {
 			return;
 		}
-		void previous.then(() => finishDisconnectedCapture(captureId));
+		void queue.settled().then(() => finishDisconnectedCapture(captureId));
 	});
 }
 
@@ -155,15 +160,10 @@ async function startCapture(
 	metadata: CaptureMetadata,
 	sender?: Browser.runtime.MessageSender,
 ): Promise<void> {
-	const next: CaptureMetadata = {
-		...metadata,
-		tabId: sender?.tab?.id ?? metadata.tabId,
-		pageUrl: sender?.tab?.url ?? metadata.pageUrl,
-		status: "recording",
-		fileStatus: "writing",
-		storageMode: metadata.storageMode ?? "direct-file",
-		scope: "element",
-	};
+	const next = normalizeStartedCapture(metadata, {
+		tabId: sender?.tab?.id,
+		url: sender?.tab?.url,
+	});
 	activeCaptures.set(next.id, next);
 	await putCapture(next);
 	await updateCaptureBadge();
@@ -178,13 +178,7 @@ async function updateCaptureProgress(
 	if (current?.status !== "recording") {
 		return;
 	}
-	const next: CaptureMetadata = {
-		...current,
-		sizeBytes: message.sizeBytes,
-		elapsedMs: message.elapsedMs,
-		chunkCount: message.chunkCount,
-		...getPartProgress(current, message),
-	};
+	const next = applyProgress(current, message);
 	activeCaptures.set(next.id, next);
 	await putCapture(next);
 	broadcastProgress(next);
@@ -217,44 +211,11 @@ async function finishCapture(message: CaptureFinishedMessage): Promise<void> {
 	if (!current) {
 		return;
 	}
-	const next: CaptureMetadata = {
-		...current,
-		status: message.status,
-		fileStatus: message.fileStatus,
-		stopReason: message.stopReason,
-		resolutionChange: message.resolutionChange,
-		errorMessage: message.errorMessage,
-		elapsedMs: message.elapsedMs,
-		sizeBytes: message.sizeBytes ?? current.sizeBytes,
-		chunkCount: message.chunkCount ?? current.chunkCount,
-		...getPartProgress(current, message),
-		endedAt: Date.now(),
-	};
+	const next = finishCaptureMetadata(current, message);
 	activeCaptures.delete(next.id);
 	await putCapture(next);
 	await updateCaptureBadge();
 	broadcast({ type: "CAPTURE_UPDATED", metadata: next });
-}
-
-function getPartProgress(
-	current: CaptureMetadata,
-	message: {
-		partCount?: number;
-		savedPartCount?: number;
-		currentPartSizeBytes?: number;
-		resolutionChanges?: CaptureMetadata["resolutionChanges"];
-	},
-): Pick<
-	CaptureMetadata,
-	"partCount" | "savedPartCount" | "currentPartSizeBytes" | "resolutionChanges"
-> {
-	return {
-		partCount: message.partCount ?? current.partCount,
-		savedPartCount: message.savedPartCount ?? current.savedPartCount,
-		currentPartSizeBytes:
-			message.currentPartSizeBytes ?? current.currentPartSizeBytes,
-		resolutionChanges: message.resolutionChanges ?? current.resolutionChanges,
-	};
 }
 
 async function finishDisconnectedCapture(captureId: string): Promise<void> {
@@ -297,17 +258,13 @@ function finishCapturesForTab(tabId: number, stopReason: StopReason): void {
 async function restoreCaptureState(): Promise<void> {
 	const captures = await listCaptures();
 	for (const capture of captures) {
-		if (capture.status !== "recording") {
+		const next = restoreInterruptedCapture(
+			capture,
+			t("restoreSaveStatusUnknown"),
+		);
+		if (!next) {
 			continue;
 		}
-		const next: CaptureMetadata = {
-			...capture,
-			status: "stopped",
-			fileStatus: (capture.savedPartCount ?? 0) > 0 ? "saved" : "unknown",
-			stopReason: "source_closed",
-			errorMessage: t("restoreSaveStatusUnknown"),
-			endedAt: Date.now(),
-		};
 		await putCapture(next);
 	}
 	await updateCaptureBadge();
@@ -328,33 +285,8 @@ async function getCurrentCapture(
 function broadcastProgress(capture: CaptureMetadata): void {
 	broadcast({
 		type: "CAPTURE_PROGRESS",
-		progress: {
-			id: capture.id,
-			status: capture.status,
-			sizeBytes: capture.sizeBytes,
-			elapsedMs: capture.elapsedMs,
-			chunkCount: capture.chunkCount,
-			partCount: capture.partCount,
-			savedPartCount: capture.savedPartCount,
-			currentPartSizeBytes: capture.currentPartSizeBytes,
-			resolutionChanges: capture.resolutionChanges,
-			thumbnailDataUrl: capture.thumbnailDataUrl,
-		},
+		progress: toCaptureProgress(capture),
 	});
-}
-
-function isCaptureStreamPortMessage(
-	value: unknown,
-): value is CaptureStreamPortMessage {
-	if (!value || typeof value !== "object") {
-		return false;
-	}
-	const type = (value as { type?: unknown }).type;
-	return (
-		type === "CAPTURE_STARTED" ||
-		type === "CAPTURE_PROGRESS" ||
-		type === "CAPTURE_FINISHED"
-	);
 }
 
 function broadcast(message: PortMessage): void {
