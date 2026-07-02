@@ -22,7 +22,6 @@
 		"@heroicons/react": "^2.2.0",
 		"@wxt-dev/webextension-polyfill": "^1.0.0",
 		"daisyui": "^5.5.23",
-		"mediabunny": "^1.46.0",
 		"react": "^19.1.0",
 		"react-dom": "^19.1.0",
 		"webextension-polyfill": "^0.12.0"
