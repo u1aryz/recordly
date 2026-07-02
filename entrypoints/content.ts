@@ -349,11 +349,17 @@ function createVideoPicker(): VideoPicker {
 		if (!currentVideo || !frame || !toolbar || !meta) {
 			frame?.setAttribute("hidden", "");
 			toolbar?.setAttribute("hidden", "");
+			if (instructions) {
+				instructions.hidden = false;
+			}
 			return;
 		}
 		if (!document.contains(currentVideo)) {
 			stop();
 			return;
+		}
+		if (instructions) {
+			instructions.hidden = true;
 		}
 		const rect = currentVideo.getBoundingClientRect();
 		const info = describeVideo(currentVideo);
@@ -985,7 +991,7 @@ function getCurrentVideoResolution(video: HTMLVideoElement): VideoResolution {
 }
 
 function formatResolution(resolution: VideoResolution): string {
-	return `${resolution.width} × ${resolution.height}`;
+	return `${resolution.width} x ${resolution.height}`;
 }
 
 function getFinishedStatus(

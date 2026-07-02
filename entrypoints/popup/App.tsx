@@ -115,7 +115,14 @@ function App(): JSX.Element {
 						type="button"
 						onClick={openCaptures}
 					>
-						<ClockIcon className="h-4 w-4" />
+						{state.recordingCount > 0 ? (
+							<span
+								aria-hidden="true"
+								className="status status-error animate-pulse"
+							/>
+						) : (
+							<ClockIcon className="h-4 w-4" />
+						)}
 						{historyLabel}
 					</button>
 				</div>

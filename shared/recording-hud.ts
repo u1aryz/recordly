@@ -370,7 +370,7 @@ export function createRecordingHudManager(
 			return undefined;
 		}
 		title.textContent = metadata.title;
-		meta.textContent = `${metadata.width} × ${metadata.height}`;
+		meta.textContent = `${metadata.width} x ${metadata.height}`;
 		if (metadata.thumbnailDataUrl) {
 			const image = document.createElement("img");
 			image.alt = "";

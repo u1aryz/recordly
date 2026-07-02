@@ -445,8 +445,7 @@ function CaptureDetail({
 		capture.storageMode === "segmented-files";
 	const isSegmented = capture.storageMode === "segmented-files";
 	const presentation = getCapturePresentation(capture);
-	const shouldShowStatusAlert =
-		presentation.tone === "warning" || presentation.tone === "error";
+	const shouldShowStatusAlert = presentation.tone !== "info";
 	return (
 		<div>
 			<div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-4">

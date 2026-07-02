@@ -3,7 +3,6 @@
 	"extDescription": {
 		"message": "Pick a video on the page and capture it as MP4."
 	},
-	"popupTitle": { "message": "Recordly" },
 	"activeTabUnavailable": { "message": "Could not access the active tab." },
 	"recordingCount": {
 		"message": "$COUNT$ recording",

@@ -3,7 +3,6 @@
 	"extDescription": {
 		"message": "ページ上の動画を選択し、MP4としてキャプチャします。"
 	},
-	"popupTitle": { "message": "Recordly" },
 	"activeTabUnavailable": { "message": "現在のタブを取得できませんでした。" },
 	"recordingCount": {
 		"message": "録画中 $COUNT$件",
@@ -14,14 +13,14 @@
 		"message": "このページでは拡張を実行できないか、動画がまだ検出されていません。"
 	},
 	"popupDescription": {
-		"message": "ページ上の video を選んで MP4 キャプチャします。"
+		"message": "ページ上の動画をMP4でキャプチャします。"
 	},
 	"selectVideoOnPage": { "message": "ページ上で録画する動画を選ぶ" },
 	"settingContinueOnResolutionChange": {
 		"message": "解像度が変わっても録画を続ける"
 	},
 	"settingContinueOnResolutionChangeDescription": {
-		"message": "解像度の変更を検知すると、新しいファイルに切り替えて録画を継続します。"
+		"message": "新しいファイルに切り替えて録画を継続します。"
 	},
 	"pickerInstructions": {
 		"message": "録画する動画にカーソルを合わせてください"
