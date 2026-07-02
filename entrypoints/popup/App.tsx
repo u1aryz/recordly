@@ -7,28 +7,9 @@ import {
 import type { JSX } from "react";
 import { useCallback, useEffect, useState } from "react";
 import { continueOnResolutionChange } from "@/shared/settings";
-import { listCaptures } from "@/shared/storage";
-import type { VideoDescriptor } from "@/shared/types";
 import { formatDuration } from "@/shared/video";
 import { t } from "@/utils/i18n";
-
-type PopupState = {
-	loading: boolean;
-	error?: string;
-	videos: VideoDescriptor[];
-	recordingCount: number;
-};
-
-async function getActiveTabId(): Promise<number> {
-	const [tab] = await browser.tabs.query({
-		active: true,
-		currentWindow: true,
-	});
-	if (tab?.id == null) {
-		throw new Error(t("activeTabUnavailable"));
-	}
-	return tab.id;
-}
+import { getActiveTabId, loadPopupState, type PopupState } from "./popup-state";
 
 function App(): JSX.Element {
 	const [state, setState] = useState<PopupState>({
@@ -50,18 +31,7 @@ function App(): JSX.Element {
 	const refreshVideos = useCallback(async () => {
 		setState((current) => ({ ...current, loading: true, error: undefined }));
 		try {
-			const tabId = await getActiveTabId();
-			const response = await browser.tabs.sendMessage(tabId, {
-				type: "LIST_VIDEOS",
-			});
-			const captures = await listCaptures();
-			setState({
-				loading: false,
-				videos: response?.videos ?? [],
-				recordingCount: captures.filter(
-					(capture) => capture.status === "recording",
-				).length,
-			});
+			setState(await loadPopupState());
 		} catch {
 			setState({
 				loading: false,
