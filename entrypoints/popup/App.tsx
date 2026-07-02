@@ -6,6 +6,7 @@ import {
 } from "@heroicons/react/24/outline";
 import type { JSX } from "react";
 import { useCallback, useEffect, useState } from "react";
+import { continueOnResolutionChange } from "@/shared/settings";
 import { listCaptures } from "@/shared/storage";
 import type { VideoDescriptor } from "@/shared/types";
 import { formatDuration } from "@/shared/video";
@@ -41,6 +42,10 @@ function App(): JSX.Element {
 		state.recordingCount > 0
 			? t("recordingCount", String(state.recordingCount))
 			: t("history");
+	const [
+		continueOnResolutionChangeEnabled,
+		setContinueOnResolutionChangeEnabled,
+	] = useState(true);
 
 	const refreshVideos = useCallback(async () => {
 		setState((current) => ({ ...current, loading: true, error: undefined }));
@@ -71,6 +76,17 @@ function App(): JSX.Element {
 		void refreshVideos();
 	}, [refreshVideos]);
 
+	useEffect(() => {
+		void continueOnResolutionChange
+			.getValue()
+			.then(setContinueOnResolutionChangeEnabled);
+	}, []);
+
+	function toggleContinueOnResolutionChange(enabled: boolean) {
+		setContinueOnResolutionChangeEnabled(enabled);
+		void continueOnResolutionChange.setValue(enabled);
+	}
+
 	async function startPicker() {
 		const tabId = await getActiveTabId();
 		await browser.tabs.sendMessage(tabId, { type: "START_PICKER" });
@@ -99,7 +115,14 @@ function App(): JSX.Element {
 						type="button"
 						onClick={openCaptures}
 					>
-						<ClockIcon className="h-4 w-4" />
+						{state.recordingCount > 0 ? (
+							<span
+								aria-hidden="true"
+								className="status status-error animate-pulse"
+							/>
+						) : (
+							<ClockIcon className="h-4 w-4" />
+						)}
 						{historyLabel}
 					</button>
 				</div>
@@ -132,6 +155,25 @@ function App(): JSX.Element {
 								<p className="leading-tight">{t("stepStartRecording")}</p>
 							</li>
 						</ol>
+
+						<label className="flex items-start justify-between gap-3 border-base-300 border-t pt-3.5">
+							<span className="min-w-0">
+								<span className="block font-medium text-sm">
+									{t("settingContinueOnResolutionChange")}
+								</span>
+								<span className="block text-base-content/60 text-xs">
+									{t("settingContinueOnResolutionChangeDescription")}
+								</span>
+							</span>
+							<input
+								checked={continueOnResolutionChangeEnabled}
+								className="toggle toggle-primary shrink-0"
+								type="checkbox"
+								onChange={(event) =>
+									toggleContinueOnResolutionChange(event.target.checked)
+								}
+							/>
+						</label>
 					</div>
 				</div>
 
@@ -177,7 +219,7 @@ function App(): JSX.Element {
 							<div className="min-w-0">
 								<div className="flex min-w-0 items-start justify-between gap-3">
 									<p className="truncate font-medium text-sm">
-										{video.title || `Video ${index + 1}`}
+										{video.title || t("videoFallbackTitle", String(index + 1))}
 									</p>
 									<span
 										className={`badge badge-soft badge-xs shrink-0 ${

@@ -27,6 +27,7 @@ const STOP_REASON_KEYS: Record<StopReason, Parameters<typeof t>[0]> = {
 	tab_capture_failed: "stopReasonTabCaptureFailed",
 	target_unavailable: "stopReasonTargetUnavailable",
 	write_failed: "stopReasonWriteFailed",
+	no_data_timeout: "stopReasonNoDataTimeout",
 };
 
 export function getEffectiveFileStatus(

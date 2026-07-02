@@ -152,6 +152,32 @@ describe("recording HUD manager", () => {
 		expect(row).not.toHaveClass("highlight");
 	});
 
+	it("temporarily shows a notice then reverts to the part label", () => {
+		vi.useFakeTimers();
+		const manager = createRecordingHudManager({
+			onOpen: vi.fn(),
+			onStop: vi.fn(),
+		});
+		manager.add(createMetadata("first", "First"));
+		manager.updatePart("first", 2);
+
+		manager.notify(
+			"first",
+			"解像度が変わったため、新しいファイルに切り替えました",
+		);
+
+		const detail = document
+			.querySelector<HTMLElement>("[data-recordly-recording-hud]")
+			?.shadowRoot?.querySelector('[data-capture-id="first"] .detail');
+		expect(detail).toHaveTextContent(
+			"解像度が変わったため、新しいファイルに切り替えました",
+		);
+
+		vi.advanceTimersByTime(5000);
+
+		expect(detail).toHaveTextContent("2つ目を録画中");
+	});
+
 	it("restores and saves a dragged position", async () => {
 		const onPositionChange = vi.fn();
 		const manager = createRecordingHudManager({

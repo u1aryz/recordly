@@ -46,6 +46,23 @@ describe("capture presentation", () => {
 		expect(getCapturePresentation(capture).label).toBe("保存完了");
 	});
 
+	it("explains that recording stopped because data stopped arriving", () => {
+		const capture = {
+			...createDirectCapture(),
+			status: "stopped" as const,
+			fileStatus: "saved" as const,
+			stopReason: "no_data_timeout" as const,
+		};
+
+		expect(getCapturePresentation(capture)).toMatchObject({
+			label: "途中まで保存",
+			tone: "warning",
+		});
+		expect(getCapturePresentation(capture).description).toContain(
+			"録画データが届かなくなったため自動停止しました",
+		);
+	});
+
 	it("explains the resolution change before and after automatic stop", () => {
 		const capture = {
 			...createDirectCapture(),

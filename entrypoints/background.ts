@@ -14,6 +14,7 @@ import type {
 	PortMessage,
 	StopReason,
 } from "@/shared/types";
+import { t } from "@/utils/i18n";
 
 const capturePorts = new Set<Browser.runtime.Port>();
 const activeCaptures = new Map<string, CaptureMetadata>();
@@ -241,16 +242,18 @@ function getPartProgress(
 		partCount?: number;
 		savedPartCount?: number;
 		currentPartSizeBytes?: number;
+		resolutionChanges?: CaptureMetadata["resolutionChanges"];
 	},
 ): Pick<
 	CaptureMetadata,
-	"partCount" | "savedPartCount" | "currentPartSizeBytes"
+	"partCount" | "savedPartCount" | "currentPartSizeBytes" | "resolutionChanges"
 > {
 	return {
 		partCount: message.partCount ?? current.partCount,
 		savedPartCount: message.savedPartCount ?? current.savedPartCount,
 		currentPartSizeBytes:
 			message.currentPartSizeBytes ?? current.currentPartSizeBytes,
+		resolutionChanges: message.resolutionChanges ?? current.resolutionChanges,
 	};
 }
 
@@ -302,8 +305,7 @@ async function restoreCaptureState(): Promise<void> {
 			status: "stopped",
 			fileStatus: (capture.savedPartCount ?? 0) > 0 ? "saved" : "unknown",
 			stopReason: "source_closed",
-			errorMessage:
-				"拡張機能の再起動により、MP4の保存完了を確認できませんでした。",
+			errorMessage: t("restoreSaveStatusUnknown"),
 			endedAt: Date.now(),
 		};
 		await putCapture(next);
@@ -335,6 +337,7 @@ function broadcastProgress(capture: CaptureMetadata): void {
 			partCount: capture.partCount,
 			savedPartCount: capture.savedPartCount,
 			currentPartSizeBytes: capture.currentPartSizeBytes,
+			resolutionChanges: capture.resolutionChanges,
 			thumbnailDataUrl: capture.thumbnailDataUrl,
 		},
 	});

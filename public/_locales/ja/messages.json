@@ -3,7 +3,6 @@
 	"extDescription": {
 		"message": "ページ上の動画を選択し、MP4としてキャプチャします。"
 	},
-	"popupTitle": { "message": "Recordly" },
 	"activeTabUnavailable": { "message": "現在のタブを取得できませんでした。" },
 	"recordingCount": {
 		"message": "録画中 $COUNT$件",
@@ -14,9 +13,15 @@
 		"message": "このページでは拡張を実行できないか、動画がまだ検出されていません。"
 	},
 	"popupDescription": {
-		"message": "ページ上の video を選んで MP4 キャプチャします。"
+		"message": "ページ上の動画をMP4でキャプチャします。"
 	},
 	"selectVideoOnPage": { "message": "ページ上で録画する動画を選ぶ" },
+	"settingContinueOnResolutionChange": {
+		"message": "解像度が変わっても録画を続ける"
+	},
+	"settingContinueOnResolutionChangeDescription": {
+		"message": "新しいファイルに切り替えて録画を継続します。"
+	},
 	"pickerInstructions": {
 		"message": "録画する動画にカーソルを合わせてください"
 	},
@@ -36,8 +41,40 @@
 	"captureStreamHasNoTracks": {
 		"message": "録画できる映像・音声がありません。動画を再生してからお試しください。"
 	},
+	"captureStreamUnsupported": {
+		"message": "このブラウザでは video.captureStream() が使えません。"
+	},
+	"captureStreamStartFailed": {
+		"message": "video.captureStream() の開始に失敗しました。"
+	},
+	"protectedVideoCaptureUnsupported": {
+		"message": "この動画は DRM などの保護によりキャプチャできません。"
+	},
+	"directFolderSaveUnsupported": {
+		"message": "このブラウザではフォルダへの直接保存に対応していません。"
+	},
+	"recordingStartFailed": { "message": "録画を開始できませんでした。" },
+	"videoAlreadyRecording": {
+		"message": "この動画はすでに録画中です。"
+	},
+	"mediaRecorderMp4Unsupported": {
+		"message": "このブラウザは MediaRecorder の MP4 出力に対応していません。"
+	},
+	"destinationPickFailed": {
+		"message": "保存先を選べませんでした。"
+	},
+	"mediaRecorderStartFailed": {
+		"message": "MediaRecorder の開始に失敗しました。"
+	},
 	"paused": { "message": "一時停止" },
 	"playing": { "message": "再生中" },
+	"muted": { "message": "ミュート" },
+	"audioAvailable": { "message": "音声あり" },
+	"videoFallbackTitle": {
+		"message": "動画 $NUMBER$",
+		"placeholders": { "number": { "content": "$1" } }
+	},
+	"videoElementLabel": { "message": "動画" },
 	"liveOrUnknown": { "message": "ライブ／不明" },
 	"capturesTitle": { "message": "Recordly キャプチャ" },
 	"noSavedData": { "message": "保存済みデータがありません。" },
@@ -52,6 +89,14 @@
 	"fileSize": { "message": "ファイルサイズ" },
 	"fileCount": { "message": "ファイル数" },
 	"resolution": { "message": "解像度" },
+	"resolutionChangeSplits": { "message": "解像度変更による分割" },
+	"resolutionChangePartLabel": {
+		"message": "$PART$つ目のファイルから",
+		"placeholders": { "part": { "content": "$1" } }
+	},
+	"resolutionChangeFileDiscarded": {
+		"message": "ファイルは生成されませんでした"
+	},
 	"mp4AtSelectedDestination": {
 		"message": "MP4は録画開始時に選択した保存先にあります。"
 	},
@@ -71,6 +116,13 @@
 	"recordingPart": {
 		"message": "$PART$つ目を録画中",
 		"placeholders": { "part": { "content": "$1" } }
+	},
+	"resolutionRolloverHud": {
+		"message": "解像度が $FROM$ から $TO$ に変わったため、新しいファイルに切り替えました",
+		"placeholders": {
+			"from": { "content": "$1" },
+			"to": { "content": "$2" }
+		}
 	},
 	"openStatus": { "message": "状況を開く" },
 	"finalizingMp4": { "message": "MP4ファイルを確定しています。" },
@@ -106,6 +158,51 @@
 	"savedPartsAfterError": {
 		"message": "録画を終了しました。確定済みのパートは保存されています。"
 	},
+	"recordingStoppedAfterExtensionUpdate": {
+		"message": "拡張機能が更新されたため録画を終了しました。"
+	},
+	"recordingStatusConnectionLost": {
+		"message": "録画状態の接続が切断されました。"
+	},
+	"recordingErrorOccurred": {
+		"message": "録画中にエラーが発生しました。"
+	},
+	"writeBackpressureStopped": {
+		"message": "ファイル書き込みが録画速度に追いつかないため停止しました。"
+	},
+	"recordingDataWriteFailed": {
+		"message": "録画データの書き込みに失敗しました。"
+	},
+	"recordingFileFinalizeFailed": {
+		"message": "録画ファイルの確定に失敗しました。"
+	},
+	"nextRecordingFileCreateFailed": {
+		"message": "次の録画ファイルを作成できませんでした。"
+	},
+	"recordingFileSaveFailed": {
+		"message": "録画ファイルを保存できませんでした。"
+	},
+	"restoreSaveStatusUnknown": {
+		"message": "拡張機能の再起動により、MP4の保存完了を確認できませんでした。"
+	},
+	"completionVideoEnded": {
+		"message": "動画の再生終了に合わせて停止し、MP4を保存しました。"
+	},
+	"completionVideoRemoved": {
+		"message": "対象動画がページからなくなったため自動停止しました。停止までの内容は保存済みです。"
+	},
+	"completionResolutionChanged": {
+		"message": "動画の解像度が変わったため自動停止しました。停止までの内容は保存済みです。"
+	},
+	"completionSourceClosed": {
+		"message": "録画元が閉じられたため自動停止しました。停止までの内容は保存済みです。"
+	},
+	"completionDefault": {
+		"message": "録画を停止し、MP4を保存しました。"
+	},
+	"stoppedAfterNoDataTimeout": {
+		"message": "録画データが届かなくなったため自動停止しました。停止までの内容は保存済みです。"
+	},
 	"stopReasonUser": { "message": "ユーザー操作で停止しました" },
 	"stopReasonResolutionChanged": {
 		"message": "動画の解像度が変わったため自動停止しました"
@@ -133,5 +230,8 @@
 		"message": "対象タブを利用できませんでした"
 	},
 	"stopReasonWriteFailed": { "message": "ファイルへの書き込みに失敗しました" },
+	"stopReasonNoDataTimeout": {
+		"message": "録画データが届かなくなったため自動停止しました"
+	},
 	"stopReasonDefault": { "message": "録画を終了しました" }
 }

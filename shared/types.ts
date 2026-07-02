@@ -12,7 +12,8 @@ export type StopReason =
 	| "error"
 	| "tab_capture_failed"
 	| "target_unavailable"
-	| "write_failed";
+	| "write_failed"
+	| "no_data_timeout";
 
 export type VideoResolution = {
 	width: number;
@@ -22,6 +23,11 @@ export type VideoResolution = {
 export type ResolutionChange = {
 	from: VideoResolution;
 	to: VideoResolution;
+};
+
+export type ResolutionChangeEvent = ResolutionChange & {
+	partIndex: number;
+	fileDiscarded?: boolean;
 };
 
 export type VideoDescriptor = {
@@ -51,6 +57,7 @@ export type CaptureMetadata = {
 	fileStatus?: CaptureFileStatus;
 	stopReason?: StopReason;
 	resolutionChange?: ResolutionChange;
+	resolutionChanges?: ResolutionChangeEvent[];
 	errorMessage?: string;
 	mimeType: string;
 	fileName: string;
@@ -80,6 +87,7 @@ export type CaptureProgress = Pick<
 	| "stopReason"
 	| "errorMessage"
 	| "thumbnailDataUrl"
+	| "resolutionChanges"
 >;
 
 export type StartPickerMessage = {
@@ -109,6 +117,7 @@ export type CaptureProgressMessage = {
 	partCount?: number;
 	savedPartCount?: number;
 	currentPartSizeBytes?: number;
+	resolutionChanges?: ResolutionChangeEvent[];
 };
 
 export type CaptureFinishedMessage = {
@@ -118,6 +127,7 @@ export type CaptureFinishedMessage = {
 	fileStatus: Exclude<CaptureFileStatus, "writing">;
 	stopReason?: StopReason;
 	resolutionChange?: ResolutionChange;
+	resolutionChanges?: ResolutionChangeEvent[];
 	errorMessage?: string;
 	elapsedMs: number;
 	sizeBytes?: number;

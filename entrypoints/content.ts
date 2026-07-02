@@ -1,4 +1,7 @@
-import { createCaptureMetadata } from "@/shared/capture-state";
+import {
+	createCaptureMetadata,
+	markResolutionChangeFileDiscarded,
+} from "@/shared/capture-state";
 import {
 	createPartFileName,
 	isFilePickerAbortError,
@@ -10,7 +13,17 @@ import {
 	createRecordingHudManager,
 	type RecordingHudManager,
 } from "@/shared/recording-hud";
-import { recordingHudPosition } from "@/shared/settings";
+import {
+	createMonitorState,
+	evaluateMonitorTick,
+	FORCE_FINALIZE_TIMEOUT_MS,
+	hasDataTimedOut,
+	type MonitorState,
+} from "@/shared/recording-monitor";
+import {
+	continueOnResolutionChange,
+	recordingHudPosition,
+} from "@/shared/settings";
 import type {
 	CaptureFinishedMessage,
 	CaptureMetadata,
@@ -29,6 +42,7 @@ import {
 	isVideoConnected,
 	listVideos,
 } from "@/shared/video";
+import { t } from "@/utils/i18n";
 
 type ActiveRecording = {
 	metadata: CaptureMetadata;
@@ -41,6 +55,11 @@ type ActiveRecording = {
 	finishSent: boolean;
 	stopReason?: StopReason;
 	errorMessage?: string;
+	continueOnResolutionChange: boolean;
+	monitorState: MonitorState;
+	lastDataAt: number;
+	finalizeTimer?: number;
+	pendingResolutionChange?: ResolutionChange;
 };
 
 type RecordingPart = {
@@ -53,6 +72,7 @@ type RecordingPart = {
 	chunkCount: number;
 	queuedBytes: number;
 	stopMode?: "rollover" | "finish";
+	finalizing?: boolean;
 };
 
 type StartRecordingResult =
@@ -67,7 +87,6 @@ type VideoPicker = {
 const CAPTURE_CHUNK_TIMESLICE_MS = 3000;
 const MAX_CAPTURE_CHUNK_BYTES = 42 * 1024 * 1024;
 const MAX_QUEUED_WRITE_BYTES = 128 * 1024 * 1024;
-const VIDEO_REMOVED_GRACE_TICKS = 4;
 const activeRecordings = new Map<string, ActiveRecording>();
 let recordingHud: RecordingHudManager | undefined;
 
@@ -118,10 +137,7 @@ export default defineContentScript({
 		ctx.onInvalidated(() => {
 			picker.destroy();
 			window.removeEventListener("pagehide", onPageHide);
-			stopAllRecordings(
-				"error",
-				"拡張機能が更新されたため録画を終了しました。",
-			);
+			stopAllRecordings("error", t("recordingStoppedAfterExtensionUpdate"));
 			recordingHud?.destroy();
 			recordingHud = undefined;
 		});
@@ -255,7 +271,7 @@ function createVideoPicker(): VideoPicker {
 		<div class="frame" hidden></div>
 		<div class="toolbar" hidden>
 			<div class="toolbar-main">
-				<span class="label">video</span>
+				<span class="label">${t("videoElementLabel")}</span>
 				<span class="meta"></span>
 				<button class="start" type="button">${t("chooseFolderAndRecord")}</button>
 				<button class="cancel" type="button">${t("cancel")}</button>
@@ -336,11 +352,17 @@ function createVideoPicker(): VideoPicker {
 		if (!currentVideo || !frame || !toolbar || !meta) {
 			frame?.setAttribute("hidden", "");
 			toolbar?.setAttribute("hidden", "");
+			if (instructions) {
+				instructions.hidden = false;
+			}
 			return;
 		}
 		if (!document.contains(currentVideo)) {
 			stop();
 			return;
+		}
+		if (instructions) {
+			instructions.hidden = true;
 		}
 		const rect = currentVideo.getBoundingClientRect();
 		const info = describeVideo(currentVideo);
@@ -351,8 +373,8 @@ function createVideoPicker(): VideoPicker {
 		frame.style.height = `${rect.height}px`;
 		toolbar.hidden = false;
 		meta.textContent = `${info.width || "?"} x ${info.height || "?"} / ${
-			info.paused ? "一時停止" : "再生中"
-		} / ${info.muted ? "ミュート" : "音声あり"}`;
+			info.paused ? t("paused") : t("playing")
+		} / ${info.muted ? t("muted") : t("audioAvailable")}`;
 		const toolbarWidth = toolbar.offsetWidth;
 		const toolbarHeight = toolbar.offsetHeight;
 		toolbar.style.left = `${Math.max(
@@ -377,7 +399,7 @@ function createVideoPicker(): VideoPicker {
 		if (result.cancelled) {
 			return;
 		}
-		message.textContent = result.reason ?? "録画を開始できませんでした。";
+		message.textContent = result.reason ?? t("recordingStartFailed");
 		message.hidden = false;
 	});
 	cancelButton?.addEventListener("click", stop);
@@ -391,7 +413,7 @@ async function startRecording(
 	if (!window.showDirectoryPicker) {
 		return {
 			ok: false,
-			reason: "このブラウザではフォルダへの直接保存に対応していません。",
+			reason: t("directFolderSaveUnsupported"),
 		};
 	}
 
@@ -401,14 +423,14 @@ async function startRecording(
 		recordingHud?.highlight(existing.metadata.id);
 		return {
 			ok: false,
-			reason: "この動画はすでに録画中です。",
+			reason: t("videoAlreadyRecording"),
 		};
 	}
 	const mimeType = getMp4MimeType();
 	if (!mimeType) {
 		return {
 			ok: false,
-			reason: "このブラウザは MediaRecorder の MP4 出力に対応していません。",
+			reason: t("mediaRecorderMp4Unsupported"),
 		};
 	}
 	const metadata = createCaptureMetadata({
@@ -439,7 +461,7 @@ async function startRecording(
 		}
 		return {
 			ok: false,
-			reason: getErrorMessage(error, "保存先を選べませんでした。"),
+			reason: getErrorMessage(error, t("destinationPickFailed")),
 		};
 	}
 
@@ -447,7 +469,7 @@ async function startRecording(
 	if (!stream) {
 		return {
 			ok: false,
-			reason: errorMessage ?? "video.captureStream() が使えません。",
+			reason: errorMessage ?? t("captureStreamUnsupported"),
 		};
 	}
 
@@ -458,12 +480,14 @@ async function startRecording(
 		stopStream(stream);
 		return {
 			ok: false,
-			reason: getErrorMessage(error, "MediaRecorder の開始に失敗しました。"),
+			reason: getErrorMessage(error, t("mediaRecorderStartFailed")),
 		};
 	}
 
 	const port = browser.runtime.connect({ name: "capture-stream" });
 	const startedAt = performance.now();
+	const continueOnResolutionChangeEnabled =
+		await continueOnResolutionChange.getValue();
 	const active: ActiveRecording = {
 		metadata,
 		stream,
@@ -473,6 +497,9 @@ async function startRecording(
 		startedAt,
 		resolutionTimer: 0,
 		finishSent: false,
+		continueOnResolutionChange: continueOnResolutionChangeEnabled,
+		monitorState: createMonitorState(),
+		lastDataAt: startedAt,
 	};
 	activeRecordings.set(metadata.id, active);
 	recordingHud?.add(metadata);
@@ -489,7 +516,7 @@ async function startRecording(
 		recordingHud?.remove(metadata.id);
 		return {
 			ok: false,
-			reason: getErrorMessage(error, "MediaRecorder の開始に失敗しました。"),
+			reason: getErrorMessage(error, t("mediaRecorderStartFailed")),
 		};
 	}
 	postCaptureStreamMessage(port, { type: "CAPTURE_STARTED", metadata });
@@ -515,7 +542,7 @@ function bindRecordingEvents(
 	const captureId = active.metadata.id;
 	active.port.onDisconnect.addListener(() => {
 		if (activeRecordings.has(captureId)) {
-			stopCapture(captureId, "error", "録画状態の接続が切断されました。");
+			stopCapture(captureId, "error", t("recordingStatusConnectionLost"));
 		}
 	});
 	video.addEventListener("ended", () => stopCapture(captureId, "video_ended"), {
@@ -528,7 +555,7 @@ function bindRecordingEvents(
 			{ once: true },
 		);
 	}
-	active.resolutionTimer = createResolutionTimer(video, active.metadata);
+	active.resolutionTimer = createResolutionTimer(video, active);
 }
 
 async function createRecordingPart(
@@ -566,14 +593,16 @@ async function createRecordingPart(
 
 function startPart(active: ActiveRecording): void {
 	const part = active.part;
+	active.lastDataAt = performance.now();
 	part.recorder.ondataavailable = (event) => {
+		active.lastDataAt = performance.now();
 		enqueueChunk(active, part, event.data);
 	};
 	part.recorder.onerror = (event) => {
 		stopCapture(
 			active.metadata.id,
 			"error",
-			(event as ErrorEvent).message || "録画中にエラーが発生しました。",
+			(event as ErrorEvent).message || t("recordingErrorOccurred"),
 		);
 	};
 	part.recorder.onstop = () => {
@@ -598,7 +627,7 @@ function enqueueChunk(
 		stopCapture(
 			active.metadata.id,
 			"write_failed",
-			"ファイル書き込みが録画速度に追いつかないため停止しました。",
+			t("writeBackpressureStopped"),
 		);
 		return;
 	}
@@ -610,7 +639,7 @@ function enqueueChunk(
 			setStopReason(
 				active,
 				"write_failed",
-				getErrorMessage(error, "録画データの書き込みに失敗しました。"),
+				getErrorMessage(error, t("recordingDataWriteFailed")),
 			);
 			stopPart(part, "finish");
 		})
@@ -661,6 +690,30 @@ function stopCapture(
 	setStopReason(active, stopReason, errorMessage);
 	recordingHud?.markStopping(captureId, performance.now() - active.startedAt);
 	stopPart(active.part, "finish", { requestData: true });
+	if (!active.finalizeTimer) {
+		active.finalizeTimer = window.setTimeout(() => {
+			active.finalizeTimer = undefined;
+			if (!active.finishSent) {
+				void finalizeStoppedPart(active, active.part);
+			}
+		}, FORCE_FINALIZE_TIMEOUT_MS);
+	}
+}
+
+function rolloverForResolutionChange(
+	active: ActiveRecording,
+	change: ResolutionChange,
+): void {
+	if (active.part.stopMode || active.stopReason || active.finishSent) {
+		return;
+	}
+	active.pendingResolutionChange = change;
+	active.metadata = {
+		...active.metadata,
+		width: change.to.width,
+		height: change.to.height,
+	};
+	stopPart(active.part, "rollover", { requestData: true });
 }
 
 function stopPart(
@@ -694,9 +747,13 @@ async function finalizeStoppedPart(
 	if (active.finishSent || active.part !== part) {
 		return;
 	}
+	if (part.finalizing) {
+		return;
+	}
+	part.finalizing = true;
 	try {
 		await part.writeQueue;
-		if (isFatalStopReason(active.stopReason)) {
+		if (isFatalStopReason(active.stopReason) || part.sizeBytes === 0) {
 			await discardCurrentPart(active, part);
 		} else {
 			await saveCurrentPart(active, part);
@@ -706,7 +763,7 @@ async function finalizeStoppedPart(
 		setStopReason(
 			active,
 			"write_failed",
-			getErrorMessage(error, "録画ファイルの確定に失敗しました。"),
+			getErrorMessage(error, t("recordingFileFinalizeFailed")),
 		);
 	}
 
@@ -730,20 +787,37 @@ async function startNextPart(
 			active.stream,
 			index,
 		);
+		const pendingChange = active.pendingResolutionChange;
 		active.part = nextPart;
 		active.metadata = {
 			...active.metadata,
 			partCount: nextPart.index,
 			currentPartSizeBytes: 0,
+			resolutionChanges: pendingChange
+				? [
+						...(active.metadata.resolutionChanges ?? []),
+						{ ...pendingChange, partIndex: nextPart.index },
+					]
+				: active.metadata.resolutionChanges,
 		};
+		active.pendingResolutionChange = undefined;
 		postProgress(active);
 		startPart(active);
+		if (pendingChange) {
+			recordingHud?.notify(
+				active.metadata.id,
+				t("resolutionRolloverHud", [
+					formatResolution(pendingChange.from),
+					formatResolution(pendingChange.to),
+				]),
+			);
+		}
 		return true;
 	} catch (error) {
 		setStopReason(
 			active,
 			"write_failed",
-			getErrorMessage(error, "次の録画ファイルを作成できませんでした。"),
+			getErrorMessage(error, t("nextRecordingFileCreateFailed")),
 		);
 		return false;
 	}
@@ -779,6 +853,10 @@ function discardPartProgress(
 		sizeBytes: Math.max(0, active.metadata.sizeBytes - part.sizeBytes),
 		chunkCount: Math.max(0, active.metadata.chunkCount - part.chunkCount),
 		currentPartSizeBytes: 0,
+		resolutionChanges: markResolutionChangeFileDiscarded(
+			active.metadata.resolutionChanges,
+			part.index,
+		),
 	};
 }
 
@@ -788,9 +866,12 @@ async function finishRecording(active: ActiveRecording): Promise<void> {
 	}
 	active.finishSent = true;
 	window.clearInterval(active.resolutionTimer);
+	if (active.finalizeTimer) {
+		window.clearTimeout(active.finalizeTimer);
+		active.finalizeTimer = undefined;
+	}
 	stopStream(active.stream);
 	const stopReason = active.stopReason;
-	const isFatal = isFatalStopReason(stopReason);
 	const hasSavedParts = (active.metadata.savedPartCount ?? 0) > 0;
 
 	try {
@@ -798,9 +879,10 @@ async function finishRecording(active: ActiveRecording): Promise<void> {
 			type: "CAPTURE_FINISHED",
 			captureId: active.metadata.id,
 			status: getFinalStatus(stopReason, hasSavedParts),
-			fileStatus: isFatal && !hasSavedParts ? "failed" : "saved",
+			fileStatus: hasSavedParts ? "saved" : "failed",
 			stopReason: stopReason === "user" ? undefined : stopReason,
 			resolutionChange: active.metadata.resolutionChange,
+			resolutionChanges: active.metadata.resolutionChanges,
 			errorMessage: active.errorMessage,
 			elapsedMs: performance.now() - active.startedAt,
 			sizeBytes: active.metadata.sizeBytes,
@@ -847,6 +929,7 @@ function createProgressMessage(
 		partCount: active.metadata.partCount ?? 1,
 		savedPartCount: active.metadata.savedPartCount ?? 0,
 		currentPartSizeBytes: active.metadata.currentPartSizeBytes ?? 0,
+		resolutionChanges: active.metadata.resolutionChanges,
 	};
 }
 
@@ -870,28 +953,39 @@ async function removePartFile(
 
 function createResolutionTimer(
 	video: HTMLVideoElement,
-	metadata: CaptureMetadata,
+	active: ActiveRecording,
 ): number {
-	let disconnectedTicks = 0;
 	return window.setInterval(() => {
-		if (!isVideoConnected(video)) {
-			disconnectedTicks += 1;
-			if (disconnectedTicks < VIDEO_REMOVED_GRACE_TICKS) {
-				return;
+		const action = evaluateMonitorTick(active.monitorState, {
+			connected: isVideoConnected(video),
+			current: getCurrentVideoResolution(video),
+			recorded: {
+				width: active.metadata.width,
+				height: active.metadata.height,
+			},
+		});
+		if (action.type === "video_removed") {
+			stopCapture(active.metadata.id, "video_removed");
+		} else if (action.type === "resolution_changed") {
+			if (active.continueOnResolutionChange) {
+				rolloverForResolutionChange(active, action.change);
+			} else {
+				stopCapture(
+					active.metadata.id,
+					"resolution_changed",
+					undefined,
+					action.change,
+				);
 			}
-			stopCapture(metadata.id, "video_removed");
-			return;
 		}
-		disconnectedTicks = 0;
-		const currentResolution = getCurrentVideoResolution(video);
-		if (hasResolutionChanged(metadata, currentResolution)) {
-			stopCapture(metadata.id, "resolution_changed", undefined, {
-				from: {
-					width: metadata.width,
-					height: metadata.height,
-				},
-				to: currentResolution,
-			});
+
+		if (
+			active.part.recorder.state === "recording" &&
+			!video.paused &&
+			!video.seeking &&
+			hasDataTimedOut(performance.now(), active.lastDataAt)
+		) {
+			stopCapture(active.metadata.id, "no_data_timeout");
 		}
 	}, 500);
 }
@@ -903,13 +997,8 @@ function getCurrentVideoResolution(video: HTMLVideoElement): VideoResolution {
 	};
 }
 
-function hasResolutionChanged(
-	metadata: CaptureMetadata,
-	resolution: VideoResolution,
-): boolean {
-	return (
-		resolution.width !== metadata.width || resolution.height !== metadata.height
-	);
+function formatResolution(resolution: VideoResolution): string {
+	return `${resolution.width} x ${resolution.height}`;
 }
 
 function getFinishedStatus(
@@ -933,15 +1022,17 @@ function isFatalStopReason(reason?: StopReason): boolean {
 function getCompletionMessage(reason?: StopReason): string {
 	switch (reason) {
 		case "video_ended":
-			return "動画の再生終了に合わせて停止し、MP4を保存しました。";
+			return t("completionVideoEnded");
 		case "video_removed":
-			return "対象動画がページからなくなったため自動停止しました。停止までの内容は保存済みです。";
+			return t("completionVideoRemoved");
 		case "resolution_changed":
-			return "動画の解像度が変わったため自動停止しました。停止までの内容は保存済みです。";
+			return t("completionResolutionChanged");
 		case "source_closed":
-			return "録画元が閉じられたため自動停止しました。停止までの内容は保存済みです。";
+			return t("completionSourceClosed");
+		case "no_data_timeout":
+			return t("stoppedAfterNoDataTimeout");
 		default:
-			return "録画を停止し、MP4を保存しました。";
+			return t("completionDefault");
 	}
 }
 
@@ -961,7 +1052,7 @@ function getHudResult(
 			};
 		}
 		return {
-			message: errorMessage ?? "録画ファイルを保存できませんでした。",
+			message: errorMessage ?? t("recordingFileSaveFailed"),
 			tone: "error",
 		};
 	}
@@ -979,7 +1070,7 @@ function listCapturableVideos(): VideoDescriptor[] {
 	return videos.map((video) => ({
 		...video,
 		canCapture: false,
-		reason: "このブラウザではフォルダへの直接保存に対応していません",
+		reason: t("directFolderSaveUnsupported"),
 	}));
 }
 
