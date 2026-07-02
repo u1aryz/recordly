@@ -1,5 +1,5 @@
 import { t } from "@/utils/i18n";
-import type { VideoDescriptor } from "./types";
+import type { VideoDescriptor, VideoResolution } from "./types";
 
 const VIDEO_ID_ATTR = "data-vcap-id";
 const MP4_MIME_TYPE_CANDIDATES = [
@@ -160,6 +160,10 @@ export function formatDuration(ms: number): string {
 	const minutes = Math.floor(totalSeconds / 60);
 	const seconds = totalSeconds % 60;
 	return `${minutes}:${seconds.toString().padStart(2, "0")}`;
+}
+
+export function formatResolution(resolution: VideoResolution): string {
+	return `${resolution.width} x ${resolution.height}`;
 }
 
 export function formatBytes(bytes: number): string {

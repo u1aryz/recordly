@@ -5,6 +5,7 @@ import {
 	findVideoFromPoint,
 	formatBytes,
 	formatDuration,
+	formatResolution,
 	getMp4MimeType,
 	getVideoBitsPerSecond,
 	isVideoConnected,
@@ -48,9 +49,10 @@ describe("video helpers", () => {
 		expect(isVideoConnected(video)).toBe(false);
 	});
 
-	it("formats elapsed time and file sizes", () => {
+	it("formats elapsed time, file sizes, and resolutions", () => {
 		expect(formatDuration(65_000)).toBe("1:05");
 		expect(formatBytes(1536)).toBe("1.50 KB");
+		expect(formatResolution({ width: 1920, height: 1080 })).toBe("1920 x 1080");
 	});
 
 	it("creates high quality MediaRecorder options from video dimensions", () => {

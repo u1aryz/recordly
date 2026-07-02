@@ -1,4 +1,12 @@
 import {
+	createCaptureFinishedMessage,
+	createProgressMessage,
+	getErrorMessage,
+	getHudResult,
+	isFatalStopReason,
+	reduceStopReason,
+} from "@/shared/capture-finish";
+import {
 	createCaptureMetadata,
 	markResolutionChangeFileDiscarded,
 } from "@/shared/capture-state";
@@ -25,7 +33,6 @@ import {
 	recordingHudPosition,
 } from "@/shared/settings";
 import type {
-	CaptureFinishedMessage,
 	CaptureMetadata,
 	CaptureStreamPortMessage,
 	ResolutionChange,
@@ -38,6 +45,7 @@ import {
 	createVideoCaptureStream,
 	describeVideo,
 	findVideoFromPoint,
+	formatResolution,
 	getMp4MimeType,
 	isVideoConnected,
 	listVideos,
@@ -875,22 +883,14 @@ async function finishRecording(active: ActiveRecording): Promise<void> {
 	const hasSavedParts = (active.metadata.savedPartCount ?? 0) > 0;
 
 	try {
-		postCaptureStreamMessage(active.port, {
-			type: "CAPTURE_FINISHED",
-			captureId: active.metadata.id,
-			status: getFinalStatus(stopReason, hasSavedParts),
-			fileStatus: hasSavedParts ? "saved" : "failed",
-			stopReason: stopReason === "user" ? undefined : stopReason,
-			resolutionChange: active.metadata.resolutionChange,
-			resolutionChanges: active.metadata.resolutionChanges,
-			errorMessage: active.errorMessage,
-			elapsedMs: performance.now() - active.startedAt,
-			sizeBytes: active.metadata.sizeBytes,
-			chunkCount: active.metadata.chunkCount,
-			partCount: active.metadata.partCount ?? 1,
-			savedPartCount: active.metadata.savedPartCount ?? 0,
-			currentPartSizeBytes: active.metadata.currentPartSizeBytes ?? 0,
-		});
+		postCaptureStreamMessage(
+			active.port,
+			createCaptureFinishedMessage(active.metadata, {
+				stopReason,
+				errorMessage: active.errorMessage,
+				elapsedMs: performance.now() - active.startedAt,
+			}),
+		);
 		const hudResult = getHudResult(
 			stopReason,
 			active.errorMessage,
@@ -903,34 +903,8 @@ async function finishRecording(active: ActiveRecording): Promise<void> {
 	}
 }
 
-function getFinalStatus(
-	reason: StopReason | undefined,
-	hasSavedParts: boolean,
-): CaptureFinishedMessage["status"] {
-	if (isFatalStopReason(reason) && hasSavedParts) {
-		return "stopped";
-	}
-	return getFinishedStatus(reason);
-}
-
 function postProgress(active: ActiveRecording): void {
-	postCaptureStreamMessage(active.port, createProgressMessage(active));
-}
-
-function createProgressMessage(
-	active: ActiveRecording,
-): CaptureStreamPortMessage {
-	return {
-		type: "CAPTURE_PROGRESS",
-		captureId: active.metadata.id,
-		sizeBytes: active.metadata.sizeBytes,
-		elapsedMs: active.metadata.elapsedMs,
-		chunkCount: active.metadata.chunkCount,
-		partCount: active.metadata.partCount ?? 1,
-		savedPartCount: active.metadata.savedPartCount ?? 0,
-		currentPartSizeBytes: active.metadata.currentPartSizeBytes ?? 0,
-		resolutionChanges: active.metadata.resolutionChanges,
-	};
+	postCaptureStreamMessage(active.port, createProgressMessage(active.metadata));
 }
 
 function setStopReason(
@@ -938,10 +912,9 @@ function setStopReason(
 	reason: StopReason,
 	errorMessage?: string,
 ): void {
-	if (!active.stopReason || isFatalStopReason(reason)) {
-		active.stopReason = reason;
-		active.errorMessage = errorMessage;
-	}
+	const next = reduceStopReason(active, { stopReason: reason, errorMessage });
+	active.stopReason = next.stopReason;
+	active.errorMessage = next.errorMessage;
 }
 
 async function removePartFile(
@@ -997,71 +970,6 @@ function getCurrentVideoResolution(video: HTMLVideoElement): VideoResolution {
 	};
 }
 
-function formatResolution(resolution: VideoResolution): string {
-	return `${resolution.width} x ${resolution.height}`;
-}
-
-function getFinishedStatus(
-	reason?: StopReason,
-): CaptureFinishedMessage["status"] {
-	if (reason === "user" || reason === "video_ended" || reason == null) {
-		return "complete";
-	}
-	if (isFatalStopReason(reason)) {
-		return "error";
-	}
-	return "stopped";
-}
-
-function isFatalStopReason(reason?: StopReason): boolean {
-	return (
-		reason === "error" || reason === "unsupported" || reason === "write_failed"
-	);
-}
-
-function getCompletionMessage(reason?: StopReason): string {
-	switch (reason) {
-		case "video_ended":
-			return t("completionVideoEnded");
-		case "video_removed":
-			return t("completionVideoRemoved");
-		case "resolution_changed":
-			return t("completionResolutionChanged");
-		case "source_closed":
-			return t("completionSourceClosed");
-		case "no_data_timeout":
-			return t("stoppedAfterNoDataTimeout");
-		default:
-			return t("completionDefault");
-	}
-}
-
-function getHudResult(
-	reason?: StopReason,
-	errorMessage?: string,
-	hasSavedParts = false,
-): {
-	message: string;
-	tone: "success" | "warning" | "error";
-} {
-	if (isFatalStopReason(reason)) {
-		if (hasSavedParts) {
-			return {
-				message: errorMessage ?? t("savedPartsAfterError"),
-				tone: "warning",
-			};
-		}
-		return {
-			message: errorMessage ?? t("recordingFileSaveFailed"),
-			tone: "error",
-		};
-	}
-	if (reason && reason !== "user") {
-		return { message: getCompletionMessage(reason), tone: "warning" };
-	}
-	return { message: getCompletionMessage(reason), tone: "success" };
-}
-
 function listCapturableVideos(): VideoDescriptor[] {
 	const videos = listVideos();
 	if (window.showDirectoryPicker) {
@@ -1099,11 +1007,4 @@ function stopStream(stream: MediaStream): void {
 	for (const track of stream.getTracks()) {
 		track.stop();
 	}
-}
-
-function getErrorMessage(error: unknown, fallback: string): string {
-	if (error instanceof Error && error.message) {
-		return error.message;
-	}
-	return fallback;
 }

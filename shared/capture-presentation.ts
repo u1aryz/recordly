@@ -4,8 +4,8 @@ import type {
 	CaptureMetadata,
 	CaptureStatus,
 	StopReason,
-	VideoResolution,
 } from "./types";
+import { formatResolution } from "./video";
 
 export type CaptureTone = "info" | "success" | "warning" | "error";
 
@@ -131,8 +131,4 @@ export function translateStopReason(
 		]);
 	}
 	return reason ? t(STOP_REASON_KEYS[reason]) : t("stopReasonDefault");
-}
-
-function formatResolution(resolution: VideoResolution): string {
-	return `${resolution.width} x ${resolution.height}`;
 }

@@ -33,7 +33,7 @@ import type {
 	PortMessage,
 	ResolutionChangeEvent,
 } from "@/shared/types";
-import { formatBytes, formatDuration } from "@/shared/video";
+import { formatBytes, formatDuration, formatResolution } from "@/shared/video";
 import { t } from "@/utils/i18n";
 
 type CaptureDetailProps = {
@@ -579,13 +579,6 @@ function getPartCountLabel(capture: CaptureMetadata): string {
 		return t("recordingPart", String(capture.partCount ?? 1));
 	}
 	return String(capture.savedPartCount ?? capture.partCount ?? 0);
-}
-
-function formatResolution(resolution: {
-	width: number;
-	height: number;
-}): string {
-	return `${resolution.width} x ${resolution.height}`;
 }
 
 function getResolutionLabel(capture: CaptureMetadata): string {
