@@ -82,6 +82,12 @@ export function isVideoConnected(video: HTMLVideoElement): boolean {
 	return video.isConnected;
 }
 
+export function stopMediaStreamTracks(stream: MediaStream): void {
+	for (const track of stream.getTracks()) {
+		track.stop();
+	}
+}
+
 export function createVideoCaptureStream(video: HTMLVideoElement): {
 	stream: MediaStream | null;
 	errorMessage?: string;

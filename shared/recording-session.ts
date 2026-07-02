@@ -1,0 +1,400 @@
+import { t } from "@/utils/i18n";
+import {
+	createCaptureFinishedMessage,
+	getErrorMessage,
+	isFatalStopReason,
+	reduceStopReason,
+} from "./capture-finish";
+import { markResolutionChangeFileDiscarded } from "./capture-state";
+import { createPartFileName, shouldSplitPart } from "./file-system";
+import { FORCE_FINALIZE_TIMEOUT_MS } from "./recording-monitor";
+import type {
+	CaptureFinishedMessage,
+	CaptureMetadata,
+	ResolutionChange,
+	StopReason,
+} from "./types";
+import { createMediaRecorderOptions, stopMediaStreamTracks } from "./video";
+
+const CAPTURE_CHUNK_TIMESLICE_MS = 3000;
+const MAX_CAPTURE_CHUNK_BYTES = 42 * 1024 * 1024;
+const MAX_QUEUED_WRITE_BYTES = 128 * 1024 * 1024;
+
+type RecordingPart = {
+	index: number;
+	fileName: string;
+	recorder: MediaRecorder;
+	writable: FileSystemWritableFileStream;
+	writeQueue: Promise<void>;
+	sizeBytes: number;
+	chunkCount: number;
+	queuedBytes: number;
+	stopMode?: "rollover" | "finish";
+	finalizing?: boolean;
+};
+
+export type RecordingFinishOutcome = {
+	message: CaptureFinishedMessage;
+	stopReason?: StopReason;
+	errorMessage?: string;
+	hasSavedParts: boolean;
+};
+
+export type RecordingSessionCallbacks = {
+	/** チャンク書き込みやパート保存が進んだとき(HUD更新・CAPTURE_PROGRESS送信用)。 */
+	onProgress: (metadata: CaptureMetadata) => void;
+	/** stop() が受理された直後(HUDの停止中表示用)。 */
+	onStopping: (elapsedMs: number) => void;
+	/** 次のパートが開始されたとき。change は解像度ロールオーバー由来のときのみ設定される。 */
+	onPartStarted: (metadata: CaptureMetadata, change?: ResolutionChange) => void;
+	/** 録画が完全に終了したとき。厳密に1回だけ呼ばれる。 */
+	onFinished: (outcome: RecordingFinishOutcome) => void;
+};
+
+export type RecordingSessionOptions = {
+	metadata: CaptureMetadata;
+	stream: MediaStream;
+	directory: FileSystemDirectoryHandle;
+	callbacks: RecordingSessionCallbacks;
+	/** テスト注入点。デフォルトは `new MediaRecorder(stream, options)`。 */
+	createRecorder?: (
+		stream: MediaStream,
+		options?: MediaRecorderOptions,
+	) => MediaRecorder;
+	/** テスト注入点。デフォルトは `performance.now()`。 */
+	now?: () => number;
+};
+
+export type RecordingSession = {
+	getMetadata: () => CaptureMetadata;
+	isFinished: () => boolean;
+	getLastDataAt: () => number;
+	isRecorderRecording: () => boolean;
+	stop: (
+		reason: StopReason,
+		errorMessage?: string,
+		resolutionChange?: ResolutionChange,
+	) => void;
+	rollover: (change: ResolutionChange) => void;
+};
+
+export type StartRecordingSessionResult =
+	| { ok: true; session: RecordingSession }
+	| { ok: false; errorMessage?: string };
+
+export async function startRecordingSession(
+	options: RecordingSessionOptions,
+): Promise<StartRecordingSessionResult> {
+	const { stream, directory, callbacks } = options;
+	const createRecorder =
+		options.createRecorder ??
+		((s: MediaStream, recorderOptions?: MediaRecorderOptions) =>
+			new MediaRecorder(s, recorderOptions));
+	const now = options.now ?? (() => performance.now());
+
+	let metadata = options.metadata;
+
+	async function createPart(index: number): Promise<RecordingPart> {
+		const fileName = createPartFileName(metadata.fileName, metadata.id, index);
+		const fileHandle = await directory.getFileHandle(fileName, {
+			create: true,
+		});
+		let writable: FileSystemWritableFileStream | undefined;
+		try {
+			writable = await fileHandle.createWritable();
+			const recorderOptions = createMediaRecorderOptions(
+				metadata.mimeType,
+				metadata.width,
+				metadata.height,
+			);
+			return {
+				index,
+				fileName,
+				recorder: createRecorder(stream, recorderOptions),
+				writable,
+				writeQueue: Promise.resolve(),
+				sizeBytes: 0,
+				chunkCount: 0,
+				queuedBytes: 0,
+			};
+		} catch (error) {
+			await writable?.abort().catch(() => undefined);
+			await removePartFile(fileName);
+			throw error;
+		}
+	}
+
+	let currentPart: RecordingPart;
+	try {
+		currentPart = await createPart(1);
+	} catch (error) {
+		return {
+			ok: false,
+			errorMessage: getErrorMessage(error, t("mediaRecorderStartFailed")),
+		};
+	}
+
+	const startedAt = now();
+	let finishSent = false;
+	let stopReason: StopReason | undefined;
+	let errorMessage: string | undefined;
+	let pendingResolutionChange: ResolutionChange | undefined;
+	let finalizeTimer: number | undefined;
+	let lastDataAt = startedAt;
+
+	async function removePartFile(fileName: string): Promise<void> {
+		await directory.removeEntry(fileName).catch(() => undefined);
+	}
+
+	function setStopReason(reason: StopReason, message?: string): void {
+		const next = reduceStopReason(
+			{ stopReason, errorMessage },
+			{ stopReason: reason, errorMessage: message },
+		);
+		stopReason = next.stopReason;
+		errorMessage = next.errorMessage;
+	}
+
+	function startPart(part: RecordingPart): void {
+		lastDataAt = now();
+		part.recorder.ondataavailable = (event) => {
+			lastDataAt = now();
+			enqueueChunk(part, event.data);
+		};
+		part.recorder.onerror = (event) => {
+			stopSession(
+				"error",
+				(event as ErrorEvent).message || t("recordingErrorOccurred"),
+			);
+		};
+		part.recorder.onstop = () => {
+			void finalizeStoppedPart(part);
+		};
+		part.recorder.start(CAPTURE_CHUNK_TIMESLICE_MS);
+	}
+
+	function enqueueChunk(part: RecordingPart, blob: Blob): void {
+		if (blob.size <= 0 || finishSent) {
+			return;
+		}
+		if (
+			blob.size > MAX_CAPTURE_CHUNK_BYTES ||
+			part.queuedBytes + blob.size > MAX_QUEUED_WRITE_BYTES
+		) {
+			stopSession("write_failed", t("writeBackpressureStopped"));
+			return;
+		}
+
+		part.queuedBytes += blob.size;
+		part.writeQueue = part.writeQueue
+			.then(() => writeChunk(part, blob))
+			.catch((error: unknown) => {
+				setStopReason(
+					"write_failed",
+					getErrorMessage(error, t("recordingDataWriteFailed")),
+				);
+				stopPart(part, "finish");
+			})
+			.finally(() => {
+				part.queuedBytes -= blob.size;
+			});
+	}
+
+	async function writeChunk(part: RecordingPart, blob: Blob): Promise<void> {
+		await part.writable.write(blob);
+		part.sizeBytes += blob.size;
+		part.chunkCount += 1;
+		metadata = {
+			...metadata,
+			sizeBytes: metadata.sizeBytes + blob.size,
+			elapsedMs: now() - startedAt,
+			chunkCount: metadata.chunkCount + 1,
+			currentPartSizeBytes: part.sizeBytes,
+		};
+		callbacks.onProgress(metadata);
+		if (shouldSplitPart(part.sizeBytes) && !part.stopMode && !stopReason) {
+			stopPart(part, "rollover", { requestData: true });
+		}
+	}
+
+	function stopSession(
+		reason: StopReason,
+		message?: string,
+		resolutionChange?: ResolutionChange,
+	): void {
+		if (finishSent) {
+			return;
+		}
+		if (resolutionChange) {
+			metadata = { ...metadata, resolutionChange };
+		}
+		setStopReason(reason, message);
+		callbacks.onStopping(now() - startedAt);
+		stopPart(currentPart, "finish", { requestData: true });
+		if (!finalizeTimer) {
+			finalizeTimer = window.setTimeout(() => {
+				finalizeTimer = undefined;
+				if (!finishSent) {
+					void finalizeStoppedPart(currentPart);
+				}
+			}, FORCE_FINALIZE_TIMEOUT_MS);
+		}
+	}
+
+	function rolloverSession(change: ResolutionChange): void {
+		if (currentPart.stopMode || stopReason || finishSent) {
+			return;
+		}
+		pendingResolutionChange = change;
+		metadata = {
+			...metadata,
+			width: change.to.width,
+			height: change.to.height,
+		};
+		stopPart(currentPart, "rollover", { requestData: true });
+	}
+
+	function stopPart(
+		part: RecordingPart,
+		stopMode: NonNullable<RecordingPart["stopMode"]>,
+		partOptions: { requestData?: boolean } = {},
+	): void {
+		if (part.recorder.state === "inactive") {
+			return;
+		}
+		part.stopMode = stopMode;
+		if (partOptions.requestData) {
+			part.recorder.requestData();
+		}
+		part.recorder.stop();
+	}
+
+	async function finalizeStoppedPart(part: RecordingPart): Promise<void> {
+		if (finishSent || currentPart !== part) {
+			return;
+		}
+		if (part.finalizing) {
+			return;
+		}
+		part.finalizing = true;
+		try {
+			await part.writeQueue;
+			if (isFatalStopReason(stopReason) || part.sizeBytes === 0) {
+				await discardCurrentPart(part);
+			} else {
+				await saveCurrentPart(part);
+			}
+		} catch (error) {
+			await discardCurrentPart(part);
+			setStopReason(
+				"write_failed",
+				getErrorMessage(error, t("recordingFileFinalizeFailed")),
+			);
+		}
+
+		if (part.stopMode === "rollover" && !stopReason) {
+			const started = await startNextPart(part.index + 1);
+			if (started) {
+				return;
+			}
+		}
+		await finishRecording();
+	}
+
+	async function startNextPart(index: number): Promise<boolean> {
+		try {
+			const nextPart = await createPart(index);
+			const pendingChange = pendingResolutionChange;
+			currentPart = nextPart;
+			metadata = {
+				...metadata,
+				partCount: nextPart.index,
+				currentPartSizeBytes: 0,
+				resolutionChanges: pendingChange
+					? [
+							...(metadata.resolutionChanges ?? []),
+							{ ...pendingChange, partIndex: nextPart.index },
+						]
+					: metadata.resolutionChanges,
+			};
+			pendingResolutionChange = undefined;
+			startPart(nextPart);
+			callbacks.onPartStarted(metadata, pendingChange);
+			return true;
+		} catch (error) {
+			setStopReason(
+				"write_failed",
+				getErrorMessage(error, t("nextRecordingFileCreateFailed")),
+			);
+			return false;
+		}
+	}
+
+	async function saveCurrentPart(part: RecordingPart): Promise<void> {
+		await part.writable.close();
+		metadata = {
+			...metadata,
+			savedPartCount: (metadata.savedPartCount ?? 0) + 1,
+		};
+		callbacks.onProgress(metadata);
+	}
+
+	async function discardCurrentPart(part: RecordingPart): Promise<void> {
+		await part.writable.abort().catch(() => undefined);
+		await removePartFile(part.fileName);
+		discardPartProgress(part);
+	}
+
+	function discardPartProgress(part: RecordingPart): void {
+		metadata = {
+			...metadata,
+			sizeBytes: Math.max(0, metadata.sizeBytes - part.sizeBytes),
+			chunkCount: Math.max(0, metadata.chunkCount - part.chunkCount),
+			currentPartSizeBytes: 0,
+			resolutionChanges: markResolutionChangeFileDiscarded(
+				metadata.resolutionChanges,
+				part.index,
+			),
+		};
+	}
+
+	async function finishRecording(): Promise<void> {
+		if (finishSent) {
+			return;
+		}
+		finishSent = true;
+		if (finalizeTimer) {
+			window.clearTimeout(finalizeTimer);
+			finalizeTimer = undefined;
+		}
+		stopMediaStreamTracks(stream);
+		const hasSavedParts = (metadata.savedPartCount ?? 0) > 0;
+		const message = createCaptureFinishedMessage(metadata, {
+			stopReason,
+			errorMessage,
+			elapsedMs: now() - startedAt,
+		});
+		callbacks.onFinished({ message, stopReason, errorMessage, hasSavedParts });
+	}
+
+	try {
+		startPart(currentPart);
+	} catch (error) {
+		await currentPart.writable.abort();
+		await removePartFile(currentPart.fileName);
+		return {
+			ok: false,
+			errorMessage: getErrorMessage(error, t("mediaRecorderStartFailed")),
+		};
+	}
+
+	const session: RecordingSession = {
+		getMetadata: () => metadata,
+		isFinished: () => finishSent,
+		getLastDataAt: () => lastDataAt,
+		isRecorderRecording: () => currentPart.recorder.state === "recording",
+		stop: stopSession,
+		rollover: rolloverSession,
+	};
+	return { ok: true, session };
+}

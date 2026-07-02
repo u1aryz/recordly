@@ -1,0 +1,693 @@
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { PART_SPLIT_BYTES } from "@/shared/file-system";
+import {
+	type RecordingSessionCallbacks,
+	startRecordingSession,
+} from "@/shared/recording-session";
+import type { CaptureMetadata } from "@/shared/types";
+
+function createMetadata(
+	overrides: Partial<CaptureMetadata> = {},
+): CaptureMetadata {
+	return {
+		id: "capture-1",
+		videoId: "video-1",
+		tabId: 1,
+		pageUrl: "https://example.test",
+		title: "Demo",
+		startedAt: 0,
+		status: "recording",
+		fileStatus: "writing",
+		mimeType: "video/mp4",
+		fileName: "demo.mp4",
+		sizeBytes: 0,
+		elapsedMs: 0,
+		width: 1920,
+		height: 1080,
+		chunkCount: 0,
+		storageMode: "segmented-files",
+		scope: "element",
+		partCount: 1,
+		savedPartCount: 0,
+		currentPartSizeBytes: 0,
+		...overrides,
+	};
+}
+
+type FakeRecorderHandle = {
+	recorder: MediaRecorder;
+	getState: () => "inactive" | "recording" | "paused";
+	start: ReturnType<typeof vi.fn>;
+	stop: ReturnType<typeof vi.fn>;
+	requestData: ReturnType<typeof vi.fn>;
+	emitData: (size: number) => void;
+	emitStop: () => void;
+	emitError: (message: string) => void;
+};
+
+function createFakeRecorder(): FakeRecorderHandle {
+	let state: "inactive" | "recording" | "paused" = "inactive";
+	let ondataavailable: ((event: { data: Blob }) => void) | null = null;
+	let onerror: ((event: unknown) => void) | null = null;
+	let onstop: (() => void) | null = null;
+	const start = vi.fn(() => {
+		state = "recording";
+	});
+	const stop = vi.fn(() => {
+		state = "inactive";
+	});
+	const requestData = vi.fn();
+	const recorder = {
+		get state() {
+			return state;
+		},
+		set ondataavailable(handler: ((event: { data: Blob }) => void) | null) {
+			ondataavailable = handler;
+		},
+		get ondataavailable() {
+			return ondataavailable;
+		},
+		set onerror(handler: ((event: unknown) => void) | null) {
+			onerror = handler;
+		},
+		get onerror() {
+			return onerror;
+		},
+		set onstop(handler: (() => void) | null) {
+			onstop = handler;
+		},
+		get onstop() {
+			return onstop;
+		},
+		start,
+		stop,
+		requestData,
+	} as unknown as MediaRecorder;
+
+	return {
+		recorder,
+		getState: () => state,
+		start,
+		stop,
+		requestData,
+		emitData: (size: number) => {
+			ondataavailable?.({ data: { size } as Blob });
+		},
+		emitStop: () => {
+			state = "inactive";
+			onstop?.();
+		},
+		emitError: (message: string) => {
+			onerror?.({ message } as ErrorEvent);
+		},
+	};
+}
+
+function createRecorderFactory() {
+	const handles: FakeRecorderHandle[] = [];
+	const createRecorder = vi.fn(() => {
+		const handle = createFakeRecorder();
+		handles.push(handle);
+		return handle.recorder;
+	});
+	return { createRecorder, handles };
+}
+
+type FakeWritable = {
+	writable: FileSystemWritableFileStream;
+	write: ReturnType<typeof vi.fn>;
+	close: ReturnType<typeof vi.fn>;
+	abort: ReturnType<typeof vi.fn>;
+	writtenBytes: number;
+};
+
+function createFakeWritable(
+	overrides: {
+		writeImpl?: (chunk: Blob) => Promise<void>;
+		closeImpl?: () => Promise<void>;
+	} = {},
+): FakeWritable {
+	const state = { writtenBytes: 0 };
+	const write = vi.fn(
+		overrides.writeImpl ??
+			(async (chunk: Blob) => {
+				state.writtenBytes += chunk.size;
+			}),
+	);
+	const close = vi.fn(overrides.closeImpl ?? (async () => undefined));
+	const abort = vi.fn(async () => undefined);
+	const writable = {
+		write,
+		close,
+		abort,
+	} as unknown as FileSystemWritableFileStream;
+	return {
+		writable,
+		write,
+		close,
+		abort,
+		get writtenBytes() {
+			return state.writtenBytes;
+		},
+	} as FakeWritable;
+}
+
+function createFakeDirectory(
+	createWritableForFile: (
+		fileName: string,
+	) =>
+		| Promise<FileSystemWritableFileStream>
+		| FileSystemWritableFileStream = () => createFakeWritable().writable,
+) {
+	const removedFiles: string[] = [];
+	const getFileHandle = vi.fn(async (fileName: string) => {
+		return {
+			createWritable: vi.fn(async () => createWritableForFile(fileName)),
+		};
+	});
+	const removeEntry = vi.fn(async (fileName: string) => {
+		removedFiles.push(fileName);
+	});
+	const directory = {
+		getFileHandle,
+		removeEntry,
+	} as unknown as FileSystemDirectoryHandle;
+	return { directory, removedFiles, getFileHandle, removeEntry };
+}
+
+function createFakeStream() {
+	const track = { stop: vi.fn() };
+	const stream = { getTracks: () => [track] } as unknown as MediaStream;
+	return { stream, track };
+}
+
+function createCallbacks(): RecordingSessionCallbacks {
+	return {
+		onProgress: vi.fn(),
+		onStopping: vi.fn(),
+		onPartStarted: vi.fn(),
+		onFinished: vi.fn(),
+	};
+}
+
+function createNow(initial = 0) {
+	let current = initial;
+	return {
+		now: () => current,
+		advance: (ms: number) => {
+			current += ms;
+		},
+	};
+}
+
+// Promise.resolve() の連鎖だと非同期チェーンの深さ分だけtickを数える必要があり
+// 数え漏れやすいため、マクロタスク境界(setTimeout)まで進めて保留中のマイクロ
+// タスクを一括で消化する。fake timers 使用時は enqueueChunk 等の内部処理は
+// マイクロタスクなので影響を受けない。
+async function flushMicrotasks(times = 1): Promise<void> {
+	for (let i = 0; i < times; i += 1) {
+		await new Promise((resolve) => setTimeout(resolve, 0));
+	}
+}
+
+// PART_SPLIT_BYTES(2GiB) は MAX_CAPTURE_CHUNK_BYTES(42MB)を大きく超えるため、
+// 1回の emitData では書き込み拒否になる。書き込みキューを都度ドレインしながら
+// 上限未満のチャンクを積み重ねて、現在のパートを目標サイズまで育てる。
+async function growPartTo(
+	handle: FakeRecorderHandle,
+	targetBytes: number,
+): Promise<void> {
+	const CHUNK_BYTES = 40 * 1024 * 1024;
+	let written = 0;
+	while (written < targetBytes) {
+		const size = Math.min(CHUNK_BYTES, targetBytes - written);
+		handle.emitData(size);
+		written += size;
+		await flushMicrotasks();
+	}
+}
+
+afterEach(() => {
+	vi.useRealTimers();
+});
+
+describe("startRecordingSession", () => {
+	it("writes chunks serially and reports progress", async () => {
+		const { directory } = createFakeDirectory();
+		const { stream } = createFakeStream();
+		const { createRecorder, handles } = createRecorderFactory();
+		const callbacks = createCallbacks();
+		const { now } = createNow();
+
+		const result = await startRecordingSession({
+			metadata: createMetadata(),
+			stream,
+			directory,
+			callbacks,
+			createRecorder,
+			now,
+		});
+		expect(result.ok).toBe(true);
+		if (!result.ok) {
+			return;
+		}
+
+		const recorder = handles[0];
+		recorder.emitData(100);
+		await flushMicrotasks();
+		recorder.emitData(200);
+		await flushMicrotasks();
+
+		expect(result.session.getMetadata().sizeBytes).toBe(300);
+		expect(result.session.getMetadata().chunkCount).toBe(2);
+		expect(callbacks.onProgress).toHaveBeenCalledTimes(2);
+	});
+
+	it("stops with write_failed when a single chunk exceeds the byte limit", async () => {
+		const { directory } = createFakeDirectory();
+		const { stream } = createFakeStream();
+		const { createRecorder, handles } = createRecorderFactory();
+		const callbacks = createCallbacks();
+
+		const result = await startRecordingSession({
+			metadata: createMetadata(),
+			stream,
+			directory,
+			callbacks,
+			createRecorder,
+		});
+		if (!result.ok) {
+			throw new Error("expected session to start");
+		}
+
+		handles[0].emitData(43 * 1024 * 1024);
+		await flushMicrotasks();
+		handles[0].emitStop();
+		await flushMicrotasks();
+
+		expect(callbacks.onFinished).toHaveBeenCalledTimes(1);
+		const outcome = (callbacks.onFinished as ReturnType<typeof vi.fn>).mock
+			.calls[0][0];
+		expect(outcome.stopReason).toBe("write_failed");
+	});
+
+	it("stops with write_failed when the write queue backs up past the limit", async () => {
+		// write() が解決する前に複数チャンクを同期的に積むことで、キューが
+		// 未解決のまま溜まっていく状況(逆圧)を再現する。
+		const { directory } = createFakeDirectory();
+		const { stream } = createFakeStream();
+		const { createRecorder, handles } = createRecorderFactory();
+		const callbacks = createCallbacks();
+
+		const result = await startRecordingSession({
+			metadata: createMetadata(),
+			stream,
+			directory,
+			callbacks,
+			createRecorder,
+		});
+		if (!result.ok) {
+			throw new Error("expected session to start");
+		}
+
+		handles[0].emitData(40 * 1024 * 1024);
+		handles[0].emitData(40 * 1024 * 1024);
+		handles[0].emitData(40 * 1024 * 1024);
+		handles[0].emitData(40 * 1024 * 1024);
+		await flushMicrotasks();
+		handles[0].emitStop();
+		await flushMicrotasks();
+
+		expect(callbacks.onFinished).toHaveBeenCalledTimes(1);
+		const outcome = (callbacks.onFinished as ReturnType<typeof vi.fn>).mock
+			.calls[0][0];
+		expect(outcome.stopReason).toBe("write_failed");
+	});
+
+	it("rolls over to a new part once the 2GiB soft limit is reached", async () => {
+		const { directory } = createFakeDirectory();
+		const { stream } = createFakeStream();
+		const { createRecorder, handles } = createRecorderFactory();
+		const callbacks = createCallbacks();
+
+		const result = await startRecordingSession({
+			metadata: createMetadata(),
+			stream,
+			directory,
+			callbacks,
+			createRecorder,
+		});
+		if (!result.ok) {
+			throw new Error("expected session to start");
+		}
+
+		await growPartTo(handles[0], PART_SPLIT_BYTES);
+
+		expect(handles[0].requestData).toHaveBeenCalledTimes(1);
+		expect(handles[0].stop).toHaveBeenCalledTimes(1);
+
+		handles[0].emitStop();
+		await flushMicrotasks();
+
+		expect(handles).toHaveLength(2);
+		expect(handles[1].start).toHaveBeenCalledTimes(1);
+		expect(callbacks.onPartStarted).toHaveBeenCalledTimes(1);
+		const [partMetadata, change] = (
+			callbacks.onPartStarted as ReturnType<typeof vi.fn>
+		).mock.calls[0];
+		expect(partMetadata.partCount).toBe(2);
+		expect(change).toBeUndefined();
+		expect(result.session.getMetadata().savedPartCount).toBe(1);
+	});
+
+	it("rolls over on a resolution change and records it against the new part", async () => {
+		const { directory } = createFakeDirectory();
+		const { stream } = createFakeStream();
+		const { createRecorder, handles } = createRecorderFactory();
+		const callbacks = createCallbacks();
+
+		const result = await startRecordingSession({
+			metadata: createMetadata(),
+			stream,
+			directory,
+			callbacks,
+			createRecorder,
+		});
+		if (!result.ok) {
+			throw new Error("expected session to start");
+		}
+
+		const change = {
+			from: { width: 1920, height: 1080 },
+			to: { width: 1280, height: 720 },
+		};
+		result.session.rollover(change);
+		expect(handles[0].requestData).toHaveBeenCalledTimes(1);
+		handles[0].emitStop();
+		await flushMicrotasks();
+
+		expect(handles).toHaveLength(2);
+		const metadata = result.session.getMetadata();
+		expect(metadata.width).toBe(1280);
+		expect(metadata.height).toBe(720);
+		expect(metadata.resolutionChanges).toEqual([{ ...change, partIndex: 2 }]);
+		const [, passedChange] = (
+			callbacks.onPartStarted as ReturnType<typeof vi.fn>
+		).mock.calls[0];
+		expect(passedChange).toEqual(change);
+	});
+
+	it("ignores rollover once a stop is already in progress", async () => {
+		const { directory } = createFakeDirectory();
+		const { stream } = createFakeStream();
+		const { createRecorder, handles } = createRecorderFactory();
+		const callbacks = createCallbacks();
+
+		const result = await startRecordingSession({
+			metadata: createMetadata(),
+			stream,
+			directory,
+			callbacks,
+			createRecorder,
+		});
+		if (!result.ok) {
+			throw new Error("expected session to start");
+		}
+
+		result.session.stop("user");
+		handles[0].requestData.mockClear();
+		result.session.rollover({
+			from: { width: 1920, height: 1080 },
+			to: { width: 1280, height: 720 },
+		});
+		expect(handles[0].requestData).not.toHaveBeenCalled();
+	});
+
+	it("finishes as complete when the user stops after saving data", async () => {
+		const { directory } = createFakeDirectory();
+		const { stream } = createFakeStream();
+		const { createRecorder, handles } = createRecorderFactory();
+		const callbacks = createCallbacks();
+
+		const result = await startRecordingSession({
+			metadata: createMetadata(),
+			stream,
+			directory,
+			callbacks,
+			createRecorder,
+		});
+		if (!result.ok) {
+			throw new Error("expected session to start");
+		}
+
+		handles[0].emitData(1024);
+		await flushMicrotasks();
+		result.session.stop("user");
+		expect(callbacks.onStopping).toHaveBeenCalledTimes(1);
+		handles[0].emitStop();
+		await flushMicrotasks();
+
+		expect(callbacks.onFinished).toHaveBeenCalledTimes(1);
+		const outcome = (callbacks.onFinished as ReturnType<typeof vi.fn>).mock
+			.calls[0][0];
+		expect(outcome.message.status).toBe("complete");
+		expect(outcome.message.fileStatus).toBe("saved");
+		expect(outcome.message.stopReason).toBeUndefined();
+		expect(outcome.hasSavedParts).toBe(true);
+	});
+
+	it("discards an empty part and reports a failed fileStatus", async () => {
+		const { directory, removedFiles } = createFakeDirectory();
+		const { stream } = createFakeStream();
+		const { createRecorder, handles } = createRecorderFactory();
+		const callbacks = createCallbacks();
+
+		const result = await startRecordingSession({
+			metadata: createMetadata(),
+			stream,
+			directory,
+			callbacks,
+			createRecorder,
+		});
+		if (!result.ok) {
+			throw new Error("expected session to start");
+		}
+
+		result.session.stop("user");
+		handles[0].emitStop();
+		await flushMicrotasks();
+
+		expect(removedFiles).toHaveLength(1);
+		const outcome = (callbacks.onFinished as ReturnType<typeof vi.fn>).mock
+			.calls[0][0];
+		expect(outcome.hasSavedParts).toBe(false);
+		expect(outcome.message.fileStatus).toBe("failed");
+	});
+
+	it("discards the part and marks write_failed when a write rejects", async () => {
+		const { directory } = createFakeDirectory(
+			() =>
+				createFakeWritable({
+					writeImpl: () => Promise.reject(new Error("disk full")),
+				}).writable,
+		);
+		const { stream } = createFakeStream();
+		const { createRecorder, handles } = createRecorderFactory();
+		const callbacks = createCallbacks();
+
+		const result = await startRecordingSession({
+			metadata: createMetadata(),
+			stream,
+			directory,
+			callbacks,
+			createRecorder,
+		});
+		if (!result.ok) {
+			throw new Error("expected session to start");
+		}
+
+		handles[0].emitData(1024);
+		await flushMicrotasks();
+		handles[0].emitStop();
+		await flushMicrotasks();
+
+		const outcome = (callbacks.onFinished as ReturnType<typeof vi.fn>).mock
+			.calls[0][0];
+		expect(outcome.stopReason).toBe("write_failed");
+		expect(outcome.errorMessage).toBe("disk full");
+		expect(outcome.hasSavedParts).toBe(false);
+	});
+
+	it("discards on finalize failure and reports stopped when parts were already saved", async () => {
+		let call = 0;
+		const { directory } = createFakeDirectory((_fileName) => {
+			call += 1;
+			if (call === 1) {
+				return createFakeWritable().writable;
+			}
+			return createFakeWritable({
+				closeImpl: () => Promise.reject(new Error("finalize failed")),
+			}).writable;
+		});
+		const { stream } = createFakeStream();
+		const { createRecorder, handles } = createRecorderFactory();
+		const callbacks = createCallbacks();
+
+		const result = await startRecordingSession({
+			metadata: createMetadata(),
+			stream,
+			directory,
+			callbacks,
+			createRecorder,
+		});
+		if (!result.ok) {
+			throw new Error("expected session to start");
+		}
+
+		await growPartTo(handles[0], PART_SPLIT_BYTES);
+		handles[0].emitStop();
+		await flushMicrotasks();
+		expect(handles).toHaveLength(2);
+
+		handles[1].emitData(1024);
+		await flushMicrotasks();
+		result.session.stop("user");
+		handles[1].emitStop();
+		await flushMicrotasks();
+
+		const outcome = (callbacks.onFinished as ReturnType<typeof vi.fn>).mock
+			.calls[0][0];
+		expect(outcome.stopReason).toBe("write_failed");
+		expect(outcome.message.status).toBe("stopped");
+	});
+
+	it("force-finalizes once the onstop event never arrives", async () => {
+		vi.useFakeTimers();
+		const { directory } = createFakeDirectory();
+		const { stream } = createFakeStream();
+		const { createRecorder, handles } = createRecorderFactory();
+		const callbacks = createCallbacks();
+
+		const result = await startRecordingSession({
+			metadata: createMetadata(),
+			stream,
+			directory,
+			callbacks,
+			createRecorder,
+		});
+		if (!result.ok) {
+			throw new Error("expected session to start");
+		}
+
+		result.session.stop("user");
+		await vi.advanceTimersByTimeAsync(8000);
+
+		expect(callbacks.onFinished).toHaveBeenCalledTimes(1);
+		void handles;
+	});
+
+	it("finalizes exactly once when onstop fires alongside the force-finalize timer", async () => {
+		vi.useFakeTimers();
+		const { directory } = createFakeDirectory();
+		const { stream } = createFakeStream();
+		const { createRecorder, handles } = createRecorderFactory();
+		const callbacks = createCallbacks();
+
+		const result = await startRecordingSession({
+			metadata: createMetadata(),
+			stream,
+			directory,
+			callbacks,
+			createRecorder,
+		});
+		if (!result.ok) {
+			throw new Error("expected session to start");
+		}
+
+		result.session.stop("user");
+		handles[0].emitStop();
+		handles[0].emitStop();
+		await vi.advanceTimersByTimeAsync(8000);
+
+		expect(callbacks.onFinished).toHaveBeenCalledTimes(1);
+	});
+
+	it("stops with write_failed when creating the next part fails, keeping stopped status", async () => {
+		let call = 0;
+		const { directory } = createFakeDirectory(() => {
+			call += 1;
+			if (call === 1) {
+				return createFakeWritable().writable;
+			}
+			throw new Error("no space left");
+		});
+		const { stream } = createFakeStream();
+		const { createRecorder, handles } = createRecorderFactory();
+		const callbacks = createCallbacks();
+
+		const result = await startRecordingSession({
+			metadata: createMetadata(),
+			stream,
+			directory,
+			callbacks,
+			createRecorder,
+		});
+		if (!result.ok) {
+			throw new Error("expected session to start");
+		}
+
+		await growPartTo(handles[0], PART_SPLIT_BYTES);
+		handles[0].emitStop();
+		await flushMicrotasks(10);
+
+		expect(handles).toHaveLength(1);
+		const outcome = (callbacks.onFinished as ReturnType<typeof vi.fn>).mock
+			.calls[0][0];
+		expect(outcome.stopReason).toBe("write_failed");
+		expect(outcome.message.status).toBe("stopped");
+	});
+
+	it("stops every stream track once finished", async () => {
+		const { directory } = createFakeDirectory();
+		const { stream, track } = createFakeStream();
+		const { createRecorder, handles } = createRecorderFactory();
+		const callbacks = createCallbacks();
+
+		const result = await startRecordingSession({
+			metadata: createMetadata(),
+			stream,
+			directory,
+			callbacks,
+			createRecorder,
+		});
+		if (!result.ok) {
+			throw new Error("expected session to start");
+		}
+
+		result.session.stop("user");
+		handles[0].emitStop();
+		await flushMicrotasks();
+
+		expect(track.stop).toHaveBeenCalledTimes(1);
+	});
+
+	it("rolls back and reports failure when the recorder cannot be created", async () => {
+		const { directory, removedFiles } = createFakeDirectory();
+		const { stream } = createFakeStream();
+		const callbacks = createCallbacks();
+		const createRecorder = vi.fn(() => {
+			throw new Error("recorder unavailable");
+		});
+
+		const result = await startRecordingSession({
+			metadata: createMetadata(),
+			stream,
+			directory,
+			callbacks,
+			createRecorder,
+		});
+
+		expect(result.ok).toBe(false);
+		expect(removedFiles).toHaveLength(1);
+	});
+});
