@@ -4,7 +4,7 @@ import {
 	getCaptureIdAfterDeletion,
 	getPageHost,
 	isCaptureDeleteKey,
-} from "@/entrypoints/captures/App";
+} from "@/entrypoints/captures/capture-view-state";
 import type { CaptureMetadata } from "@/shared/types";
 
 const captures = [
