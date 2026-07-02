@@ -78,6 +78,65 @@ export function hasDataTimedOut(
 	return nowMs - lastDataAtMs >= timeoutMs;
 }
 
+export type RecordingTickCommand =
+	| {
+			type: "stop";
+			reason: "video_removed" | "resolution_changed" | "no_data_timeout";
+			change?: ResolutionChange;
+	  }
+	| { type: "rollover"; change: ResolutionChange };
+
+/**
+ * 解像度監視の1tick分の評価結果と無データタイムアウト判定を、実行すべきコマンド列に変換する。
+ * 同一tickで解像度変化(rollover/stop)と無データタイムアウト(stop)が両方発火し得るため、
+ * 発生した順に配列で返す。
+ */
+export function evaluateRecordingTick(
+	state: MonitorState,
+	input: {
+		connected: boolean;
+		current: VideoResolution;
+		recorded: VideoResolution;
+		continueOnResolutionChange: boolean;
+		recorderRecording: boolean;
+		paused: boolean;
+		seeking: boolean;
+		nowMs: number;
+		lastDataAtMs: number;
+	},
+): RecordingTickCommand[] {
+	const commands: RecordingTickCommand[] = [];
+	const action = evaluateMonitorTick(state, {
+		connected: input.connected,
+		current: input.current,
+		recorded: input.recorded,
+	});
+	if (action.type === "video_removed") {
+		commands.push({ type: "stop", reason: "video_removed" });
+	} else if (action.type === "resolution_changed") {
+		if (input.continueOnResolutionChange) {
+			commands.push({ type: "rollover", change: action.change });
+		} else {
+			commands.push({
+				type: "stop",
+				reason: "resolution_changed",
+				change: action.change,
+			});
+		}
+	}
+
+	if (
+		input.recorderRecording &&
+		!input.paused &&
+		!input.seeking &&
+		hasDataTimedOut(input.nowMs, input.lastDataAtMs)
+	) {
+		commands.push({ type: "stop", reason: "no_data_timeout" });
+	}
+
+	return commands;
+}
+
 function isValidResolution(resolution: VideoResolution): boolean {
 	return resolution.width > 0 && resolution.height > 0;
 }

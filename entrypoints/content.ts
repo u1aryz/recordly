@@ -23,9 +23,8 @@ import {
 } from "@/shared/recording-hud";
 import {
 	createMonitorState,
-	evaluateMonitorTick,
+	evaluateRecordingTick,
 	FORCE_FINALIZE_TIMEOUT_MS,
-	hasDataTimedOut,
 	type MonitorState,
 } from "@/shared/recording-monitor";
 import {
@@ -929,36 +928,33 @@ function createResolutionTimer(
 	active: ActiveRecording,
 ): number {
 	return window.setInterval(() => {
-		const action = evaluateMonitorTick(active.monitorState, {
+		const commands = evaluateRecordingTick(active.monitorState, {
 			connected: isVideoConnected(video),
 			current: getCurrentVideoResolution(video),
 			recorded: {
 				width: active.metadata.width,
 				height: active.metadata.height,
 			},
+			continueOnResolutionChange: active.continueOnResolutionChange,
+			recorderRecording: active.part.recorder.state === "recording",
+			paused: video.paused,
+			seeking: video.seeking,
+			nowMs: performance.now(),
+			lastDataAtMs: active.lastDataAt,
 		});
-		if (action.type === "video_removed") {
-			stopCapture(active.metadata.id, "video_removed");
-		} else if (action.type === "resolution_changed") {
-			if (active.continueOnResolutionChange) {
-				rolloverForResolutionChange(active, action.change);
-			} else {
+		for (const command of commands) {
+			if (command.type === "rollover") {
+				rolloverForResolutionChange(active, command.change);
+			} else if (command.reason === "resolution_changed") {
 				stopCapture(
 					active.metadata.id,
 					"resolution_changed",
 					undefined,
-					action.change,
+					command.change,
 				);
+			} else {
+				stopCapture(active.metadata.id, command.reason);
 			}
-		}
-
-		if (
-			active.part.recorder.state === "recording" &&
-			!video.paused &&
-			!video.seeking &&
-			hasDataTimedOut(performance.now(), active.lastDataAt)
-		) {
-			stopCapture(active.metadata.id, "no_data_timeout");
 		}
 	}, 500);
 }
