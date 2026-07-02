@@ -17,6 +17,12 @@
 		"message": "ページ上の video を選んで MP4 キャプチャします。"
 	},
 	"selectVideoOnPage": { "message": "ページ上で録画する動画を選ぶ" },
+	"settingContinueOnResolutionChange": {
+		"message": "解像度が変わっても録画を続ける"
+	},
+	"settingContinueOnResolutionChangeDescription": {
+		"message": "解像度の変更を検知すると、新しいファイルに切り替えて録画を継続します。"
+	},
 	"pickerInstructions": {
 		"message": "録画する動画にカーソルを合わせてください"
 	},
@@ -52,6 +58,11 @@
 	"fileSize": { "message": "ファイルサイズ" },
 	"fileCount": { "message": "ファイル数" },
 	"resolution": { "message": "解像度" },
+	"resolutionChangeSplits": { "message": "解像度変更による分割" },
+	"resolutionChangePartLabel": {
+		"message": "$PART$つ目のファイルから",
+		"placeholders": { "part": { "content": "$1" } }
+	},
 	"mp4AtSelectedDestination": {
 		"message": "MP4は録画開始時に選択した保存先にあります。"
 	},
@@ -71,6 +82,13 @@
 	"recordingPart": {
 		"message": "$PART$つ目を録画中",
 		"placeholders": { "part": { "content": "$1" } }
+	},
+	"resolutionRolloverHud": {
+		"message": "解像度が $FROM$ から $TO$ に変わったため、新しいファイルに切り替えました",
+		"placeholders": {
+			"from": { "content": "$1" },
+			"to": { "content": "$2" }
+		}
 	},
 	"openStatus": { "message": "状況を開く" },
 	"finalizingMp4": { "message": "MP4ファイルを確定しています。" },
@@ -106,6 +124,9 @@
 	"savedPartsAfterError": {
 		"message": "録画を終了しました。確定済みのパートは保存されています。"
 	},
+	"stoppedAfterNoDataTimeout": {
+		"message": "録画データが届かなくなったため自動停止しました。停止までの内容は保存済みです。"
+	},
 	"stopReasonUser": { "message": "ユーザー操作で停止しました" },
 	"stopReasonResolutionChanged": {
 		"message": "動画の解像度が変わったため自動停止しました"
@@ -133,5 +154,8 @@
 		"message": "対象タブを利用できませんでした"
 	},
 	"stopReasonWriteFailed": { "message": "ファイルへの書き込みに失敗しました" },
+	"stopReasonNoDataTimeout": {
+		"message": "録画データが届かなくなったため自動停止しました"
+	},
 	"stopReasonDefault": { "message": "録画を終了しました" }
 }

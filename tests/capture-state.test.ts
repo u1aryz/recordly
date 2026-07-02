@@ -127,4 +127,46 @@ describe("capture state", () => {
 			currentPartSizeBytes: 1,
 		});
 	});
+
+	it("merges resolutionChanges history and keeps it when progress omits it", () => {
+		const metadata = createCaptureMetadata({
+			videoId: "video-id",
+			tabId: 1,
+			pageUrl: "https://example.test",
+			title: "Large Demo",
+			mimeType: "video/mp4",
+			width: 1920,
+			height: 1080,
+			storageMode: "segmented-files",
+		});
+
+		const withChange = applyProgress(metadata, {
+			sizeBytes: 1024,
+			elapsedMs: 1000,
+			chunkCount: 1,
+			partCount: 2,
+			savedPartCount: 1,
+			currentPartSizeBytes: 0,
+			resolutionChanges: [
+				{
+					from: { width: 1920, height: 1080 },
+					to: { width: 1280, height: 720 },
+					partIndex: 2,
+				},
+			],
+		});
+		expect(withChange.resolutionChanges).toHaveLength(1);
+
+		const nextProgress = applyProgress(withChange, {
+			sizeBytes: 2048,
+			elapsedMs: 2000,
+			chunkCount: 2,
+			partCount: 2,
+			savedPartCount: 1,
+			currentPartSizeBytes: 1024,
+		});
+		expect(nextProgress.resolutionChanges).toEqual(
+			withChange.resolutionChanges,
+		);
+	});
 });

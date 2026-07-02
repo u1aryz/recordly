@@ -21,6 +21,8 @@ type RecordingHudRow = {
 	stopButton: HTMLButtonElement;
 	removeTimer?: number;
 	highlightTimer?: number;
+	noticeTimer?: number;
+	partCount: number;
 	recording: boolean;
 };
 
@@ -34,6 +36,7 @@ export type RecordingHudManager = {
 	add: (metadata: CaptureMetadata) => void;
 	update: (captureId: string, elapsedMs: number) => void;
 	updatePart: (captureId: string, partCount: number) => void;
+	notify: (captureId: string, message: string) => void;
 	markStopping: (captureId: string, elapsedMs: number) => void;
 	finish: (captureId: string, message: string, tone: HudTone) => void;
 	remove: (captureId: string) => void;
@@ -44,6 +47,7 @@ export type RecordingHudManager = {
 
 const RESULT_DISPLAY_MS = 8000;
 const HIGHLIGHT_DISPLAY_MS = 1600;
+const NOTICE_DISPLAY_MS = 5000;
 const DEFAULT_MARGIN_PX = 16;
 const FALLBACK_PANEL_WIDTH_PX = 390;
 const FALLBACK_PANEL_HEIGHT_PX = 160;
@@ -307,6 +311,9 @@ export function createRecordingHudManager(
 		if (row.highlightTimer) {
 			window.clearTimeout(row.highlightTimer);
 		}
+		if (row.noticeTimer) {
+			window.clearTimeout(row.noticeTimer);
+		}
 	}
 
 	function remove(captureId: string): void {
@@ -383,6 +390,7 @@ export function createRecordingHudManager(
 			detail,
 			actions,
 			stopButton,
+			partCount: 1,
 			recording: true,
 		};
 	}
@@ -407,9 +415,29 @@ export function createRecordingHudManager(
 		},
 		updatePart(captureId, partCount) {
 			const row = rows.get(captureId);
-			if (row) {
-				row.detail.textContent = t("recordingPart", String(partCount));
+			if (!row) {
+				return;
 			}
+			row.partCount = partCount;
+			if (row.noticeTimer) {
+				window.clearTimeout(row.noticeTimer);
+				row.noticeTimer = undefined;
+			}
+			row.detail.textContent = t("recordingPart", String(partCount));
+		},
+		notify(captureId, message) {
+			const row = rows.get(captureId);
+			if (!row) {
+				return;
+			}
+			if (row.noticeTimer) {
+				window.clearTimeout(row.noticeTimer);
+			}
+			row.detail.textContent = message;
+			row.noticeTimer = window.setTimeout(() => {
+				row.noticeTimer = undefined;
+				row.detail.textContent = t("recordingPart", String(row.partCount));
+			}, NOTICE_DISPLAY_MS);
 		},
 		markStopping(captureId, elapsedMs) {
 			const row = rows.get(captureId);

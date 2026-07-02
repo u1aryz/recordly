@@ -60,6 +60,7 @@ export function applyProgress(
 		| "partCount"
 		| "savedPartCount"
 		| "currentPartSizeBytes"
+		| "resolutionChanges"
 	>,
 ): CaptureMetadata {
 	return {
@@ -71,6 +72,7 @@ export function applyProgress(
 		savedPartCount: progress.savedPartCount ?? metadata.savedPartCount,
 		currentPartSizeBytes:
 			progress.currentPartSizeBytes ?? metadata.currentPartSizeBytes,
+		resolutionChanges: progress.resolutionChanges ?? metadata.resolutionChanges,
 	};
 }
 

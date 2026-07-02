@@ -17,6 +17,12 @@
 		"message": "Select a video on the page and capture it as MP4."
 	},
 	"selectVideoOnPage": { "message": "Select a video to record on this page" },
+	"settingContinueOnResolutionChange": {
+		"message": "Keep recording when the resolution changes"
+	},
+	"settingContinueOnResolutionChangeDescription": {
+		"message": "When a resolution change is detected, recording continues in a new file."
+	},
 	"pickerInstructions": {
 		"message": "Move the pointer over the video to record"
 	},
@@ -52,6 +58,11 @@
 	"fileSize": { "message": "File size" },
 	"fileCount": { "message": "Files" },
 	"resolution": { "message": "Resolution" },
+	"resolutionChangeSplits": { "message": "Splits from resolution changes" },
+	"resolutionChangePartLabel": {
+		"message": "From part $PART$",
+		"placeholders": { "part": { "content": "$1" } }
+	},
 	"mp4AtSelectedDestination": {
 		"message": "The MP4 is in the destination selected when recording started."
 	},
@@ -71,6 +82,13 @@
 	"recordingPart": {
 		"message": "Recording part $PART$.",
 		"placeholders": { "part": { "content": "$1" } }
+	},
+	"resolutionRolloverHud": {
+		"message": "Resolution changed from $FROM$ to $TO$, switched to a new file",
+		"placeholders": {
+			"from": { "content": "$1" },
+			"to": { "content": "$2" }
+		}
 	},
 	"openStatus": { "message": "Open status" },
 	"finalizingMp4": { "message": "Finalizing the MP4 file." },
@@ -106,6 +124,9 @@
 	"savedPartsAfterError": {
 		"message": "Recording ended. The finalized parts remain saved."
 	},
+	"stoppedAfterNoDataTimeout": {
+		"message": "Stopped automatically because no recording data arrived. Content up to the stop point has been saved."
+	},
 	"stopReasonUser": { "message": "Stopped by the user" },
 	"stopReasonResolutionChanged": {
 		"message": "Stopped automatically because the video resolution changed"
@@ -133,5 +154,8 @@
 		"message": "The target tab was unavailable"
 	},
 	"stopReasonWriteFailed": { "message": "Could not write to the file" },
+	"stopReasonNoDataTimeout": {
+		"message": "Stopped automatically because no recording data arrived"
+	},
 	"stopReasonDefault": { "message": "Recording ended" }
 }

@@ -11,3 +11,10 @@ export const recordingHudPosition = storage.defineItem<HudPosition | null>(
 		fallback: null,
 	},
 );
+
+export const continueOnResolutionChange = storage.defineItem<boolean>(
+	"local:continueOnResolutionChange",
+	{
+		fallback: true,
+	},
+);

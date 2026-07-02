@@ -31,6 +31,7 @@ import type {
 	CaptureMetadata,
 	CaptureProgress,
 	PortMessage,
+	ResolutionChangeEvent,
 } from "@/shared/types";
 import { formatBytes, formatDuration } from "@/shared/video";
 import { t } from "@/utils/i18n";
@@ -500,10 +501,14 @@ function CaptureDetail({
 					) : null}
 					<CaptureMetric
 						label={t("resolution")}
-						value={`${capture.width} x ${capture.height}`}
+						value={getResolutionLabel(capture)}
 					/>
 				</dl>
 			</div>
+
+			{capture.resolutionChanges?.length ? (
+				<ResolutionChangeHistory changes={capture.resolutionChanges} />
+			) : null}
 
 			{isDirectFile && !isRecording ? (
 				<p className="mt-4 text-base-content/65 text-sm">
@@ -575,6 +580,53 @@ function getPartCountLabel(capture: CaptureMetadata): string {
 		return t("recordingPart", String(capture.partCount ?? 1));
 	}
 	return String(capture.savedPartCount ?? capture.partCount ?? 0);
+}
+
+function formatResolution(resolution: {
+	width: number;
+	height: number;
+}): string {
+	return `${resolution.width} x ${resolution.height}`;
+}
+
+function getResolutionLabel(capture: CaptureMetadata): string {
+	const changes = capture.resolutionChanges;
+	const latest = changes?.[changes.length - 1];
+	if (latest) {
+		return formatResolution(latest.to);
+	}
+	return formatResolution({ width: capture.width, height: capture.height });
+}
+
+function ResolutionChangeHistory({
+	changes,
+}: {
+	changes: ResolutionChangeEvent[];
+}): JSX.Element {
+	return (
+		<details className="collapse-arrow collapse mt-4 rounded-box border border-base-300 bg-base-100">
+			<summary className="collapse-title min-h-0 py-3 font-medium text-sm">
+				{t("resolutionChangeSplits")} ({changes.length})
+			</summary>
+			<div className="collapse-content">
+				<ul className="space-y-1.5 text-sm">
+					{changes.map((change) => (
+						<li
+							className="flex items-center justify-between gap-3"
+							key={change.partIndex}
+						>
+							<span className="text-base-content/60">
+								{t("resolutionChangePartLabel", String(change.partIndex))}
+							</span>
+							<span>
+								{formatResolution(change.from)} → {formatResolution(change.to)}
+							</span>
+						</li>
+					))}
+				</ul>
+			</div>
+		</details>
+	);
 }
 
 function CaptureAlert({
