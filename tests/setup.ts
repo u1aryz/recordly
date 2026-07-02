@@ -1,6 +1,7 @@
 import "@testing-library/jest-dom/vitest";
 import "fake-indexeddb/auto";
-import { vi } from "vitest";
+import { afterEach, vi } from "vitest";
+import { fakeBrowser } from "wxt/testing";
 import jaMessages from "@/public/_locales/ja/messages.json";
 
 type LocaleMessage = {
@@ -43,22 +44,30 @@ function getPlaceholderValue(
 	return match ? values[Number(match[1]) - 1] : undefined;
 }
 
-vi.mock("wxt/browser", () => ({
-	browser: {
-		i18n: {
-			getMessage(
-				key: keyof typeof jaMessages,
-				substitutions?: string | string[],
-			) {
-				const definition = jaMessages[key] as LocaleMessage | undefined;
-				if (!definition) {
-					return "";
-				}
-				return replacePlaceholders(
-					definition,
-					normalizeSubstitutions(substitutions),
-				);
-			},
-		},
-	},
-}));
+function getMessage(
+	key: keyof typeof jaMessages,
+	substitutions?: string | string[],
+): string {
+	const definition = jaMessages[key] as LocaleMessage | undefined;
+	if (!definition) {
+		return "";
+	}
+	return replacePlaceholders(definition, normalizeSubstitutions(substitutions));
+}
+
+function applyI18nMock(): void {
+	fakeBrowser.i18n.getMessage =
+		getMessage as typeof fakeBrowser.i18n.getMessage;
+}
+
+applyI18nMock();
+
+vi.mock("wxt/browser", () => ({ browser: fakeBrowser }));
+// entrypoints/**/App.tsx は WXT の auto-import によりグローバル `browser` を参照するため、
+// コンポーネントテストでも同じ fakeBrowser インスタンスを見えるようにする。
+vi.stubGlobal("browser", fakeBrowser);
+
+afterEach(() => {
+	fakeBrowser.reset();
+	applyI18nMock();
+});
