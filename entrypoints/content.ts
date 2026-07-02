@@ -1,4 +1,7 @@
-import { createCaptureMetadata } from "@/shared/capture-state";
+import {
+	createCaptureMetadata,
+	markResolutionChangeFileDiscarded,
+} from "@/shared/capture-state";
 import {
 	createPartFileName,
 	isFilePickerAbortError,
@@ -850,6 +853,10 @@ function discardPartProgress(
 		sizeBytes: Math.max(0, active.metadata.sizeBytes - part.sizeBytes),
 		chunkCount: Math.max(0, active.metadata.chunkCount - part.chunkCount),
 		currentPartSizeBytes: 0,
+		resolutionChanges: markResolutionChangeFileDiscarded(
+			active.metadata.resolutionChanges,
+			part.index,
+		),
 	};
 }
 

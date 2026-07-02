@@ -94,6 +94,9 @@
 		"message": "$PART$つ目のファイルから",
 		"placeholders": { "part": { "content": "$1" } }
 	},
+	"resolutionChangeFileDiscarded": {
+		"message": "ファイルは生成されませんでした"
+	},
 	"mp4AtSelectedDestination": {
 		"message": "MP4は録画開始時に選択した保存先にあります。"
 	},

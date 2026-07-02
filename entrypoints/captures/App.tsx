@@ -617,8 +617,13 @@ function ResolutionChangeHistory({
 							<span className="text-base-content/60">
 								{t("resolutionChangePartLabel", String(change.partIndex))}
 							</span>
-							<span>
+							<span className="flex items-center gap-2">
 								{formatResolution(change.from)} → {formatResolution(change.to)}
+								{change.fileDiscarded ? (
+									<span className="badge badge-soft badge-warning badge-sm whitespace-nowrap">
+										{t("resolutionChangeFileDiscarded")}
+									</span>
+								) : null}
 							</span>
 						</li>
 					))}

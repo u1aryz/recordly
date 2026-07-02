@@ -94,6 +94,7 @@
 		"message": "From part $PART$",
 		"placeholders": { "part": { "content": "$1" } }
 	},
+	"resolutionChangeFileDiscarded": { "message": "File was not generated" },
 	"mp4AtSelectedDestination": {
 		"message": "The MP4 is in the destination selected when recording started."
 	},

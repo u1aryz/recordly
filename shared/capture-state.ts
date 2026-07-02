@@ -2,6 +2,7 @@ import type {
 	CaptureMetadata,
 	CaptureProgress,
 	ResolutionChange,
+	ResolutionChangeEvent,
 	StopReason,
 } from "./types";
 
@@ -74,6 +75,20 @@ export function applyProgress(
 			progress.currentPartSizeBytes ?? metadata.currentPartSizeBytes,
 		resolutionChanges: progress.resolutionChanges ?? metadata.resolutionChanges,
 	};
+}
+
+export function markResolutionChangeFileDiscarded(
+	changes: ResolutionChangeEvent[] | undefined,
+	partIndex: number,
+): ResolutionChangeEvent[] | undefined {
+	if (!changes?.some((change) => change.partIndex === partIndex)) {
+		return changes;
+	}
+	return changes.map((change) =>
+		change.partIndex === partIndex
+			? { ...change, fileDiscarded: true }
+			: change,
+	);
 }
 
 export function finishCapture(

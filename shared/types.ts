@@ -27,6 +27,7 @@ export type ResolutionChange = {
 
 export type ResolutionChangeEvent = ResolutionChange & {
 	partIndex: number;
+	fileDiscarded?: boolean;
 };
 
 export type VideoDescriptor = {
