@@ -69,7 +69,9 @@ export function CaptureDetail({
 		<div>
 			<div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-4">
 				<div className="min-w-0">
-					<h2 className="break-words font-semibold text-lg">{capture.title}</h2>
+					<h2 className="wrap-break-word font-semibold text-lg">
+						{capture.title}
+					</h2>
 					<p className="truncate text-base-content/65 text-sm">
 						{getPageHost(capture.pageUrl)}
 					</p>

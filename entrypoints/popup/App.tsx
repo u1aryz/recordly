@@ -69,7 +69,7 @@ function App(): JSX.Element {
 	}
 
 	return (
-		<main className="w-[400px] overflow-hidden bg-base-100 text-base-content">
+		<main className="w-100 overflow-hidden bg-base-100 text-base-content">
 			<header className="border-base-300 border-b bg-base-200 px-5 py-4">
 				<div className="flex items-center justify-between gap-3">
 					<div className="min-w-0 space-y-0.5">
@@ -180,7 +180,7 @@ function App(): JSX.Element {
 					<div className="alert text-xs">{t("noVideosDetected")}</div>
 				) : null}
 
-				<ul className="list max-h-[360px] gap-2 overflow-y-auto pr-1">
+				<ul className="list max-h-90 gap-2 overflow-y-auto pr-1">
 					{state.videos.map((video, index) => (
 						<li
 							className="block list-row rounded-box border border-base-300 bg-base-100 p-3.5 shadow-sm"
