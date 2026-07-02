@@ -42,8 +42,40 @@
 	"captureStreamHasNoTracks": {
 		"message": "No video or audio is available to record. Play the video and try again."
 	},
+	"captureStreamUnsupported": {
+		"message": "This browser does not support video.captureStream()."
+	},
+	"captureStreamStartFailed": {
+		"message": "Could not start video.captureStream()."
+	},
+	"protectedVideoCaptureUnsupported": {
+		"message": "This video cannot be captured because it is protected by DRM or similar restrictions."
+	},
+	"directFolderSaveUnsupported": {
+		"message": "This browser does not support saving directly to a folder."
+	},
+	"recordingStartFailed": { "message": "Could not start recording." },
+	"videoAlreadyRecording": {
+		"message": "This video is already being recorded."
+	},
+	"mediaRecorderMp4Unsupported": {
+		"message": "This browser does not support MP4 output from MediaRecorder."
+	},
+	"destinationPickFailed": {
+		"message": "Could not choose the destination."
+	},
+	"mediaRecorderStartFailed": {
+		"message": "Could not start MediaRecorder."
+	},
 	"paused": { "message": "Paused" },
 	"playing": { "message": "Playing" },
+	"muted": { "message": "Muted" },
+	"audioAvailable": { "message": "Audio available" },
+	"videoFallbackTitle": {
+		"message": "Video $NUMBER$",
+		"placeholders": { "number": { "content": "$1" } }
+	},
+	"videoElementLabel": { "message": "video" },
 	"liveOrUnknown": { "message": "live/unknown" },
 	"capturesTitle": { "message": "Recordly Captures" },
 	"noSavedData": { "message": "There is no saved data." },
@@ -123,6 +155,48 @@
 	},
 	"savedPartsAfterError": {
 		"message": "Recording ended. The finalized parts remain saved."
+	},
+	"recordingStoppedAfterExtensionUpdate": {
+		"message": "Recording stopped because the extension was updated."
+	},
+	"recordingStatusConnectionLost": {
+		"message": "The recording status connection was lost."
+	},
+	"recordingErrorOccurred": {
+		"message": "An error occurred while recording."
+	},
+	"writeBackpressureStopped": {
+		"message": "Recording stopped because file writes could not keep up with the recording speed."
+	},
+	"recordingDataWriteFailed": {
+		"message": "Could not write recording data."
+	},
+	"recordingFileFinalizeFailed": {
+		"message": "Could not finalize the recording file."
+	},
+	"nextRecordingFileCreateFailed": {
+		"message": "Could not create the next recording file."
+	},
+	"recordingFileSaveFailed": {
+		"message": "Could not save the recording file."
+	},
+	"restoreSaveStatusUnknown": {
+		"message": "The extension restarted before the MP4 save could be confirmed."
+	},
+	"completionVideoEnded": {
+		"message": "Recording stopped when the video ended, and the MP4 was saved."
+	},
+	"completionVideoRemoved": {
+		"message": "Stopped automatically because the selected video was removed from the page. Content up to the stop point has been saved."
+	},
+	"completionResolutionChanged": {
+		"message": "Stopped automatically because the video resolution changed. Content up to the stop point has been saved."
+	},
+	"completionSourceClosed": {
+		"message": "Stopped automatically because the recording source was closed. Content up to the stop point has been saved."
+	},
+	"completionDefault": {
+		"message": "Recording stopped, and the MP4 was saved."
 	},
 	"stoppedAfterNoDataTimeout": {
 		"message": "Stopped automatically because no recording data arrived. Content up to the stop point has been saved."

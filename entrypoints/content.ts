@@ -39,6 +39,7 @@ import {
 	isVideoConnected,
 	listVideos,
 } from "@/shared/video";
+import { t } from "@/utils/i18n";
 
 type ActiveRecording = {
 	metadata: CaptureMetadata;
@@ -133,10 +134,7 @@ export default defineContentScript({
 		ctx.onInvalidated(() => {
 			picker.destroy();
 			window.removeEventListener("pagehide", onPageHide);
-			stopAllRecordings(
-				"error",
-				"拡張機能が更新されたため録画を終了しました。",
-			);
+			stopAllRecordings("error", t("recordingStoppedAfterExtensionUpdate"));
 			recordingHud?.destroy();
 			recordingHud = undefined;
 		});
@@ -270,7 +268,7 @@ function createVideoPicker(): VideoPicker {
 		<div class="frame" hidden></div>
 		<div class="toolbar" hidden>
 			<div class="toolbar-main">
-				<span class="label">video</span>
+				<span class="label">${t("videoElementLabel")}</span>
 				<span class="meta"></span>
 				<button class="start" type="button">${t("chooseFolderAndRecord")}</button>
 				<button class="cancel" type="button">${t("cancel")}</button>
@@ -366,8 +364,8 @@ function createVideoPicker(): VideoPicker {
 		frame.style.height = `${rect.height}px`;
 		toolbar.hidden = false;
 		meta.textContent = `${info.width || "?"} x ${info.height || "?"} / ${
-			info.paused ? "一時停止" : "再生中"
-		} / ${info.muted ? "ミュート" : "音声あり"}`;
+			info.paused ? t("paused") : t("playing")
+		} / ${info.muted ? t("muted") : t("audioAvailable")}`;
 		const toolbarWidth = toolbar.offsetWidth;
 		const toolbarHeight = toolbar.offsetHeight;
 		toolbar.style.left = `${Math.max(
@@ -392,7 +390,7 @@ function createVideoPicker(): VideoPicker {
 		if (result.cancelled) {
 			return;
 		}
-		message.textContent = result.reason ?? "録画を開始できませんでした。";
+		message.textContent = result.reason ?? t("recordingStartFailed");
 		message.hidden = false;
 	});
 	cancelButton?.addEventListener("click", stop);
@@ -406,7 +404,7 @@ async function startRecording(
 	if (!window.showDirectoryPicker) {
 		return {
 			ok: false,
-			reason: "このブラウザではフォルダへの直接保存に対応していません。",
+			reason: t("directFolderSaveUnsupported"),
 		};
 	}
 
@@ -416,14 +414,14 @@ async function startRecording(
 		recordingHud?.highlight(existing.metadata.id);
 		return {
 			ok: false,
-			reason: "この動画はすでに録画中です。",
+			reason: t("videoAlreadyRecording"),
 		};
 	}
 	const mimeType = getMp4MimeType();
 	if (!mimeType) {
 		return {
 			ok: false,
-			reason: "このブラウザは MediaRecorder の MP4 出力に対応していません。",
+			reason: t("mediaRecorderMp4Unsupported"),
 		};
 	}
 	const metadata = createCaptureMetadata({
@@ -454,7 +452,7 @@ async function startRecording(
 		}
 		return {
 			ok: false,
-			reason: getErrorMessage(error, "保存先を選べませんでした。"),
+			reason: getErrorMessage(error, t("destinationPickFailed")),
 		};
 	}
 
@@ -462,7 +460,7 @@ async function startRecording(
 	if (!stream) {
 		return {
 			ok: false,
-			reason: errorMessage ?? "video.captureStream() が使えません。",
+			reason: errorMessage ?? t("captureStreamUnsupported"),
 		};
 	}
 
@@ -473,7 +471,7 @@ async function startRecording(
 		stopStream(stream);
 		return {
 			ok: false,
-			reason: getErrorMessage(error, "MediaRecorder の開始に失敗しました。"),
+			reason: getErrorMessage(error, t("mediaRecorderStartFailed")),
 		};
 	}
 
@@ -509,7 +507,7 @@ async function startRecording(
 		recordingHud?.remove(metadata.id);
 		return {
 			ok: false,
-			reason: getErrorMessage(error, "MediaRecorder の開始に失敗しました。"),
+			reason: getErrorMessage(error, t("mediaRecorderStartFailed")),
 		};
 	}
 	postCaptureStreamMessage(port, { type: "CAPTURE_STARTED", metadata });
@@ -535,7 +533,7 @@ function bindRecordingEvents(
 	const captureId = active.metadata.id;
 	active.port.onDisconnect.addListener(() => {
 		if (activeRecordings.has(captureId)) {
-			stopCapture(captureId, "error", "録画状態の接続が切断されました。");
+			stopCapture(captureId, "error", t("recordingStatusConnectionLost"));
 		}
 	});
 	video.addEventListener("ended", () => stopCapture(captureId, "video_ended"), {
@@ -595,7 +593,7 @@ function startPart(active: ActiveRecording): void {
 		stopCapture(
 			active.metadata.id,
 			"error",
-			(event as ErrorEvent).message || "録画中にエラーが発生しました。",
+			(event as ErrorEvent).message || t("recordingErrorOccurred"),
 		);
 	};
 	part.recorder.onstop = () => {
@@ -620,7 +618,7 @@ function enqueueChunk(
 		stopCapture(
 			active.metadata.id,
 			"write_failed",
-			"ファイル書き込みが録画速度に追いつかないため停止しました。",
+			t("writeBackpressureStopped"),
 		);
 		return;
 	}
@@ -632,7 +630,7 @@ function enqueueChunk(
 			setStopReason(
 				active,
 				"write_failed",
-				getErrorMessage(error, "録画データの書き込みに失敗しました。"),
+				getErrorMessage(error, t("recordingDataWriteFailed")),
 			);
 			stopPart(part, "finish");
 		})
@@ -756,7 +754,7 @@ async function finalizeStoppedPart(
 		setStopReason(
 			active,
 			"write_failed",
-			getErrorMessage(error, "録画ファイルの確定に失敗しました。"),
+			getErrorMessage(error, t("recordingFileFinalizeFailed")),
 		);
 	}
 
@@ -810,7 +808,7 @@ async function startNextPart(
 		setStopReason(
 			active,
 			"write_failed",
-			getErrorMessage(error, "次の録画ファイルを作成できませんでした。"),
+			getErrorMessage(error, t("nextRecordingFileCreateFailed")),
 		);
 		return false;
 	}
@@ -1011,17 +1009,17 @@ function isFatalStopReason(reason?: StopReason): boolean {
 function getCompletionMessage(reason?: StopReason): string {
 	switch (reason) {
 		case "video_ended":
-			return "動画の再生終了に合わせて停止し、MP4を保存しました。";
+			return t("completionVideoEnded");
 		case "video_removed":
-			return "対象動画がページからなくなったため自動停止しました。停止までの内容は保存済みです。";
+			return t("completionVideoRemoved");
 		case "resolution_changed":
-			return "動画の解像度が変わったため自動停止しました。停止までの内容は保存済みです。";
+			return t("completionResolutionChanged");
 		case "source_closed":
-			return "録画元が閉じられたため自動停止しました。停止までの内容は保存済みです。";
+			return t("completionSourceClosed");
 		case "no_data_timeout":
 			return t("stoppedAfterNoDataTimeout");
 		default:
-			return "録画を停止し、MP4を保存しました。";
+			return t("completionDefault");
 	}
 }
 
@@ -1041,7 +1039,7 @@ function getHudResult(
 			};
 		}
 		return {
-			message: errorMessage ?? "録画ファイルを保存できませんでした。",
+			message: errorMessage ?? t("recordingFileSaveFailed"),
 			tone: "error",
 		};
 	}
@@ -1059,7 +1057,7 @@ function listCapturableVideos(): VideoDescriptor[] {
 	return videos.map((video) => ({
 		...video,
 		canCapture: false,
-		reason: "このブラウザではフォルダへの直接保存に対応していません",
+		reason: t("directFolderSaveUnsupported"),
 	}));
 }
 

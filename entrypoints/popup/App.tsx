@@ -212,7 +212,7 @@ function App(): JSX.Element {
 							<div className="min-w-0">
 								<div className="flex min-w-0 items-start justify-between gap-3">
 									<p className="truncate font-medium text-sm">
-										{video.title || `Video ${index + 1}`}
+										{video.title || t("videoFallbackTitle", String(index + 1))}
 									</p>
 									<span
 										className={`badge badge-soft badge-xs shrink-0 ${

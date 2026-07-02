@@ -70,9 +70,7 @@ export function describeVideo(video: HTMLVideoElement): VideoDescriptor {
 		muted: video.muted,
 		hasAudio,
 		canCapture,
-		reason: canCapture
-			? undefined
-			: "このブラウザでは video.captureStream() が使えません",
+		reason: canCapture ? undefined : t("captureStreamUnsupported"),
 	};
 }
 
@@ -92,7 +90,7 @@ export function createVideoCaptureStream(video: HTMLVideoElement): {
 	if (!captureStream) {
 		return {
 			stream: null,
-			errorMessage: "このブラウザでは video.captureStream() が使えません",
+			errorMessage: t("captureStreamUnsupported"),
 		};
 	}
 
@@ -181,12 +179,12 @@ export function formatBytes(bytes: number): string {
 
 function getCaptureStreamErrorMessage(error: unknown): string {
 	if (error instanceof DOMException && error.name === "NotSupportedError") {
-		return "この動画は DRM などの保護によりキャプチャできません。";
+		return t("protectedVideoCaptureUnsupported");
 	}
 	if (error instanceof Error && error.message) {
 		return error.message;
 	}
-	return "video.captureStream() の開始に失敗しました。";
+	return t("captureStreamStartFailed");
 }
 
 declare global {

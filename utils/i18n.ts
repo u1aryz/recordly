@@ -1,11 +1,13 @@
-import type { browser as browserType } from "wxt/browser";
 import { browser } from "wxt/browser";
+import type enMessages from "@/public/_locales/en/messages.json";
 
-export type MessageKey = Exclude<
-	Parameters<typeof browserType.i18n.getMessage>[0],
-	`@@${string}`
->;
+export type MessageKey = keyof typeof enMessages;
+
+const getMessage = browser.i18n.getMessage as (
+	key: string,
+	substitutions?: string | string[],
+) => string;
 
 export function t(key: MessageKey, substitutions?: string | string[]): string {
-	return browser.i18n.getMessage(key, substitutions) || key;
+	return getMessage(key, substitutions) || key;
 }

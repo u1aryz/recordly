@@ -121,8 +121,8 @@ function App(): JSX.Element {
 
 	useEffect(() => {
 		document.title = selected
-			? `${getProgressSummary(selected)} - Recordly Captures`
-			: "Recordly Captures";
+			? `${getProgressSummary(selected)} - ${t("capturesTitle")}`
+			: t("capturesTitle");
 	}, [selected]);
 
 	useEffect(() => {
