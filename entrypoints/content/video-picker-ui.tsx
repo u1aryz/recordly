@@ -1,0 +1,88 @@
+import { StrictMode } from "react";
+import { createRoot, type Root } from "react-dom/client";
+import type { ContentScriptContext } from "wxt/utils/content-script-context";
+import {
+	createShadowRootUi,
+	type ShadowRootContentScriptUi,
+} from "wxt/utils/content-script-ui/shadow-root";
+import { SHADOW_HOST_CSS } from "./shadow-host-css";
+import {
+	VideoPickerOverlay,
+	type VideoPickerStartResult,
+} from "./VideoPickerOverlay";
+
+export type { VideoPickerStartResult };
+
+export type VideoPickerUiOptions = {
+	onStart: (video: HTMLVideoElement) => Promise<VideoPickerStartResult>;
+};
+
+export type VideoPickerUi = {
+	start: () => void;
+	destroy: () => void;
+};
+
+export function createVideoPickerUi(
+	ctx: ContentScriptContext,
+	options: VideoPickerUiOptions,
+): VideoPickerUi {
+	let active = false;
+	let uiPromise: Promise<ShadowRootContentScriptUi<Root>> | undefined;
+
+	function ensureUi(): Promise<ShadowRootContentScriptUi<Root>> {
+		uiPromise ??= createShadowRootUi(ctx, {
+			name: "recordly-video-picker",
+			position: "overlay",
+			zIndex: 2147483647,
+			css: SHADOW_HOST_CSS,
+			onMount(container) {
+				const appRoot = document.createElement("div");
+				container.append(appRoot);
+				const root = createRoot(appRoot);
+				root.render(
+					<StrictMode>
+						<VideoPickerOverlay onClose={close} onStart={options.onStart} />
+					</StrictMode>,
+				);
+				return root;
+			},
+			onRemove(root) {
+				root?.unmount();
+			},
+		});
+		return uiPromise;
+	}
+
+	function close(): void {
+		if (!active) {
+			return;
+		}
+		active = false;
+		// onClose は React ツリー内のイベントから呼ばれるため、同期 unmount を避けて次のマクロタスクへ回す。
+		void uiPromise?.then((ui) => {
+			setTimeout(() => {
+				if (!active) {
+					ui.remove();
+				}
+			}, 0);
+		});
+	}
+
+	return {
+		start() {
+			if (active) {
+				return;
+			}
+			active = true;
+			void ensureUi().then((ui) => {
+				if (active) {
+					ui.mount();
+				}
+			});
+		},
+		destroy() {
+			active = false;
+			void uiPromise?.then((ui) => ui.remove());
+		},
+	};
+}

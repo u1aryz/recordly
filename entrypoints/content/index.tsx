@@ -1,3 +1,4 @@
+import "./style.css";
 import {
 	createProgressMessage,
 	getErrorMessage,
@@ -6,10 +7,6 @@ import {
 import { createCaptureMetadata } from "@/shared/capture-state";
 import { isFilePickerAbortError } from "@/shared/file-system";
 import { isExtensionMessage } from "@/shared/message";
-import {
-	createRecordingHudManager,
-	type RecordingHudManager,
-} from "@/shared/recording-hud";
 import {
 	createMonitorState,
 	evaluateRecordingTick,
@@ -39,11 +36,15 @@ import {
 	listVideos,
 	stopMediaStreamTracks,
 } from "@/shared/video";
-import {
-	createVideoPicker,
-	type VideoPickerStartResult,
-} from "@/shared/video-picker";
 import { t } from "@/utils/i18n";
+import {
+	createRecordingHudUi,
+	type RecordingHudManager,
+} from "./recording-hud-ui";
+import {
+	createVideoPickerUi,
+	type VideoPickerStartResult,
+} from "./video-picker-ui";
 
 type ActiveRecording = {
 	session: RecordingSession;
@@ -61,8 +62,9 @@ export default defineContentScript({
 	matches: ["<all_urls>"],
 	allFrames: false,
 	runAt: "document_idle",
+	cssInjectionMode: "ui",
 	main(ctx) {
-		recordingHud = createRecordingHudManager({
+		recordingHud = createRecordingHudUi(ctx, {
 			getPosition() {
 				return recordingHudPosition.getValue();
 			},
@@ -76,7 +78,7 @@ export default defineContentScript({
 				stopCapture(captureId, "user");
 			},
 		});
-		const picker = createVideoPicker({ onStart: startRecording });
+		const picker = createVideoPickerUi(ctx, { onStart: startRecording });
 
 		browser.runtime.onMessage.addListener((message: unknown) => {
 			if (!isExtensionMessage(message)) {

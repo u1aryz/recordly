@@ -37,12 +37,20 @@ export function findVideoFromPoint(
 		if (element instanceof HTMLVideoElement) {
 			return element;
 		}
-		const nested = element.querySelector?.("video");
-		if (nested instanceof HTMLVideoElement) {
-			return nested;
+		for (const nested of element.querySelectorAll?.("video") ?? []) {
+			if (
+				nested instanceof HTMLVideoElement &&
+				rectContainsPoint(nested.getBoundingClientRect(), x, y)
+			) {
+				return nested;
+			}
 		}
 	}
 	return null;
+}
+
+function rectContainsPoint(rect: DOMRect, x: number, y: number): boolean {
+	return x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
 }
 
 export function describeVideo(video: HTMLVideoElement): VideoDescriptor {

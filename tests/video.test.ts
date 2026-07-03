@@ -23,16 +23,54 @@ describe("video helpers", () => {
 		expect(result).toBe(video);
 	});
 
-	it("finds nested video behind page overlays", () => {
+	it("finds nested video behind page overlays when the point is inside its rect", () => {
 		const wrapper = document.createElement("div");
 		const video = document.createElement("video");
 		wrapper.append(video);
+		vi.spyOn(video, "getBoundingClientRect").mockReturnValue({
+			left: 0,
+			right: 100,
+			top: 0,
+			bottom: 100,
+		} as DOMRect);
 		const result = findVideoFromPoint(
 			10,
 			20,
 			vi.fn(() => [wrapper]),
 		);
 		expect(result).toBe(video);
+	});
+
+	it("ignores a nested video whose rect does not contain the point", () => {
+		const wrapper = document.createElement("div");
+		const video = document.createElement("video");
+		wrapper.append(video);
+		vi.spyOn(video, "getBoundingClientRect").mockReturnValue({
+			left: 500,
+			right: 600,
+			top: 500,
+			bottom: 600,
+		} as DOMRect);
+		const result = findVideoFromPoint(
+			10,
+			20,
+			vi.fn(() => [wrapper]),
+		);
+		expect(result).toBeNull();
+	});
+
+	it("does not match a video elsewhere in the page reached via an ancestor like body", () => {
+		const bodyLike = document.createElement("div");
+		const video = document.createElement("video");
+		bodyLike.append(video);
+		// jsdom の getBoundingClientRect は既定で 0x0 を返すため、
+		// (10, 20) を含まない矩形としてそのまま利用できる。
+		const result = findVideoFromPoint(
+			10,
+			20,
+			vi.fn(() => [bodyLike]),
+		);
+		expect(result).toBeNull();
 	});
 
 	it("treats videos inside connected shadow roots as connected", () => {
