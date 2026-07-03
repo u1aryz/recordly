@@ -55,16 +55,17 @@ describe("video helpers", () => {
 		expect(formatResolution({ width: 1920, height: 1080 })).toBe("1920 x 1080");
 	});
 
-	it("creates high quality MediaRecorder options from video dimensions", () => {
-		expect(getVideoBitsPerSecond(1280, 720)).toBe(7_372_800);
-		expect(getVideoBitsPerSecond(1920, 1080)).toBe(16_588_800);
-		expect(getVideoBitsPerSecond(3840, 2160)).toBe(66_355_200);
-		expect(getVideoBitsPerSecond(0, 0)).toBe(4_000_000);
+	it("creates standard quality MediaRecorder options from video dimensions", () => {
+		expect(getVideoBitsPerSecond(1280, 720)).toBe(2_764_800);
+		expect(getVideoBitsPerSecond(1920, 1080)).toBe(6_220_800);
+		expect(getVideoBitsPerSecond(3840, 2160)).toBe(24_883_200);
+		expect(getVideoBitsPerSecond(7680, 4320)).toBe(30_000_000);
+		expect(getVideoBitsPerSecond(0, 0)).toBe(1_500_000);
 
 		expect(createMediaRecorderOptions("video/mp4", 1920, 1080)).toEqual({
 			mimeType: "video/mp4",
-			audioBitsPerSecond: 192_000,
-			videoBitsPerSecond: 16_588_800,
+			audioBitsPerSecond: 128_000,
+			videoBitsPerSecond: 6_220_800,
 		});
 	});
 
@@ -73,6 +74,14 @@ describe("video helpers", () => {
 			isTypeSupported: () => false,
 		});
 		expect(getMp4MimeType()).toBeNull();
+		vi.unstubAllGlobals();
+	});
+
+	it("prefers the H.264 High profile candidate when supported", () => {
+		vi.stubGlobal("MediaRecorder", {
+			isTypeSupported: (mimeType: string) => mimeType.includes("avc1.640028"),
+		});
+		expect(getMp4MimeType()).toBe('video/mp4;codecs="avc1.640028,mp4a.40.2"');
 		vi.unstubAllGlobals();
 	});
 

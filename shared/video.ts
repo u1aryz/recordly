@@ -3,14 +3,17 @@ import type { VideoDescriptor, VideoResolution } from "./types";
 
 const VIDEO_ID_ATTR = "data-vcap-id";
 const MP4_MIME_TYPE_CANDIDATES = [
+	'video/mp4;codecs="avc1.640028,mp4a.40.2"',
+	'video/mp4;codecs="avc1.640028"',
 	'video/mp4;codecs="avc1.42E01E,mp4a.40.2"',
 	'video/mp4;codecs="avc1.42E01E"',
 	"video/mp4",
 ];
-const AUDIO_BITS_PER_SECOND = 192_000;
-const MIN_VIDEO_BITS_PER_SECOND = 4_000_000;
-const MAX_VIDEO_BITS_PER_SECOND = 80_000_000;
-const BITS_PER_PIXEL = 8;
+const AUDIO_BITS_PER_SECOND = 128_000;
+const MIN_VIDEO_BITS_PER_SECOND = 1_500_000;
+const MAX_VIDEO_BITS_PER_SECOND = 30_000_000;
+// 約0.1 bit/pixel/frame @30fps 相当
+const BITS_PER_PIXEL_PER_SECOND = 3;
 
 export function getOrCreateVideoId(video: HTMLVideoElement): string {
 	const existing = video.getAttribute(VIDEO_ID_ATTR);
@@ -154,7 +157,7 @@ export function createMediaRecorderOptions(
 
 export function getVideoBitsPerSecond(width: number, height: number): number {
 	const pixels = Math.max(1, width) * Math.max(1, height);
-	const bitsPerSecond = pixels * BITS_PER_PIXEL;
+	const bitsPerSecond = pixels * BITS_PER_PIXEL_PER_SECOND;
 	return Math.min(
 		MAX_VIDEO_BITS_PER_SECOND,
 		Math.max(MIN_VIDEO_BITS_PER_SECOND, bitsPerSecond),
