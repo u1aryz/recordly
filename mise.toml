@@ -19,6 +19,10 @@ run = "pnpm build"
 description = "テストを実行"
 run = "pnpm test"
 
+[tasks."test:e2e"]
+description = "E2E テストを実行"
+run = "pnpm test:e2e"
+
 [tasks.format]
 description = "フォーマットと型チェック"
 run = ["pnpm format", "pnpm typecheck"]

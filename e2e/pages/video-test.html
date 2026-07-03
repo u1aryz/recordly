@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Recordly E2E Video Test</title>
+<style>
+	body {
+		margin: 0;
+		padding: 120px 40px;
+		background: #ddd;
+	}
+	video {
+		display: block;
+		width: 640px;
+		height: 360px;
+		background: #222;
+	}
+	/*
+	 * z-index を持つ固定ヘッダー(YouTube の masthead 相当)。
+	 * オーバーレイがページ要素の背後に隠れる回帰(shadow host の z-index 打ち消し)を検出する。
+	 */
+	header {
+		position: fixed;
+		top: 0;
+		left: 0;
+		right: 0;
+		height: 90px;
+		background: rgb(200, 30, 30);
+		z-index: 100;
+		color: #fff;
+		font: 700 20px sans-serif;
+		display: flex;
+		align-items: center;
+		padding: 0 24px;
+	}
+</style>
+</head>
+<body>
+<header>fixed header (z-index: 100)</header>
+<h1>Video test page</h1>
+<video id="v" controls muted></video>
+<script>
+	// canvas.captureStream から srcObject を作り、実際に再生中の video を用意する。
+	const canvas = document.createElement("canvas");
+	canvas.width = 640;
+	canvas.height = 360;
+	const ctx = canvas.getContext("2d");
+	let hue = 0;
+	setInterval(() => {
+		hue = (hue + 2) % 360;
+		ctx.fillStyle = `hsl(${hue}, 70%, 50%)`;
+		ctx.fillRect(0, 0, 640, 360);
+	}, 100);
+	const video = document.getElementById("v");
+	video.srcObject = canvas.captureStream(10);
+	video.play();
+</script>
+</body>
+</html>

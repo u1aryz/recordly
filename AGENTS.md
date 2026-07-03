@@ -17,6 +17,7 @@ Recordly は、Web ページ上の動画を選択し、キャプチャして MP4
 - `shared/`: message、storage、capture state、video、binary などの共有ロジック。
 - `utils/`: i18n などの補助処理。
 - `tests/`: Vitest による共有ロジックのテスト。
+- `e2e/`: Playwright による E2E テスト(拡張機能を実ブラウザにロードしてピッカー操作〜録画保存まで検証)。
 
 ## 開発コマンド
 
@@ -26,7 +27,8 @@ Recordly は、Web ページ上の動画を選択し、キャプチャして MP4
 - `pnpm dev`: Chromium/Chrome 向けに WXT 開発サーバーを起動します。
 - `pnpm build`: Chromium/Chrome 向けに拡張機能をビルドします。
 - `pnpm typecheck`: TypeScript の型チェックを実行します。
-- `pnpm test`: Vitest のテストを実行します。
+- `pnpm test`: Vitest のユニットテストを実行します(`tests/` のみ。E2E は含まれません)。
+- `pnpm test:e2e`: Playwright の E2E テストを実行します(ビルドを含みます)。初回のみ `pnpm exec playwright install chromium` が必要です。
 - `pnpm format`: Biome による check と自動修正を実行します。
 
 ## コードスタイル
@@ -46,6 +48,7 @@ Recordly は、Web ページ上の動画を選択し、キャプチャして MP4
 - 実装は既存構成に合わせます。共有ロジックは `shared/`、UI は該当する `entrypoints/` 配下に置きます。
 - 変更後は `pnpm typecheck` と `pnpm test` を実行します。
 - ビルドや manifest、entrypoint、権限に関わる変更では、必要に応じて `pnpm build` も実行します。
+- content script の UI(動画ピッカー、録画 HUD)や録画フローの挙動変更では、`pnpm test:e2e` も実行します。
 - UI や拡張機能の挙動変更では、`pnpm dev` で手動確認できる状態にします。
 - 既存の未コミット変更がある場合は、ユーザーの作業として扱い、勝手に戻したり上書きしたりしません。
 
