@@ -1,7 +1,5 @@
 このファイルはコードエージェントがこのプロジェクトを理解するためのガイドです。
 
-# AGENTS.md
-
 ## プロジェクト概要
 
 Recordly は、Web ページ上の動画を選択し、キャプチャして MP4 として保存する WXT ベースのブラウザ拡張です。React で popup と captures 画面を構成し、拡張機能の background/content script と共有ロジックで録画状態や動画情報を扱います。
