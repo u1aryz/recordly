@@ -12,18 +12,6 @@ export default defineConfig({
 		permissions: ["activeTab", "tabs", "storage"],
 		host_permissions: ["<all_urls>"],
 	},
-	webExt: {
-		binaries: {
-			chrome: "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
-		},
-		keepProfileChanges: true,
-		chromiumArgs: [
-			"--disable-blink-features=AutomationControlled",
-			"--disable-features=IsolateOrigins,site-per-process",
-			"--remote-debugging-port=9222",
-		],
-		startUrls: ["https://kick.com/"],
-	},
 	dev: {
 		server: {
 			port: 3033,
