@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Aurora Trails — Wildscapes</title>
+<style>
+	:root {
+		color-scheme: dark;
+	}
+	body {
+		margin: 0;
+		background: #10151c;
+		color: #e8ecf1;
+		font: 15px/1.6 "Segoe UI", system-ui, sans-serif;
+	}
+	header {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		height: 56px;
+		padding: 0 28px;
+		background: #151b24;
+		border-bottom: 1px solid #232c38;
+		font-weight: 700;
+		font-size: 16px;
+	}
+	header .logo {
+		width: 22px;
+		height: 22px;
+		border-radius: 6px;
+		background: linear-gradient(135deg, #4f8cff, #9b5cf6);
+	}
+	header nav {
+		margin-left: auto;
+		display: flex;
+		gap: 22px;
+		color: #93a0b4;
+		font-weight: 500;
+		font-size: 13px;
+	}
+	main {
+		max-width: 920px;
+		/* Leave room above the video so the picker menu doesn't overlap the
+		   fixed instructions bar in store screenshots. */
+		margin: 76px auto 0;
+		padding: 0 24px;
+	}
+	video {
+		display: block;
+		width: 100%;
+		aspect-ratio: 16 / 9;
+		background: #000;
+		border-radius: 12px;
+	}
+	h1 {
+		font-size: 20px;
+		margin: 16px 0 6px;
+	}
+	.meta {
+		color: #93a0b4;
+		font-size: 13px;
+		display: flex;
+		gap: 14px;
+	}
+</style>
+</head>
+<body>
+<header>
+	<div class="logo"></div>
+	Wildscapes
+	<nav><span>Home</span><span>Explore</span><span>Library</span></nav>
+</header>
+<main>
+	<video id="v" controls muted></video>
+	<h1>Aurora Trails — Northern Lights in Real Time</h1>
+	<div class="meta"><span>Nature &amp; Travel</span><span>4K</span><span>1.2M views</span></div>
+</main>
+<script>
+	// Provide an actually playing video via canvas.captureStream, drawing an
+	// aurora scene so store screenshots show believable video content.
+	const canvas = document.createElement("canvas");
+	canvas.width = 1280;
+	canvas.height = 720;
+	const ctx = canvas.getContext("2d");
+	let t = 0;
+	setInterval(() => {
+		t += 0.02;
+		const sky = ctx.createLinearGradient(0, 0, 0, 720);
+		sky.addColorStop(0, "#050d1c");
+		sky.addColorStop(1, "#0d1b2a");
+		ctx.fillStyle = sky;
+		ctx.fillRect(0, 0, 1280, 720);
+		for (let i = 0; i < 90; i++) {
+			const x = (i * 137) % 1280;
+			const y = (i * 211) % 380;
+			ctx.fillStyle = `rgba(255,255,255,${0.15 + 0.5 * Math.abs(Math.sin(i + t))})`;
+			ctx.fillRect(x, y, 2, 2);
+		}
+		ctx.globalCompositeOperation = "lighter";
+		ctx.lineCap = "round";
+		const bands = [
+			"rgba(64,224,160,0.22)",
+			"rgba(80,180,255,0.16)",
+			"rgba(150,120,255,0.14)",
+		];
+		for (let b = 0; b < bands.length; b++) {
+			ctx.beginPath();
+			for (let x = 0; x <= 1280; x += 16) {
+				const y =
+					290 +
+					b * 70 +
+					Math.sin(x / 180 + t * (1 + b * 0.3) + b * 2) * 60 +
+					Math.sin(x / 47 - t * 1.7) * 18;
+				if (x === 0) {
+					ctx.moveTo(x, y);
+				} else {
+					ctx.lineTo(x, y);
+				}
+			}
+			ctx.lineWidth = 70;
+			ctx.strokeStyle = bands[b];
+			ctx.stroke();
+		}
+		ctx.globalCompositeOperation = "source-over";
+		ctx.fillStyle = "#040a12";
+		ctx.beginPath();
+		ctx.moveTo(0, 720);
+		for (let x = 0; x <= 1280; x += 32) {
+			ctx.lineTo(x, 570 + Math.sin(x / 210 + 1.7) * 40 + Math.sin(x / 83) * 18);
+		}
+		ctx.lineTo(1280, 720);
+		ctx.closePath();
+		ctx.fill();
+	}, 33);
+	const video = document.getElementById("v");
+	video.srcObject = canvas.captureStream(30);
+	video.play();
+</script>
+</body>
+</html>

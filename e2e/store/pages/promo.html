@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<style>
+	* {
+		box-sizing: border-box;
+	}
+	body {
+		margin: 0;
+		height: 100vh;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		overflow: hidden;
+		font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+		color: #fff;
+		background:
+			repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.025) 0 1px, transparent 1px 44px),
+			repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.025) 0 1px, transparent 1px 44px),
+			radial-gradient(120% 140% at 85% 10%, #1b4a36 0%, #10281d 45%, #0a1712 100%);
+	}
+	.tile {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		text-align: center;
+	}
+	.brand {
+		display: flex;
+		align-items: center;
+	}
+	.badge {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		background: #173b2c;
+		border: 1px solid #2c6b4f;
+	}
+	.name {
+		font-weight: 800;
+		letter-spacing: -0.02em;
+	}
+	.tagline {
+		margin: 0;
+		color: #c9e5d6;
+	}
+	.chips {
+		display: flex;
+	}
+	.chip {
+		display: flex;
+		align-items: center;
+		gap: 7px;
+		border: 1px solid #357c5c;
+		background: rgba(23, 59, 44, 0.55);
+		border-radius: 999px;
+		color: #d9efe3;
+		white-space: nowrap;
+	}
+	.dot {
+		width: 8px;
+		height: 8px;
+		border-radius: 50%;
+		background: #f56b79;
+	}
+
+	/* Small promo tile: 440x280 */
+	body.small .brand { gap: 14px; }
+	body.small .badge { width: 56px; height: 56px; border-radius: 14px; }
+	body.small .badge img { width: 36px; }
+	body.small .name { font-size: 46px; }
+	body.small .tagline { margin-top: 12px; font-size: 15px; max-width: 350px; }
+	body.small .chips { margin-top: 18px; gap: 8px; }
+	body.small .chip { font-size: 11px; padding: 5px 12px; }
+	body.small .chip:nth-child(3) { display: none; }
+
+	/* Marquee promo tile: 1400x560 */
+	body.marquee .brand { gap: 26px; }
+	body.marquee .badge { width: 104px; height: 104px; border-radius: 24px; }
+	body.marquee .badge img { width: 68px; }
+	body.marquee .name { font-size: 92px; }
+	body.marquee .tagline { margin-top: 24px; font-size: 28px; max-width: 950px; }
+	body.marquee .chips { margin-top: 34px; gap: 12px; }
+	body.marquee .chip { font-size: 17px; padding: 10px 22px; }
+	body.marquee .dot { width: 11px; height: 11px; }
+</style>
+</head>
+<body>
+<div class="tile">
+	<div class="brand">
+		<div class="badge"><img alt="" src="__ICON_SRC__" /></div>
+		<div class="name">Recordly</div>
+	</div>
+	<p class="tagline">Pick any video on a page and save it straight to disk as MP4.</p>
+	<div class="chips">
+		<span class="chip"><span class="dot"></span>No screen sharing</span>
+		<span class="chip">MP4, no re-encoding</span>
+		<span class="chip">2GB-part long recordings</span>
+	</div>
+</div>
+<script>
+	document.body.className =
+		new URLSearchParams(location.search).get("size") || "small";
+</script>
+</body>
+</html>

@@ -55,6 +55,9 @@ export const test = base.extend<ExtensionFixtures>({
 		// Only enable page video recording and viewer-friendly slow motion for
 		// demo recordings when DEMO_VIDEO_DIR is set (no effect on normal test runs).
 		const demoVideoDir = process.env.DEMO_VIDEO_DIR;
+		// Store asset generation (pnpm store:assets) uses the English UI and the
+		// Chrome Web Store screenshot viewport (no effect on normal test runs).
+		const storeAssetsDir = process.env.STORE_ASSETS_DIR;
 		const context = await chromium.launchPersistentContext("", {
 			// channel: "chromium" is required to load the extension in headless mode.
 			channel: "chromium",
@@ -75,6 +78,13 @@ export const test = base.extend<ExtensionFixtures>({
 							dir: demoVideoDir,
 							size: { width: 1280, height: 720 },
 						},
+					}
+				: {}),
+			...(storeAssetsDir
+				? {
+						// Same macOS UI-language caveat as the demo recording above.
+						locale: "en-US",
+						viewport: { width: 1280, height: 800 },
 					}
 				: {}),
 		});
