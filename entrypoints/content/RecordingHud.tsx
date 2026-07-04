@@ -150,8 +150,12 @@ export function RecordingHud({
 				onPointerMove={moveDrag}
 				onPointerUp={endDrag}
 			>
-				<span className="font-bold">
-					<span className="text-error">●</span> {t("recordingStatus")}
+				<span className="flex items-center gap-2 font-bold">
+					<span aria-hidden="true" className="inline-grid *:[grid-area:1/1]">
+						<span className="status status-error animate-ping" />
+						<span className="status status-error" />
+					</span>
+					{t("recordingStatus")}
 				</span>
 				<span className="text-base-content/60 text-xs">
 					{t("recordingCount", String(state.recordingCount))}

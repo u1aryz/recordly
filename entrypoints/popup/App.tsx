@@ -88,8 +88,11 @@ function App(): JSX.Element {
 						{state.recordingCount > 0 ? (
 							<span
 								aria-hidden="true"
-								className="status status-error animate-pulse"
-							/>
+								className="inline-grid *:[grid-area:1/1]"
+							>
+								<span className="status status-error animate-ping" />
+								<span className="status status-error" />
+							</span>
 						) : (
 							<ClockIcon className="h-4 w-4" />
 						)}
