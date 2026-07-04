@@ -1,8 +1,13 @@
 {
 	"name": "recordly",
-	"description": "DevTools style video picker and MP4 capture extension",
+	"description": "A browser extension to select videos on a web page, capture them, and save as MP4",
 	"private": true,
 	"version": "0.0.3",
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/u1aryz/recordly.git"
+	},
 	"type": "module",
 	"packageManager": "pnpm@11.6.0",
 	"engines": {
@@ -16,6 +21,7 @@
 		"typecheck": "tsc --noEmit",
 		"test": "vitest run",
 		"test:e2e": "wxt build && playwright test",
+		"demo:record": "wxt build && DEMO_VIDEO_DIR=e2e/demo/output playwright test -c playwright.demo.config.ts",
 		"format": "biome check --write --unsafe",
 		"postinstall": "wxt prepare"
 	},
