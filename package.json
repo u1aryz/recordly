@@ -2,7 +2,7 @@
 	"name": "recordly",
 	"description": "A browser extension to select videos on a web page, capture them, and save as MP4",
 	"private": true,
-	"version": "0.0.3",
+	"version": "0.0.4",
 	"license": "MIT",
 	"repository": {
 		"type": "git",
