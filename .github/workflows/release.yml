@@ -28,3 +28,17 @@ jobs:
         uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda # v3
         with:
           files: output/*.zip
+      # Uploads the zip to the Chrome Web Store and submits it for review.
+      # Skipped until the secrets are configured (see docs/store/listing.md).
+      - name: Submit to Chrome Web Store
+        env:
+          CHROME_EXTENSION_ID: ${{ secrets.CHROME_EXTENSION_ID }}
+          CHROME_CLIENT_ID: ${{ secrets.CHROME_CLIENT_ID }}
+          CHROME_CLIENT_SECRET: ${{ secrets.CHROME_CLIENT_SECRET }}
+          CHROME_REFRESH_TOKEN: ${{ secrets.CHROME_REFRESH_TOKEN }}
+        run: |
+          if [ -z "$CHROME_EXTENSION_ID" ]; then
+            echo "Chrome Web Store secrets are not configured; skipping submit."
+            exit 0
+          fi
+          pnpm wxt submit --chrome-zip output/*-chrome.zip

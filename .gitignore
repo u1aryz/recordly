@@ -14,6 +14,8 @@ stats.html
 stats-*.json
 .wxt
 web-ext.config.ts
+# Chrome Web Store submission credentials (wxt submit init)
+.env.submit
 test-results
 playwright-report
 
