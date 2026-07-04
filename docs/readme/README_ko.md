@@ -68,7 +68,7 @@ pnpm exec playwright install chromium
 
 ## 기여
 
-[기여 가이드](../CONTRIBUTING.md)(영어)를 참고하세요. 이 프로젝트는 [행동 강령](../../CODE_OF_CONDUCT.md)을 따릅니다. 취약점 신고는 [보안 정책](../../SECURITY.md)을 참고하세요. Recordly는 사용자 데이터를 수집하지 않습니다. 자세한 내용은 [개인정보 처리방침](../../PRIVACY.md)(영어)을 참고하세요.
+[기여 가이드](../CONTRIBUTING.md)(영어)를 참고하세요. 이 프로젝트는 [행동 강령](../CODE_OF_CONDUCT.md)을 따릅니다. 취약점 신고는 [보안 정책](../SECURITY.md)을 참고하세요. Recordly는 사용자 데이터를 수집하지 않습니다. 자세한 내용은 [개인정보 처리방침](../PRIVACY.md)(영어)을 참고하세요.
 
 ## 라이선스
 

@@ -3,14 +3,14 @@
 Draft copy and checklists for the Chrome Web Store listing. Paste these into the
 [developer dashboard](https://chrome.google.com/webstore/devconsole) when creating or
 updating the item. Keep this file in sync with `public/_locales/*/messages.json`,
-`PRIVACY.md`, and the manifest permissions — reviewers cross-check all three.
+`docs/PRIVACY.md`, and the manifest permissions — reviewers cross-check all three.
 
 ## Basics
 
 - **Item name**: Recordly
 - **Category**: Tools
 - **Language**: English (default) + Japanese, Spanish, Korean, Simplified Chinese
-- **Privacy policy URL**: `https://github.com/u1aryz/recordly/blob/main/PRIVACY.md`
+- **Privacy policy URL**: `https://github.com/u1aryz/recordly/blob/main/docs/PRIVACY.md`
 - **Homepage URL**: `https://github.com/u1aryz/recordly`
 - **Support URL**: `https://github.com/u1aryz/recordly/issues`
 

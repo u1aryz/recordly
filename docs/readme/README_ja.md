@@ -68,7 +68,7 @@ pnpm exec playwright install chromium
 
 ## コントリビューション
 
-[Contributing Guide](../CONTRIBUTING.md)(英語)を参照してください。本プロジェクトは[行動規範](../../CODE_OF_CONDUCT.md)に従います。脆弱性の報告は[セキュリティポリシー](../../SECURITY.md)を参照してください。Recordly はユーザーデータを収集しません。詳細は[プライバシーポリシー](../../PRIVACY.md)(英語)を参照してください。
+[Contributing Guide](../CONTRIBUTING.md)(英語)を参照してください。本プロジェクトは[行動規範](../CODE_OF_CONDUCT.md)に従います。脆弱性の報告は[セキュリティポリシー](../SECURITY.md)を参照してください。Recordly はユーザーデータを収集しません。詳細は[プライバシーポリシー](../PRIVACY.md)(英語)を参照してください。
 
 ## ライセンス
 

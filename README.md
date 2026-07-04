@@ -68,7 +68,7 @@ pnpm exec playwright install chromium
 
 ## Contributing
 
-See the [Contributing Guide](docs/CONTRIBUTING.md). This project follows the [Code of Conduct](CODE_OF_CONDUCT.md); to report a vulnerability, see the [Security Policy](SECURITY.md). Recordly does not collect any user data — see the [Privacy Policy](PRIVACY.md).
+See the [Contributing Guide](docs/CONTRIBUTING.md). This project follows the [Code of Conduct](docs/CODE_OF_CONDUCT.md); to report a vulnerability, see the [Security Policy](docs/SECURITY.md). Recordly does not collect any user data — see the [Privacy Policy](docs/PRIVACY.md).
 
 ## License
 
