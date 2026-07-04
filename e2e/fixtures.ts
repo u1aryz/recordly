@@ -68,9 +68,8 @@ export const test = base.extend<ExtensionFixtures>({
 			...(demoVideoDir
 				? {
 						// Demos are recorded with the English UI. On macOS, the extension's
-						// UI language follows the OS setting, so override it if needed with:
-						// defaults write com.google.chrome.for.testing AppleLanguages '("en-US")'
-						// (revert with defaults delete after recording)
+						// UI language follows the OS setting instead of this locale option;
+						// english-ui-global-setup.ts overrides it for the run.
 						locale: "en-US",
 						slowMo: 250,
 						viewport: { width: 1280, height: 720 },
