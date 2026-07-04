@@ -47,6 +47,9 @@ type ExtensionFixtures = {
 export const test = base.extend<ExtensionFixtures>({
 	// biome-ignore lint/correctness/noEmptyPattern: Playwright fixture の作法
 	context: async ({}, use) => {
+		// DEMO_VIDEO_DIR が指定されたときだけ、デモ録画用にページ動画の保存と
+		// 鑑賞向けのスロー再生を有効にする(通常のテスト実行には影響しない)。
+		const demoVideoDir = process.env.DEMO_VIDEO_DIR;
 		const context = await chromium.launchPersistentContext("", {
 			// 拡張機能を headless でロードするには channel: "chromium" が必要。
 			channel: "chromium",
@@ -54,6 +57,21 @@ export const test = base.extend<ExtensionFixtures>({
 				`--disable-extensions-except=${extensionPath}`,
 				`--load-extension=${extensionPath}`,
 			],
+			...(demoVideoDir
+				? {
+						// デモは英語 UI で録画する。macOS では拡張の UI 言語が OS 設定に従うため、
+						// 必要なら次で上書きする:
+						// defaults write com.google.chrome.for.testing AppleLanguages '("en-US")'
+						// (録画後は defaults delete で戻す)
+						locale: "en-US",
+						slowMo: 250,
+						viewport: { width: 1280, height: 720 },
+						recordVideo: {
+							dir: demoVideoDir,
+							size: { width: 1280, height: 720 },
+						},
+					}
+				: {}),
 		});
 		// テストページはネットワークを介さず route で配信する。
 		await context.route(`${VIDEO_TEST_PAGE_URL}*`, async (route) => {
