@@ -1,59 +1,58 @@
-このファイルはコードエージェントがこのプロジェクトを理解するためのガイドです。
+This file is a guide for code agents to understand this project.
 
-## プロジェクト概要
+## Project overview
 
-Recordly は、Web ページ上の動画を選択し、キャプチャして MP4 として保存する WXT ベースのブラウザ拡張です。React で popup と captures 画面を構成し、拡張機能の background/content script と共有ロジックで録画状態や動画情報を扱います。
+Recordly is a WXT-based browser extension that lets you select a video on a web page, capture it, and save it as MP4. The popup and captures screens are built with React, and the extension's background/content scripts handle recording state and video information through shared logic.
 
-対応対象は Chromium/Chrome です。Firefox は、直接ファイル保存に使う File System Access API（`showSaveFilePicker`）と `MediaRecorder` の MP4 出力を必要な構成で利用できないため、非対応です。
+The supported target is Chromium/Chrome. Firefox is not supported because the File System Access API (`showSaveFilePicker`) used for saving files directly and MP4 output from `MediaRecorder` are not available there in the required configuration.
 
-主な構成は次のとおりです。
+The main structure is as follows.
 
-- `entrypoints/background.ts`: 拡張機能の background 処理。
-- `entrypoints/content/`: Web ページに注入される content script。動画ピッカーや録画 HUD の React UI を含みます。
-- `entrypoints/popup/`: 拡張アイコンから開く popup UI。
-- `entrypoints/captures/`: キャプチャ進捗や停止後のダウンロードを扱う UI。
-- `shared/`: message、storage、capture state、recording session/monitor、video、file-system などの共有ロジック。
-- `utils/`: i18n などの補助処理。
-- `tests/`: Vitest による共有ロジックのテスト。
-- `e2e/`: Playwright による E2E テスト(拡張機能を実ブラウザにロードしてピッカー操作〜録画保存まで検証)。
+- `entrypoints/background.ts`: Background processing for the extension.
+- `entrypoints/content/`: Content script injected into web pages. Includes the React UI for the video picker and recording HUD.
+- `entrypoints/popup/`: Popup UI opened from the extension icon.
+- `entrypoints/captures/`: UI for capture progress and downloads after stopping.
+- `shared/`: Shared logic such as message, storage, capture state, recording session/monitor, video, and file-system.
+- `utils/`: Helpers such as i18n.
+- `tests/`: Vitest tests for the shared logic.
+- `e2e/`: Playwright E2E tests (load the extension into a real browser and verify everything from picker interaction to saving a recording).
 
-## 開発コマンド
+## Development commands
 
-コードエージェントは pnpm ベースで作業します。通常の実装・検証で使うコマンドだけをここに記載します。
+Code agents work with pnpm. Only the commands used in ordinary implementation and verification are listed here.
 
-- `pnpm install`: 依存関係をインストールします。
-- `pnpm dev`: Chromium/Chrome 向けに WXT 開発サーバーを起動します。
-- `pnpm build`: Chromium/Chrome 向けに拡張機能をビルドします。
-- `pnpm typecheck`: TypeScript の型チェックを実行します。
-- `pnpm test`: Vitest のユニットテストを実行します(`tests/` のみ。E2E は含まれません)。
-- `pnpm test:e2e`: Playwright の E2E テストを実行します(ビルドを含みます)。初回のみ `pnpm exec playwright install chromium` が必要です。
-- `pnpm format`: Biome による check と自動修正を実行します。
+- `pnpm install`: Install dependencies.
+- `pnpm dev`: Start the WXT dev server for Chromium/Chrome.
+- `pnpm build`: Build the extension for Chromium/Chrome.
+- `pnpm typecheck`: Run TypeScript type checking.
+- `pnpm test`: Run Vitest unit tests (only `tests/`; E2E is not included).
+- `pnpm test:e2e`: Run Playwright E2E tests (includes a build). `pnpm exec playwright install chromium` is required only before the first run.
+- `pnpm format`: Run Biome check with autofix.
 
-## コードスタイル
+## Code style
 
-- フォーマットと lint は `biome.json` に従います。
-- インデントはタブ、文字列はダブルクォートを使います。
-- Biome の recommended rule、未使用 import 禁止、ブロック文必須、Tailwind class sort を前提にします。
-- 非同期処理は `async/await` を優先します。
-- `try` ブロック内で意図的にエラーをスローしないでください。例外を制御フローとして使わず、条件分岐や戻り値で表現できる設計を優先します。
-- ユーザー向けに表示する文言はコードへ直接記述せず、`public/_locales/` に日英のメッセージを追加し、`utils/i18n.ts` の `t()` を介して取得してください。
-- WXT ブラウザ拡張、React/UI、daisyUI/Tailwind、Playwright などに関わる作業では、利用可能な各種スキルを参照してから実装・検証します。
-- 既存の型、共有関数、ディレクトリ構成を優先し、不要な抽象化や大きな移動は避けます。
+- Formatting and linting follow `biome.json`.
+- Use tabs for indentation and double quotes for strings.
+- Assume Biome recommended rules, no unused imports, required block statements, and Tailwind class sorting.
+- Prefer `async/await` for asynchronous code.
+- Do not intentionally throw errors inside `try` blocks. Do not use exceptions as control flow; prefer designs that express outcomes with conditionals and return values.
+- Do not hardcode user-facing strings; add messages for each locale under `public/_locales/` and retrieve them via `t()` in `utils/i18n.ts`.
+- For work involving WXT browser extensions, React/UI, daisyUI/Tailwind, Playwright, and the like, consult the available skills before implementing and verifying.
+- Prefer existing types, shared functions, and the current directory layout; avoid unnecessary abstractions and large moves.
 
-## 開発フロー
+## Development flow
 
-- 変更前に関連ファイル、既存テスト、設定ファイルを確認します。
-- 実装は既存構成に合わせます。共有ロジックは `shared/`、UI は該当する `entrypoints/` 配下に置きます。
-- 変更後は `pnpm typecheck` と `pnpm test` を実行します。
-- ビルドや manifest、entrypoint、権限に関わる変更では、必要に応じて `pnpm build` も実行します。
-- content script の UI(動画ピッカー、録画 HUD)や録画フローの挙動変更では、`pnpm test:e2e` も実行します。
-- UI や拡張機能の挙動変更では、`pnpm dev` で手動確認できる状態にします。
-- 既存の未コミット変更がある場合は、ユーザーの作業として扱い、勝手に戻したり上書きしたりしません。
+- Before making changes, review the related files, existing tests, and configuration files.
+- Match the implementation to the existing structure. Put shared logic under `shared/` and UI under the relevant `entrypoints/` directory.
+- After changes, run `pnpm typecheck` and `pnpm test`.
+- For changes involving the build, manifest, entrypoints, or permissions, also run `pnpm build` as needed.
+- For behavior changes in the content script UI (video picker, recording HUD) or the recording flow, also run `pnpm test:e2e`.
+- For UI or extension behavior changes, keep the work verifiable manually with `pnpm dev`.
+- Treat existing uncommitted changes as the user's work; do not revert or overwrite them on your own.
 
-## 注意事項
+## Notes
 
-- コミットは Conventional Commits に従い、説明部分は日本語で書きます。
-- 英語で考えて、日本語でやり取りします。
-- linter エラーはリファクタリングで解決することを優先します。Biome 設定を見直す必要がある場合は、先にユーザーへ確認します。
-- ブラウザ拡張では、権限追加、manifest 変更、storage schema 変更の影響範囲を慎重に確認します。
-- `zip` 系コマンドや mise 系コマンドは、通常のコードエージェント作業では使わない前提です。
+- Commits follow Conventional Commits, with descriptions written in English.
+- Prefer resolving linter errors through refactoring. If the Biome configuration needs revisiting, check with the user first.
+- For browser extensions, carefully assess the impact of permission additions, manifest changes, and storage schema changes.
+- `zip`-related commands and mise commands are assumed not to be used in ordinary code agent work.

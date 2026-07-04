@@ -1,61 +1,79 @@
 # Recordly
 
-## 概要
+[![CI](https://github.com/u1aryz/recordly/actions/workflows/ci.yml/badge.svg)](https://github.com/u1aryz/recordly/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-Recordly は Web ページ上の動画を選択し、キャプチャして保存するためのブラウザ拡張です。
+English | [日本語](docs/readme/README_ja.md) | [Español](docs/readme/README_es.md) | [한국어](docs/readme/README_ko.md) | [简体中文](docs/readme/README_zh-CN.md)
 
-動画の選択、保存先の指定、キャプチャの開始、進捗確認、停止時の MP4 保存までを拡張機能内で行えます。
+## Overview
 
-録画データは、おおよそ 2GB ごとに分割して保存されます。
+Recordly is a browser extension for selecting videos on a web page, capturing them, and saving the result.
 
-## 対応ブラウザ
+Selecting a video, choosing a destination, starting the capture, checking progress, and saving the MP4 on stop all happen within the extension.
 
-Recordly は Chromium/Chrome 向けです。Firefox には対応していません。
+Recording data is saved in parts of roughly 2GB each.
 
-録画したデータを保存先へ直接書き込む File System Access API（`showSaveFilePicker`）と、`MediaRecorder` による MP4 出力を前提としており、Firefox ではこれらの必要な機能を同じ構成で利用できないためです。
+![Demo](docs/assets/demo.gif)
 
-## 前提条件
+## Supported browsers
 
-- mise
+Recordly targets Chromium/Chrome. Firefox is not supported.
 
-## セットアップ
+It relies on the File System Access API (`showSaveFilePicker`) to write recorded data directly to the destination and on MP4 output from `MediaRecorder`; Firefox does not provide these required capabilities in the same configuration.
 
-```bash
-mise install
-```
+## Prerequisites
 
-## 使い方
+- Node.js >= 22
+- pnpm
 
-開発サーバーを起動します。
+Alternatively, [mise](https://mise.jdx.dev/) can set up the toolchain for you with `mise install`.
 
-```bash
-mise run dev
-```
-
-ビルドする場合は次のコマンドを使います。
+## Setup
 
 ```bash
-mise run build
+pnpm install
 ```
 
-起動後、ブラウザに拡張を読み込みます。動画があるページで拡張アイコンを押し、popup の「ページ上で動画を選択」から録画したい動画を選択してください。表示されたメニューの「保存先を選択して録画開始」から保存先を指定して録画を開始します。録画中は captures ページで進捗を確認でき、停止すると指定した保存先への MP4 の保存が完了します。
+## Usage
 
-## テスト
-
-共有ロジックのユニットテスト（Vitest）を実行します。
+Start the dev server:
 
 ```bash
-mise run test
+pnpm dev
 ```
 
-E2E テスト（Playwright）は、ビルドした拡張機能を実ブラウザにロードし、動画の選択から録画開始・MP4 の保存までを検証します。
+To build, use:
 
 ```bash
-mise run test:e2e
+pnpm build
 ```
 
-E2E テストの初回実行前に、Playwright のブラウザをインストールしてください。
+Once running, load the extension into the browser. On a page with a video, click the extension icon and use "Select a video to record on this page" in the popup to pick the video you want to record. In the menu that appears, choose "Choose folder and start recording" to pick a destination and start recording. While recording, you can check progress on the captures page; when you stop, the MP4 finishes saving to the chosen destination.
+
+## Testing
+
+Run the unit tests for the shared logic (Vitest):
+
+```bash
+pnpm test
+```
+
+The E2E tests (Playwright) load the built extension into a real browser and verify everything from selecting a video to starting a recording and saving the MP4.
+
+```bash
+pnpm test:e2e
+```
+
+Before running the E2E tests for the first time, install the Playwright browser:
 
 ```bash
 pnpm exec playwright install chromium
 ```
+
+## Contributing
+
+See the [Contributing Guide](docs/CONTRIBUTING.md).
+
+## License
+
+[MIT](LICENSE)
