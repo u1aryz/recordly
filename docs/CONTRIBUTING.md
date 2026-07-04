@@ -2,6 +2,8 @@
 
 Thank you for your interest in contributing! This guide explains how to set up the project and what we expect from contributions.
 
+This project follows the [Code of Conduct](../CODE_OF_CONDUCT.md). To report a security vulnerability, see the [Security Policy](../SECURITY.md).
+
 ## Prerequisites
 
 - Node.js >= 22
