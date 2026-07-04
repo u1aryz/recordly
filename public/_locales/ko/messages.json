@@ -1,0 +1,237 @@
+{
+	"extName": { "message": "Recordly" },
+	"extDescription": {
+		"message": "페이지의 동영상을 선택하여 MP4로 캡처합니다."
+	},
+	"activeTabUnavailable": { "message": "현재 탭에 접근할 수 없습니다." },
+	"recordingCount": {
+		"message": "녹화 중 $COUNT$건",
+		"placeholders": { "count": { "content": "$1" } }
+	},
+	"history": { "message": "기록" },
+	"pageUnavailable": {
+		"message": "이 페이지에서는 확장 프로그램을 실행할 수 없거나, 아직 동영상이 감지되지 않았습니다."
+	},
+	"popupDescription": {
+		"message": "페이지의 동영상을 선택해 MP4로 캡처합니다."
+	},
+	"selectVideoOnPage": {
+		"message": "이 페이지에서 녹화할 동영상을 선택하세요"
+	},
+	"settingContinueOnResolutionChange": {
+		"message": "해상도가 변경되어도 녹화를 계속합니다"
+	},
+	"settingContinueOnResolutionChangeDescription": {
+		"message": "해상도 변경이 감지되면 새 파일로 녹화를 이어갑니다."
+	},
+	"pickerInstructions": {
+		"message": "녹화할 동영상 위로 커서를 이동하세요"
+	},
+	"pickerCancelHint": { "message": "Esc 키를 눌러 취소" },
+	"chooseFolderAndRecord": {
+		"message": "폴더를 선택하고 녹화 시작"
+	},
+	"cancel": { "message": "취소" },
+	"stepSelectVideo": { "message": "동영상 선택" },
+	"stepChooseDestination": { "message": "저장 폴더 선택" },
+	"stepStartRecording": { "message": "녹화 시작" },
+	"detectedVideos": { "message": "감지된 동영상" },
+	"refresh": { "message": "새로고침" },
+	"noVideosDetected": {
+		"message": "감지된 동영상이 없습니다. 동영상을 재생한 후 새로고침하세요."
+	},
+	"captureStreamHasNoTracks": {
+		"message": "녹화할 영상 또는 음성이 없습니다. 동영상을 재생한 후 다시 시도하세요."
+	},
+	"captureStreamUnsupported": {
+		"message": "이 브라우저는 video.captureStream()을 지원하지 않습니다."
+	},
+	"captureStreamStartFailed": {
+		"message": "video.captureStream() 시작에 실패했습니다."
+	},
+	"protectedVideoCaptureUnsupported": {
+		"message": "이 동영상은 DRM 등의 보호 조치로 인해 캡처할 수 없습니다."
+	},
+	"directFolderSaveUnsupported": {
+		"message": "이 브라우저는 폴더에 직접 저장하는 기능을 지원하지 않습니다."
+	},
+	"recordingStartFailed": { "message": "녹화를 시작할 수 없습니다." },
+	"videoAlreadyRecording": {
+		"message": "이 동영상은 이미 녹화 중입니다."
+	},
+	"mediaRecorderMp4Unsupported": {
+		"message": "이 브라우저는 MediaRecorder의 MP4 출력을 지원하지 않습니다."
+	},
+	"destinationPickFailed": {
+		"message": "저장 위치를 선택할 수 없습니다."
+	},
+	"mediaRecorderStartFailed": {
+		"message": "MediaRecorder 시작에 실패했습니다."
+	},
+	"paused": { "message": "일시정지" },
+	"playing": { "message": "재생 중" },
+	"muted": { "message": "음소거" },
+	"audioAvailable": { "message": "오디오 있음" },
+	"videoFallbackTitle": {
+		"message": "동영상 $NUMBER$",
+		"placeholders": { "number": { "content": "$1" } }
+	},
+	"videoElementLabel": { "message": "동영상" },
+	"liveOrUnknown": { "message": "실시간/알 수 없음" },
+	"capturesTitle": { "message": "Recordly 캡처" },
+	"noSavedData": { "message": "저장된 데이터가 없습니다." },
+	"streamingSaveUnsupported": {
+		"message": "이 브라우저는 스트리밍 방식의 파일 저장을 지원하지 않습니다."
+	},
+	"historyLoadFailed": { "message": "캡처 기록을 불러올 수 없습니다." },
+	"retry": { "message": "다시 시도" },
+	"noCaptures": { "message": "아직 캡처가 없습니다." },
+	"selectCapture": { "message": "캡처를 선택하세요." },
+	"elapsedTime": { "message": "경과 시간" },
+	"fileSize": { "message": "파일 크기" },
+	"fileCount": { "message": "파일 수" },
+	"resolution": { "message": "해상도" },
+	"resolutionChangeSplits": { "message": "해상도 변경으로 인한 분할" },
+	"resolutionChangePartLabel": {
+		"message": "$PART$번째 파일부터",
+		"placeholders": { "part": { "content": "$1" } }
+	},
+	"resolutionChangeFileDiscarded": { "message": "파일이 생성되지 않았습니다" },
+	"mp4AtSelectedDestination": {
+		"message": "MP4는 녹화 시작 시 선택한 저장 위치에 있습니다."
+	},
+	"mp4PartsAtSelectedDestination": {
+		"message": "MP4 파일은 선택한 폴더에 part-001, part-002 등으로 저장됩니다."
+	},
+	"stoppingAndSaving": { "message": "저장하며 종료하는 중…" },
+	"stopAndSave": { "message": "중지하고 저장" },
+	"saveMp4": { "message": "MP4 저장" },
+	"removeFromHistory": { "message": "기록에서 삭제" },
+	"delete": { "message": "삭제" },
+	"recordingStatus": { "message": "녹화 상태" },
+	"moveRecordingHud": { "message": "드래그하여 녹화 상태 HUD 이동" },
+	"recordingToDestination": {
+		"message": "선택한 폴더에 약 2GiB 단위로 분할 저장 중입니다."
+	},
+	"recordingPart": {
+		"message": "$PART$번째 파트 녹화 중",
+		"placeholders": { "part": { "content": "$1" } }
+	},
+	"resolutionRolloverHud": {
+		"message": "해상도가 $FROM$에서 $TO$로 변경되어 새 파일로 전환했습니다",
+		"placeholders": {
+			"from": { "content": "$1" },
+			"to": { "content": "$2" }
+		}
+	},
+	"openStatus": { "message": "상태 열기" },
+	"finalizingMp4": { "message": "MP4 파일을 마무리하는 중입니다." },
+	"statusRecording": { "message": "녹화 중" },
+	"recordingAndSaving": { "message": "녹화 중·파일로 저장 중" },
+	"recordingAndSavingDescription": {
+		"message": "녹화 데이터를 선택한 폴더에 약 2GiB 단위로 분할하여 기록하고 있습니다."
+	},
+	"statusSaveFailed": { "message": "저장 실패" },
+	"saveFailedTitle": { "message": "MP4를 저장할 수 없습니다" },
+	"saveFailedDescription": {
+		"message": "파일을 쓰는 중 문제가 발생했습니다."
+	},
+	"statusNeedsReview": { "message": "확인 필요" },
+	"saveStatusUnknownTitle": { "message": "저장 상태를 확인할 수 없습니다" },
+	"saveStatusUnknownDescription": {
+		"message": "녹화 소스와의 연결이 먼저 끊어져 MP4 저장 완료 여부를 확인할 수 없습니다. 선택한 저장 위치를 확인하세요."
+	},
+	"statusPartiallySaved": { "message": "부분 저장됨" },
+	"partiallySavedTitle": { "message": "중지 시점까지 내용이 저장되었습니다" },
+	"partiallySavedDescription": {
+		"message": "$REASON$. 녹화 시작 시 선택한 저장 위치에 중지 시점까지의 내용이 저장되었습니다.",
+		"placeholders": { "reason": { "content": "$1" } }
+	},
+	"statusSaved": { "message": "저장 완료" },
+	"savedTitle": { "message": "MP4 저장이 완료되었습니다" },
+	"savedAfterVideoEnded": {
+		"message": "동영상 재생이 끝나 녹화가 종료되었고, MP4가 저장되었습니다."
+	},
+	"savedDescription": {
+		"message": "선택한 폴더에 분할된 MP4가 저장되었습니다."
+	},
+	"savedPartsAfterError": {
+		"message": "녹화가 종료되었습니다. 확정된 파트는 저장된 상태로 남아 있습니다."
+	},
+	"recordingStoppedAfterExtensionUpdate": {
+		"message": "확장 프로그램이 업데이트되어 녹화가 종료되었습니다."
+	},
+	"recordingStatusConnectionLost": {
+		"message": "녹화 상태 연결이 끊어졌습니다."
+	},
+	"recordingErrorOccurred": {
+		"message": "녹화 중 오류가 발생했습니다."
+	},
+	"writeBackpressureStopped": {
+		"message": "파일 쓰기 속도가 녹화 속도를 따라가지 못해 녹화가 중지되었습니다."
+	},
+	"recordingDataWriteFailed": {
+		"message": "녹화 데이터를 쓰지 못했습니다."
+	},
+	"recordingFileFinalizeFailed": {
+		"message": "녹화 파일을 마무리하지 못했습니다."
+	},
+	"nextRecordingFileCreateFailed": {
+		"message": "다음 녹화 파일을 생성할 수 없습니다."
+	},
+	"recordingFileSaveFailed": {
+		"message": "녹화 파일을 저장할 수 없습니다."
+	},
+	"restoreSaveStatusUnknown": {
+		"message": "확장 프로그램이 재시작되어 MP4 저장 완료 여부를 확인할 수 없습니다."
+	},
+	"completionVideoEnded": {
+		"message": "동영상 재생이 끝나 녹화를 중지했고, MP4가 저장되었습니다."
+	},
+	"completionVideoRemoved": {
+		"message": "선택한 동영상이 페이지에서 사라져 자동으로 중지되었습니다. 중지 시점까지의 내용이 저장되었습니다."
+	},
+	"completionResolutionChanged": {
+		"message": "동영상 해상도가 변경되어 자동으로 중지되었습니다. 중지 시점까지의 내용이 저장되었습니다."
+	},
+	"completionSourceClosed": {
+		"message": "녹화 소스가 닫혀 자동으로 중지되었습니다. 중지 시점까지의 내용이 저장되었습니다."
+	},
+	"completionDefault": {
+		"message": "녹화가 중지되었고, MP4가 저장되었습니다."
+	},
+	"stoppedAfterNoDataTimeout": {
+		"message": "녹화 데이터가 도착하지 않아 자동으로 중지되었습니다. 중지 시점까지의 내용이 저장되었습니다."
+	},
+	"stopReasonUser": { "message": "사용자에 의해 중지됨" },
+	"stopReasonResolutionChanged": {
+		"message": "동영상 해상도가 변경되어 자동으로 중지됨"
+	},
+	"stopReasonResolutionChangedWithDetails": {
+		"message": "동영상 해상도가 $FROM$에서 $TO$로 변경되어 자동으로 중지됨",
+		"placeholders": {
+			"from": { "content": "$1" },
+			"to": { "content": "$2" }
+		}
+	},
+	"stopReasonSourceClosed": {
+		"message": "소스 페이지 또는 스트림이 닫힘"
+	},
+	"stopReasonVideoEnded": { "message": "선택한 동영상 재생이 종료됨" },
+	"stopReasonVideoRemoved": {
+		"message": "선택한 동영상이 페이지에서 사라져 자동으로 중지됨"
+	},
+	"stopReasonUnsupported": {
+		"message": "브라우저가 이 녹화 방식을 지원하지 않음"
+	},
+	"stopReasonError": { "message": "녹화 중 오류 발생" },
+	"stopReasonTabCaptureFailed": { "message": "탭 녹화를 시작할 수 없음" },
+	"stopReasonTargetUnavailable": {
+		"message": "대상 탭을 사용할 수 없음"
+	},
+	"stopReasonWriteFailed": { "message": "파일에 쓸 수 없음" },
+	"stopReasonNoDataTimeout": {
+		"message": "녹화 데이터가 도착하지 않아 자동으로 중지됨"
+	},
+	"stopReasonDefault": { "message": "녹화 종료됨" }
+}

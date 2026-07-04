@@ -1,0 +1,235 @@
+{
+	"extName": { "message": "Recordly" },
+	"extDescription": {
+		"message": "在页面上选择一个视频，并将其捕获保存为 MP4。"
+	},
+	"activeTabUnavailable": { "message": "无法访问当前标签页。" },
+	"recordingCount": {
+		"message": "正在录制 $COUNT$ 个",
+		"placeholders": { "count": { "content": "$1" } }
+	},
+	"history": { "message": "历史记录" },
+	"pageUnavailable": {
+		"message": "此页面无法运行扩展程序，或尚未检测到视频。"
+	},
+	"popupDescription": {
+		"message": "选择页面上的视频，并将其捕获保存为 MP4。"
+	},
+	"selectVideoOnPage": { "message": "选择此页面上要录制的视频" },
+	"settingContinueOnResolutionChange": {
+		"message": "分辨率变化时继续录制"
+	},
+	"settingContinueOnResolutionChangeDescription": {
+		"message": "检测到分辨率变化时，将切换到新文件继续录制。"
+	},
+	"pickerInstructions": {
+		"message": "将指针移到要录制的视频上"
+	},
+	"pickerCancelHint": { "message": "按 Esc 取消" },
+	"chooseFolderAndRecord": {
+		"message": "选择文件夹并开始录制"
+	},
+	"cancel": { "message": "取消" },
+	"stepSelectVideo": { "message": "选择视频" },
+	"stepChooseDestination": { "message": "选择保存文件夹" },
+	"stepStartRecording": { "message": "开始录制" },
+	"detectedVideos": { "message": "检测到的视频" },
+	"refresh": { "message": "刷新" },
+	"noVideosDetected": {
+		"message": "未检测到视频。请播放视频后刷新。"
+	},
+	"captureStreamHasNoTracks": {
+		"message": "没有可录制的视频或音频。请播放视频后重试。"
+	},
+	"captureStreamUnsupported": {
+		"message": "此浏览器不支持 video.captureStream()。"
+	},
+	"captureStreamStartFailed": {
+		"message": "无法启动 video.captureStream()。"
+	},
+	"protectedVideoCaptureUnsupported": {
+		"message": "此视频受 DRM 等机制保护，无法捕获。"
+	},
+	"directFolderSaveUnsupported": {
+		"message": "此浏览器不支持直接保存到文件夹。"
+	},
+	"recordingStartFailed": { "message": "无法开始录制。" },
+	"videoAlreadyRecording": {
+		"message": "此视频已在录制中。"
+	},
+	"mediaRecorderMp4Unsupported": {
+		"message": "此浏览器不支持 MediaRecorder 输出 MP4。"
+	},
+	"destinationPickFailed": {
+		"message": "无法选择保存位置。"
+	},
+	"mediaRecorderStartFailed": {
+		"message": "无法启动 MediaRecorder。"
+	},
+	"paused": { "message": "已暂停" },
+	"playing": { "message": "正在播放" },
+	"muted": { "message": "静音" },
+	"audioAvailable": { "message": "有音频" },
+	"videoFallbackTitle": {
+		"message": "视频 $NUMBER$",
+		"placeholders": { "number": { "content": "$1" } }
+	},
+	"videoElementLabel": { "message": "视频" },
+	"liveOrUnknown": { "message": "直播／未知" },
+	"capturesTitle": { "message": "Recordly 捕获记录" },
+	"noSavedData": { "message": "没有已保存的数据。" },
+	"streamingSaveUnsupported": {
+		"message": "此浏览器不支持流式保存文件。"
+	},
+	"historyLoadFailed": { "message": "无法加载捕获历史记录。" },
+	"retry": { "message": "重试" },
+	"noCaptures": { "message": "暂无捕获记录。" },
+	"selectCapture": { "message": "请选择一个捕获记录。" },
+	"elapsedTime": { "message": "已用时间" },
+	"fileSize": { "message": "文件大小" },
+	"fileCount": { "message": "文件数" },
+	"resolution": { "message": "分辨率" },
+	"resolutionChangeSplits": { "message": "因分辨率变化而拆分" },
+	"resolutionChangePartLabel": {
+		"message": "从第 $PART$ 个文件起",
+		"placeholders": { "part": { "content": "$1" } }
+	},
+	"resolutionChangeFileDiscarded": { "message": "未生成文件" },
+	"mp4AtSelectedDestination": {
+		"message": "MP4 文件位于开始录制时选择的保存位置。"
+	},
+	"mp4PartsAtSelectedDestination": {
+		"message": "MP4 文件已保存到所选文件夹，依次命名为 part-001、part-002 等。"
+	},
+	"stoppingAndSaving": { "message": "正在停止并保存…" },
+	"stopAndSave": { "message": "停止并保存" },
+	"saveMp4": { "message": "保存 MP4" },
+	"removeFromHistory": { "message": "从历史记录中移除" },
+	"delete": { "message": "删除" },
+	"recordingStatus": { "message": "录制状态" },
+	"moveRecordingHud": { "message": "拖动以移动录制状态 HUD" },
+	"recordingToDestination": {
+		"message": "正在以约 2 GiB 为单位分割保存到所选文件夹。"
+	},
+	"recordingPart": {
+		"message": "正在录制第 $PART$ 个文件。",
+		"placeholders": { "part": { "content": "$1" } }
+	},
+	"resolutionRolloverHud": {
+		"message": "分辨率已从 $FROM$ 变为 $TO$，已切换到新文件",
+		"placeholders": {
+			"from": { "content": "$1" },
+			"to": { "content": "$2" }
+		}
+	},
+	"openStatus": { "message": "打开状态" },
+	"finalizingMp4": { "message": "正在完成 MP4 文件。" },
+	"statusRecording": { "message": "录制中" },
+	"recordingAndSaving": { "message": "录制中，正在保存到文件" },
+	"recordingAndSavingDescription": {
+		"message": "录制数据正以约 2 GiB 为单位分割写入所选文件夹。"
+	},
+	"statusSaveFailed": { "message": "保存失败" },
+	"saveFailedTitle": { "message": "无法保存 MP4" },
+	"saveFailedDescription": {
+		"message": "写入文件时发生问题。"
+	},
+	"statusNeedsReview": { "message": "需要确认" },
+	"saveStatusUnknownTitle": { "message": "无法确认保存状态" },
+	"saveStatusUnknownDescription": {
+		"message": "与录制源的连接在确认 MP4 保存完成前已中断。请检查所选的保存位置。"
+	},
+	"statusPartiallySaved": { "message": "已部分保存" },
+	"partiallySavedTitle": { "message": "已保存至停止时的内容" },
+	"partiallySavedDescription": {
+		"message": "$REASON$。已将停止前的内容保存到开始录制时选择的位置。",
+		"placeholders": { "reason": { "content": "$1" } }
+	},
+	"statusSaved": { "message": "已保存" },
+	"savedTitle": { "message": "MP4 已保存" },
+	"savedAfterVideoEnded": {
+		"message": "视频播放结束后录制已停止，MP4 已保存。"
+	},
+	"savedDescription": {
+		"message": "分割生成的 MP4 文件已保存到所选文件夹。"
+	},
+	"savedPartsAfterError": {
+		"message": "录制已结束。已完成的部分仍保留保存。"
+	},
+	"recordingStoppedAfterExtensionUpdate": {
+		"message": "由于扩展程序已更新，录制已停止。"
+	},
+	"recordingStatusConnectionLost": {
+		"message": "录制状态连接已断开。"
+	},
+	"recordingErrorOccurred": {
+		"message": "录制过程中发生了错误。"
+	},
+	"writeBackpressureStopped": {
+		"message": "由于文件写入速度跟不上录制速度，录制已停止。"
+	},
+	"recordingDataWriteFailed": {
+		"message": "无法写入录制数据。"
+	},
+	"recordingFileFinalizeFailed": {
+		"message": "无法完成录制文件。"
+	},
+	"nextRecordingFileCreateFailed": {
+		"message": "无法创建下一个录制文件。"
+	},
+	"recordingFileSaveFailed": {
+		"message": "无法保存录制文件。"
+	},
+	"restoreSaveStatusUnknown": {
+		"message": "扩展程序重启前未能确认 MP4 保存是否完成。"
+	},
+	"completionVideoEnded": {
+		"message": "视频播放结束后录制已停止，MP4 已保存。"
+	},
+	"completionVideoRemoved": {
+		"message": "由于所选视频已从页面中移除，已自动停止。停止前的内容已保存。"
+	},
+	"completionResolutionChanged": {
+		"message": "由于视频分辨率发生变化，已自动停止。停止前的内容已保存。"
+	},
+	"completionSourceClosed": {
+		"message": "由于录制源已关闭，已自动停止。停止前的内容已保存。"
+	},
+	"completionDefault": {
+		"message": "录制已停止，MP4 已保存。"
+	},
+	"stoppedAfterNoDataTimeout": {
+		"message": "由于未收到录制数据，已自动停止。停止前的内容已保存。"
+	},
+	"stopReasonUser": { "message": "已由用户停止" },
+	"stopReasonResolutionChanged": {
+		"message": "由于视频分辨率发生变化，已自动停止"
+	},
+	"stopReasonResolutionChangedWithDetails": {
+		"message": "由于视频分辨率从 $FROM$ 变为 $TO$，已自动停止",
+		"placeholders": {
+			"from": { "content": "$1" },
+			"to": { "content": "$2" }
+		}
+	},
+	"stopReasonSourceClosed": {
+		"message": "源页面或流已关闭"
+	},
+	"stopReasonVideoEnded": { "message": "所选视频已播放结束" },
+	"stopReasonVideoRemoved": {
+		"message": "由于所选视频已从页面中移除，已自动停止"
+	},
+	"stopReasonUnsupported": {
+		"message": "浏览器不支持此录制方式"
+	},
+	"stopReasonError": { "message": "录制过程中发生了错误" },
+	"stopReasonTabCaptureFailed": { "message": "无法开始标签页录制" },
+	"stopReasonTargetUnavailable": {
+		"message": "目标标签页不可用"
+	},
+	"stopReasonWriteFailed": { "message": "无法写入文件" },
+	"stopReasonNoDataTimeout": {
+		"message": "由于未收到录制数据，已自动停止"
+	},
+	"stopReasonDefault": { "message": "录制已结束" }
+}

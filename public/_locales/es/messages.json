@@ -1,0 +1,251 @@
+{
+	"extName": { "message": "Recordly" },
+	"extDescription": {
+		"message": "Selecciona un video en la página y captúralo como MP4."
+	},
+	"activeTabUnavailable": {
+		"message": "No se pudo acceder a la pestaña activa."
+	},
+	"recordingCount": {
+		"message": "$COUNT$ grabando",
+		"placeholders": { "count": { "content": "$1" } }
+	},
+	"history": { "message": "Historial" },
+	"pageUnavailable": {
+		"message": "La extensión no puede ejecutarse en esta página, o aún no se ha detectado ningún video."
+	},
+	"popupDescription": {
+		"message": "Selecciona un video en la página y captúralo como MP4."
+	},
+	"selectVideoOnPage": {
+		"message": "Selecciona un video para grabar en esta página"
+	},
+	"settingContinueOnResolutionChange": {
+		"message": "Continuar grabando cuando cambie la resolución"
+	},
+	"settingContinueOnResolutionChangeDescription": {
+		"message": "Cuando se detecta un cambio de resolución, la grabación continúa en un nuevo archivo."
+	},
+	"pickerInstructions": {
+		"message": "Mueve el puntero sobre el video que quieres grabar"
+	},
+	"pickerCancelHint": { "message": "Presiona Esc para cancelar" },
+	"chooseFolderAndRecord": {
+		"message": "Elegir carpeta y comenzar a grabar"
+	},
+	"cancel": { "message": "Cancelar" },
+	"stepSelectVideo": { "message": "Seleccionar video" },
+	"stepChooseDestination": { "message": "Elegir carpeta de guardado" },
+	"stepStartRecording": { "message": "Iniciar grabación" },
+	"detectedVideos": { "message": "Videos detectados" },
+	"refresh": { "message": "Actualizar" },
+	"noVideosDetected": {
+		"message": "No se detectaron videos. Reproduce un video y luego actualiza."
+	},
+	"captureStreamHasNoTracks": {
+		"message": "No hay video ni audio disponible para grabar. Reproduce el video e inténtalo de nuevo."
+	},
+	"captureStreamUnsupported": {
+		"message": "Este navegador no admite video.captureStream()."
+	},
+	"captureStreamStartFailed": {
+		"message": "No se pudo iniciar video.captureStream()."
+	},
+	"protectedVideoCaptureUnsupported": {
+		"message": "Este video no se puede capturar porque está protegido por DRM u otras restricciones similares."
+	},
+	"directFolderSaveUnsupported": {
+		"message": "Este navegador no admite guardar directamente en una carpeta."
+	},
+	"recordingStartFailed": { "message": "No se pudo iniciar la grabación." },
+	"videoAlreadyRecording": {
+		"message": "Este video ya se está grabando."
+	},
+	"mediaRecorderMp4Unsupported": {
+		"message": "Este navegador no admite la salida MP4 de MediaRecorder."
+	},
+	"destinationPickFailed": {
+		"message": "No se pudo elegir el destino."
+	},
+	"mediaRecorderStartFailed": {
+		"message": "No se pudo iniciar MediaRecorder."
+	},
+	"paused": { "message": "Pausado" },
+	"playing": { "message": "Reproduciendo" },
+	"muted": { "message": "Silenciado" },
+	"audioAvailable": { "message": "Audio disponible" },
+	"videoFallbackTitle": {
+		"message": "Video $NUMBER$",
+		"placeholders": { "number": { "content": "$1" } }
+	},
+	"videoElementLabel": { "message": "video" },
+	"liveOrUnknown": { "message": "en vivo/desconocido" },
+	"capturesTitle": { "message": "Capturas de Recordly" },
+	"noSavedData": { "message": "No hay datos guardados." },
+	"streamingSaveUnsupported": {
+		"message": "Este navegador no admite el guardado de archivos en flujo continuo."
+	},
+	"historyLoadFailed": {
+		"message": "No se pudo cargar el historial de capturas."
+	},
+	"retry": { "message": "Reintentar" },
+	"noCaptures": { "message": "Aún no hay capturas." },
+	"selectCapture": { "message": "Selecciona una captura." },
+	"elapsedTime": { "message": "Tiempo transcurrido" },
+	"fileSize": { "message": "Tamaño del archivo" },
+	"fileCount": { "message": "Archivos" },
+	"resolution": { "message": "Resolución" },
+	"resolutionChangeSplits": {
+		"message": "Divisiones por cambios de resolución"
+	},
+	"resolutionChangePartLabel": {
+		"message": "Desde la parte $PART$",
+		"placeholders": { "part": { "content": "$1" } }
+	},
+	"resolutionChangeFileDiscarded": { "message": "No se generó el archivo" },
+	"mp4AtSelectedDestination": {
+		"message": "El MP4 está en el destino seleccionado cuando comenzó la grabación."
+	},
+	"mp4PartsAtSelectedDestination": {
+		"message": "Los archivos MP4 se guardan en la carpeta seleccionada como part-001, part-002, etc."
+	},
+	"stoppingAndSaving": { "message": "Deteniendo y guardando…" },
+	"stopAndSave": { "message": "Detener y guardar" },
+	"saveMp4": { "message": "Guardar MP4" },
+	"removeFromHistory": { "message": "Quitar del historial" },
+	"delete": { "message": "Eliminar" },
+	"recordingStatus": { "message": "Estado de la grabación" },
+	"moveRecordingHud": {
+		"message": "Arrastra para mover el HUD de estado de grabación"
+	},
+	"recordingToDestination": {
+		"message": "Grabando en la carpeta seleccionada en partes de aproximadamente 2 GiB."
+	},
+	"recordingPart": {
+		"message": "Grabando la parte $PART$.",
+		"placeholders": { "part": { "content": "$1" } }
+	},
+	"resolutionRolloverHud": {
+		"message": "La resolución cambió de $FROM$ a $TO$; se cambió a un nuevo archivo",
+		"placeholders": {
+			"from": { "content": "$1" },
+			"to": { "content": "$2" }
+		}
+	},
+	"openStatus": { "message": "Abrir estado" },
+	"finalizingMp4": { "message": "Finalizando el archivo MP4." },
+	"statusRecording": { "message": "Grabando" },
+	"recordingAndSaving": { "message": "Grabando y guardando en archivo" },
+	"recordingAndSavingDescription": {
+		"message": "Los datos de grabación se están dividiendo en archivos de aproximadamente 2 GiB en la carpeta seleccionada."
+	},
+	"statusSaveFailed": { "message": "Error al guardar" },
+	"saveFailedTitle": { "message": "No se pudo guardar el MP4" },
+	"saveFailedDescription": {
+		"message": "Ocurrió un problema al escribir el archivo."
+	},
+	"statusNeedsReview": { "message": "Revisión requerida" },
+	"saveStatusUnknownTitle": {
+		"message": "No se pudo confirmar el estado de guardado"
+	},
+	"saveStatusUnknownDescription": {
+		"message": "La conexión con la fuente de grabación terminó antes de poder confirmar el guardado del MP4. Verifica el destino seleccionado."
+	},
+	"statusPartiallySaved": { "message": "Guardado parcialmente" },
+	"partiallySavedTitle": {
+		"message": "Contenido guardado hasta el punto de detención"
+	},
+	"partiallySavedDescription": {
+		"message": "$REASON$. El contenido hasta el punto de detención se guardó en el destino seleccionado cuando comenzó la grabación.",
+		"placeholders": { "reason": { "content": "$1" } }
+	},
+	"statusSaved": { "message": "Guardado" },
+	"savedTitle": { "message": "MP4 guardado" },
+	"savedAfterVideoEnded": {
+		"message": "La grabación se detuvo cuando terminó el video, y el MP4 se guardó."
+	},
+	"savedDescription": {
+		"message": "Los archivos MP4 divididos se guardaron en la carpeta seleccionada."
+	},
+	"savedPartsAfterError": {
+		"message": "La grabación finalizó. Las partes finalizadas permanecen guardadas."
+	},
+	"recordingStoppedAfterExtensionUpdate": {
+		"message": "La grabación se detuvo porque la extensión se actualizó."
+	},
+	"recordingStatusConnectionLost": {
+		"message": "Se perdió la conexión del estado de grabación."
+	},
+	"recordingErrorOccurred": {
+		"message": "Ocurrió un error durante la grabación."
+	},
+	"writeBackpressureStopped": {
+		"message": "La grabación se detuvo porque la escritura de archivos no pudo mantener el ritmo de la grabación."
+	},
+	"recordingDataWriteFailed": {
+		"message": "No se pudieron escribir los datos de grabación."
+	},
+	"recordingFileFinalizeFailed": {
+		"message": "No se pudo finalizar el archivo de grabación."
+	},
+	"nextRecordingFileCreateFailed": {
+		"message": "No se pudo crear el siguiente archivo de grabación."
+	},
+	"recordingFileSaveFailed": {
+		"message": "No se pudo guardar el archivo de grabación."
+	},
+	"restoreSaveStatusUnknown": {
+		"message": "La extensión se reinició antes de poder confirmar el guardado del MP4."
+	},
+	"completionVideoEnded": {
+		"message": "La grabación se detuvo cuando terminó el video, y el MP4 se guardó."
+	},
+	"completionVideoRemoved": {
+		"message": "Se detuvo automáticamente porque el video seleccionado se eliminó de la página. El contenido hasta el punto de detención se ha guardado."
+	},
+	"completionResolutionChanged": {
+		"message": "Se detuvo automáticamente porque cambió la resolución del video. El contenido hasta el punto de detención se ha guardado."
+	},
+	"completionSourceClosed": {
+		"message": "Se detuvo automáticamente porque se cerró la fuente de grabación. El contenido hasta el punto de detención se ha guardado."
+	},
+	"completionDefault": {
+		"message": "La grabación se detuvo, y el MP4 se guardó."
+	},
+	"stoppedAfterNoDataTimeout": {
+		"message": "Se detuvo automáticamente porque no llegaron datos de grabación. El contenido hasta el punto de detención se ha guardado."
+	},
+	"stopReasonUser": { "message": "Detenido por el usuario" },
+	"stopReasonResolutionChanged": {
+		"message": "Se detuvo automáticamente porque cambió la resolución del video"
+	},
+	"stopReasonResolutionChangedWithDetails": {
+		"message": "Se detuvo automáticamente porque la resolución del video cambió de $FROM$ a $TO$",
+		"placeholders": {
+			"from": { "content": "$1" },
+			"to": { "content": "$2" }
+		}
+	},
+	"stopReasonSourceClosed": {
+		"message": "La página o el flujo de origen se cerró"
+	},
+	"stopReasonVideoEnded": { "message": "El video seleccionado terminó" },
+	"stopReasonVideoRemoved": {
+		"message": "Se detuvo automáticamente porque el video seleccionado se eliminó de la página"
+	},
+	"stopReasonUnsupported": {
+		"message": "El navegador no admite este método de grabación"
+	},
+	"stopReasonError": { "message": "Ocurrió un error durante la grabación" },
+	"stopReasonTabCaptureFailed": {
+		"message": "No se pudo iniciar la grabación de la pestaña"
+	},
+	"stopReasonTargetUnavailable": {
+		"message": "La pestaña objetivo no estaba disponible"
+	},
+	"stopReasonWriteFailed": { "message": "No se pudo escribir en el archivo" },
+	"stopReasonNoDataTimeout": {
+		"message": "Se detuvo automáticamente porque no llegaron datos de grabación"
+	},
+	"stopReasonDefault": { "message": "La grabación finalizó" }
+}
