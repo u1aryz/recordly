@@ -1,13 +1,13 @@
 import { expect, test, VIDEO_TEST_PAGE_URL } from "./fixtures";
 
-/** MP4 の先頭 12 バイトに ftyp box シグネチャが含まれるか。 */
+/** Whether the first 12 bytes of the MP4 contain the ftyp box signature. */
 function hasFtypBox(head: number[]): boolean {
-	// [size(4)] "ftyp" ... の並びなので offset 4 から確認する。
+	// The layout is [size(4)] "ftyp" ..., so check starting at offset 4.
 	const ftyp = [0x66, 0x74, 0x79, 0x70];
 	return ftyp.every((byte, index) => head[4 + index] === byte);
 }
 
-test("動画を選択して録画し MP4 が保存される", async ({
+test("selects a video, records, and saves an MP4", async ({
 	context,
 	getMessage,
 	startPicker,
@@ -20,11 +20,11 @@ test("動画を選択して録画し MP4 が保存される", async ({
 	const startLabel = await getMessage("chooseFolderAndRecord");
 	const stopLabel = await getMessage("stopAndSave");
 
-	// フォルダ選択ダイアログは自動化できないため、content script の isolated world で
-	// showDirectoryPicker を OPFS に差し替える。
+	// The folder selection dialog can't be automated, so replace showDirectoryPicker
+	// with OPFS in the content script's isolated world.
 	await stubDirectoryPicker(page);
 
-	// ピッカーを起動して動画を選択し、録画を開始する。
+	// Start the picker, select the video, and begin recording.
 	await startPicker();
 	const box = await page.locator("#v").boundingBox();
 	if (!box) {
@@ -36,17 +36,17 @@ test("動画を選択して録画し MP4 が保存される", async ({
 	await expect(page.getByText(videoLabel, { exact: true })).toBeVisible();
 	await page.getByRole("button", { name: startLabel }).click();
 
-	// 録画が始まると HUD が表示され、ピッカーは閉じる。
+	// Once recording starts, the HUD appears and the picker closes.
 	const stopButton = page.getByRole("button", { name: stopLabel });
 	await expect(stopButton).toBeVisible({ timeout: 15_000 });
 	await expect(page.locator("recordly-video-picker")).toHaveCount(0);
 
-	// チャンクの timeslice(3 秒)を跨ぐまで録画してから停止する。
+	// Record past the chunk timeslice (3 seconds) before stopping.
 	await page.waitForTimeout(3500);
 	await stopButton.click();
 
-	// OPFS の part ファイルは writable.close() 完了時にのみサイズが確定するため、
-	// 「size > 0 の part ファイルが現れる」= 保存完了として検証できる。
+	// OPFS part files only have their size finalized once writable.close() completes,
+	// so we can verify the save completed by checking that a part file with size > 0 appears.
 	await expect
 		.poll(
 			async () => {

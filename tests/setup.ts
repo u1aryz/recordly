@@ -63,8 +63,8 @@ function applyI18nMock(): void {
 applyI18nMock();
 
 vi.mock("wxt/browser", () => ({ browser: fakeBrowser }));
-// entrypoints/**/App.tsx は WXT の auto-import によりグローバル `browser` を参照するため、
-// コンポーネントテストでも同じ fakeBrowser インスタンスを見えるようにする。
+// entrypoints/**/App.tsx references the global `browser` via WXT's
+// auto-import, so make component tests see the same fakeBrowser instance.
 vi.stubGlobal("browser", fakeBrowser);
 
 afterEach(() => {

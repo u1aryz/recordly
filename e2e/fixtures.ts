@@ -10,7 +10,7 @@ import {
 	type Worker,
 } from "@playwright/test";
 
-/** service worker 内(evaluate コールバック)で参照する chrome API の最小型。 */
+/** Minimal type for the chrome API referenced inside the service worker (evaluate callback). */
 declare const chrome: {
 	i18n: { getMessage: (key: string) => string };
 	tabs: {
@@ -25,22 +25,24 @@ const videoTestPagePath = fileURLToPath(
 	new URL("./pages/video-test.html", import.meta.url),
 );
 
-/** テストページの URL。localhost は secure context なので OPFS が使える。 */
+/** URL of the test page. localhost is a secure context, so OPFS is available. */
 export const VIDEO_TEST_PAGE_URL = "http://localhost/video-test.html";
 
 type ExtensionFixtures = {
 	context: BrowserContext;
 	extensionId: string;
 	serviceWorker: Worker;
-	/** 拡張機能に適用されているロケールの UI 文言を返す。 */
+	/** Returns the UI text for the locale currently applied to the extension. */
 	getMessage: (key: string) => Promise<string>;
-	/** アクティブタブへ START_PICKER を送ってピッカーを起動する。 */
+	/** Sends START_PICKER to the active tab to launch the picker. */
 	startPicker: () => Promise<void>;
-	/** content script の isolated world で showDirectoryPicker を OPFS に差し替える。 */
+	/** Replaces showDirectoryPicker with OPFS in the content script's isolated world. */
 	stubDirectoryPicker: (page: Page) => Promise<void>;
 	/**
-	 * テストページの OPFS ルート直下のファイル一覧(名前・サイズ・先頭バイト)を返す。
-	 * 書き込み中で読み取れないファイルはスキップする(ポーリングの次回試行で拾う)。
+	 * Returns the list of files directly under the test page's OPFS root
+	 * (name, size, and leading bytes).
+	 * Skips files that can't be read because they're still being written
+	 * (they'll be picked up on the next polling attempt).
 	 */
 	readOpfsFiles: (
 		page: Page,
@@ -48,13 +50,13 @@ type ExtensionFixtures = {
 };
 
 export const test = base.extend<ExtensionFixtures>({
-	// biome-ignore lint/correctness/noEmptyPattern: Playwright fixture の作法
+	// biome-ignore lint/correctness/noEmptyPattern: Playwright fixture convention
 	context: async ({}, use) => {
-		// DEMO_VIDEO_DIR が指定されたときだけ、デモ録画用にページ動画の保存と
-		// 鑑賞向けのスロー再生を有効にする(通常のテスト実行には影響しない)。
+		// Only enable page video recording and viewer-friendly slow motion for
+		// demo recordings when DEMO_VIDEO_DIR is set (no effect on normal test runs).
 		const demoVideoDir = process.env.DEMO_VIDEO_DIR;
 		const context = await chromium.launchPersistentContext("", {
-			// 拡張機能を headless でロードするには channel: "chromium" が必要。
+			// channel: "chromium" is required to load the extension in headless mode.
 			channel: "chromium",
 			args: [
 				`--disable-extensions-except=${extensionPath}`,
@@ -62,10 +64,10 @@ export const test = base.extend<ExtensionFixtures>({
 			],
 			...(demoVideoDir
 				? {
-						// デモは英語 UI で録画する。macOS では拡張の UI 言語が OS 設定に従うため、
-						// 必要なら次で上書きする:
+						// Demos are recorded with the English UI. On macOS, the extension's
+						// UI language follows the OS setting, so override it if needed with:
 						// defaults write com.google.chrome.for.testing AppleLanguages '("en-US")'
-						// (録画後は defaults delete で戻す)
+						// (revert with defaults delete after recording)
 						locale: "en-US",
 						slowMo: 250,
 						viewport: { width: 1280, height: 720 },
@@ -76,7 +78,7 @@ export const test = base.extend<ExtensionFixtures>({
 					}
 				: {}),
 		});
-		// テストページはネットワークを介さず route で配信する。
+		// Serve the test page via route rather than over the network.
 		await context.route(`${VIDEO_TEST_PAGE_URL}*`, async (route) => {
 			await route.fulfill({
 				contentType: "text/html",
@@ -131,7 +133,7 @@ export const test = base.extend<ExtensionFixtures>({
 			await cdp.detach();
 		});
 	},
-	// biome-ignore lint/correctness/noEmptyPattern: Playwright fixture の作法
+	// biome-ignore lint/correctness/noEmptyPattern: Playwright fixture convention
 	readOpfsFiles: async ({}, use) => {
 		await use(async (page) => {
 			return await page.evaluate(async () => {
@@ -141,15 +143,16 @@ export const test = base.extend<ExtensionFixtures>({
 					if (handle.kind !== "file") {
 						continue;
 					}
-					// File はスナップショット参照のため、取得後に元ファイルが書き換わると
-					// 読み取りが NotReadableError で失敗する。書き込み中のファイルは
-					// スキップして、expect.poll の次回試行に委ねる。
+					// A File is a snapshot reference, so if the underlying file is
+					// rewritten after it's obtained, reading it fails with
+					// NotReadableError. Skip files that are still being written and
+					// leave them for the next expect.poll attempt.
 					try {
 						const file = await (handle as FileSystemFileHandle).getFile();
 						const head = new Uint8Array(await file.slice(0, 12).arrayBuffer());
 						files.push({ name, size: file.size, head: Array.from(head) });
 					} catch {
-						// 読み取り中に書き換わったファイルはこの回では対象にしない。
+						// Skip files rewritten while reading; don't include them this round.
 					}
 				}
 				return files;
@@ -168,9 +171,11 @@ type ExecutionContextDescription = {
 };
 
 /**
- * content script(isolated world)の execution context を特定する。
- * Runtime.enable で既存コンテキスト分の executionContextCreated が再生されるのを利用する。
- * Playwright 自身の utility world も isolated として現れるため、拡張 ID で絞り込む。
+ * Identifies the execution context of the content script (isolated world).
+ * Relies on Runtime.enable replaying executionContextCreated events for
+ * already-existing contexts.
+ * Playwright's own utility world also appears as isolated, so filter by
+ * extension ID to narrow it down.
  */
 async function findContentScriptContextId(
 	cdp: CDPSession,

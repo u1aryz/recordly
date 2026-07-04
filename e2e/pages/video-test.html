@@ -16,8 +16,9 @@
 		background: #222;
 	}
 	/*
-	 * z-index を持つ固定ヘッダー(YouTube の masthead 相当)。
-	 * オーバーレイがページ要素の背後に隠れる回帰(shadow host の z-index 打ち消し)を検出する。
+	 * Fixed header with a z-index (equivalent to YouTube's masthead).
+	 * Detects the regression where the overlay gets hidden behind page
+	 * elements (the shadow host's z-index being overridden).
 	 */
 	header {
 		position: fixed;
@@ -40,7 +41,7 @@
 <h1>Video test page</h1>
 <video id="v" controls muted></video>
 <script>
-	// canvas.captureStream から srcObject を作り、実際に再生中の video を用意する。
+	// Create a srcObject from canvas.captureStream to provide an actually playing video.
 	const canvas = document.createElement("canvas");
 	canvas.width = 640;
 	canvas.height = 360;

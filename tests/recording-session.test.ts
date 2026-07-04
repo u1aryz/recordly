@@ -200,19 +200,21 @@ function createNow(initial = 0) {
 	};
 }
 
-// Promise.resolve() の連鎖だと非同期チェーンの深さ分だけtickを数える必要があり
-// 数え漏れやすいため、マクロタスク境界(setTimeout)まで進めて保留中のマイクロ
-// タスクを一括で消化する。fake timers 使用時は enqueueChunk 等の内部処理は
-// マイクロタスクなので影響を受けない。
+// Chaining Promise.resolve() would require counting ticks equal to the depth
+// of the async chain, which is easy to get wrong, so instead advance to a
+// macrotask boundary (setTimeout) to flush all pending microtasks at once.
+// When fake timers are in use, internal processing such as enqueueChunk is
+// unaffected since it runs as a microtask.
 async function flushMicrotasks(times = 1): Promise<void> {
 	for (let i = 0; i < times; i += 1) {
 		await new Promise((resolve) => setTimeout(resolve, 0));
 	}
 }
 
-// PART_SPLIT_BYTES(2GiB) は MAX_CAPTURE_CHUNK_BYTES(42MB)を大きく超えるため、
-// 1回の emitData では書き込み拒否になる。書き込みキューを都度ドレインしながら
-// 上限未満のチャンクを積み重ねて、現在のパートを目標サイズまで育てる。
+// PART_SPLIT_BYTES (2GiB) far exceeds MAX_CAPTURE_CHUNK_BYTES (42MB), so a
+// single emitData call would be rejected as a write. Drain the write queue
+// each time while stacking chunks below the limit, growing the current part
+// up to the target size.
 async function growPartTo(
 	handle: FakeRecorderHandle,
 	targetBytes: number,
@@ -292,8 +294,8 @@ describe("startRecordingSession", () => {
 	});
 
 	it("stops with write_failed when the write queue backs up past the limit", async () => {
-		// write() が解決する前に複数チャンクを同期的に積むことで、キューが
-		// 未解決のまま溜まっていく状況(逆圧)を再現する。
+		// Reproduce a backpressure situation where the queue backs up unresolved
+		// by synchronously stacking multiple chunks before write() resolves.
 		const { directory } = createFakeDirectory();
 		const { stream } = createFakeStream();
 		const { createRecorder, handles } = createRecorderFactory();

@@ -20,8 +20,8 @@ describe("createSerialTaskQueue", () => {
 			order.push(2);
 		});
 
-		// enqueue は最初のタスクの実行自体もマイクロタスクとしてスケジュールする
-		// ため、resolveFirst が設定されるまで1tick待つ。
+		// enqueue schedules the execution of the first task itself as a
+		// microtask too, so wait one tick until resolveFirst is set.
 		await Promise.resolve();
 		expect(order).toEqual([]);
 		resolveFirst();

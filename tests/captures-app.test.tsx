@@ -61,17 +61,17 @@ describe("captures App", () => {
 	let resolveInitialLoad!: (captures: CaptureMetadata[]) => void;
 
 	beforeEach(() => {
-		// jsdom は scrollIntoView を実装していないため、選択行のスクロール処理
-		// (App.tsx の useEffect)がテストで落ちないようスタブする。
+		// jsdom does not implement scrollIntoView, so stub it so the selected
+		// row's scroll handling (the useEffect in App.tsx) doesn't fail in tests.
 		Element.prototype.scrollIntoView = vi.fn();
 		fakePort = createFakePort();
 		vi.spyOn(browser.runtime, "connect").mockReturnValue(fakePort.port);
 		vi.spyOn(browser.runtime, "sendMessage").mockImplementation(
 			async () => undefined,
 		);
-		// reload() が読む listCaptures(IndexedDB)の解決タイミングをテストから
-		// 明示的に制御し、port イベントとの競合(後から reload の結果で上書き
-		// されてしまう)を避ける。
+		// Explicitly control from the test the resolution timing of
+		// listCaptures (IndexedDB), which reload() reads, to avoid a race with
+		// port events (where reload's result would later overwrite them).
 		vi.spyOn(storageModule, "listCaptures").mockImplementation(
 			() =>
 				new Promise((resolve) => {

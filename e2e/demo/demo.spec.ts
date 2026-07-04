@@ -1,10 +1,11 @@
 import { expect, test, VIDEO_TEST_PAGE_URL } from "../fixtures";
 
 /**
- * README 用のデモ動画を録画する。DEMO_VIDEO_DIR を指定した pnpm demo:record
- * から実行し、capture.spec.ts と同じフローを鑑賞向けのペースでなぞる。
+ * Records the demo video for the README. Run via `pnpm demo:record` with
+ * DEMO_VIDEO_DIR set, tracing the same flow as capture.spec.ts but at a
+ * viewer-friendly pace.
  */
-test("デモ: ピッカーで動画を選択して録画し MP4 を保存する", async ({
+test("demo: select a video with the picker, record, and save an MP4", async ({
 	context,
 	getMessage,
 	startPicker,
@@ -19,11 +20,11 @@ test("デモ: ピッカーで動画を選択して録画し MP4 を保存する"
 	await stubDirectoryPicker(page);
 	await page.waitForTimeout(1000);
 
-	// ピッカーを起動し、案内バーを読めるだけの間を置く。
+	// Start the picker and pause long enough to read the instructions bar.
 	await startPicker();
 	await page.waitForTimeout(1200);
 
-	// ハイライトが見えるよう、動画までゆっくりカーソルを移動する。
+	// Move the cursor slowly to the video so the highlight is visible.
 	const box = await page.locator("#v").boundingBox();
 	if (!box) {
 		throw new Error("video element not found");
@@ -38,7 +39,7 @@ test("デモ: ピッカーで動画を選択して録画し MP4 を保存する"
 	await page.waitForTimeout(600);
 	await startButton.click();
 
-	// HUD のタイマーがチャンク境界(3 秒)を跨ぐまで録画を見せる。
+	// Show the recording until the HUD timer crosses the chunk boundary (3 seconds).
 	const stopButton = page.getByRole("button", { name: stopLabel });
 	await expect(stopButton).toBeVisible({ timeout: 15_000 });
 	await page.waitForTimeout(5500);
@@ -47,7 +48,7 @@ test("デモ: ピッカーで動画を選択して録画し MP4 を保存する"
 	await page.waitForTimeout(600);
 	await stopButton.click();
 
-	// フローが壊れたままデモが成功しないよう、MP4 の保存を検証する。
+	// Verify the MP4 was saved so the demo doesn't pass with a broken flow.
 	await expect
 		.poll(
 			async () => {
@@ -60,6 +61,6 @@ test("デモ: ピッカーで動画を選択して録画し MP4 を保存する"
 		)
 		.toHaveLength(1);
 
-	// 最終状態を少し映してから終了する。
+	// Show the final state briefly before finishing.
 	await page.waitForTimeout(1500);
 });

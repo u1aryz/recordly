@@ -11,7 +11,7 @@ async function hoverVideo(page: Page): Promise<void> {
 	});
 }
 
-test("ピッカーの案内バー・選択・キャンセルが機能する", async ({
+test("picker instructions bar, selection, and cancel work correctly", async ({
 	context,
 	getMessage,
 	startPicker,
@@ -24,23 +24,23 @@ test("ピッカーの案内バー・選択・キャンセルが機能する", as
 
 	await startPicker();
 
-	// 起動直後は案内バーのみ表示される。
+	// Right after starting, only the instructions bar is shown.
 	await expect(page.getByText(instructions)).toBeVisible();
 	await expect(page.getByText(videoLabel, { exact: true })).toBeHidden();
 
-	// 動画から離れた場所へ動かしても案内バーは表示されたまま、選択は発生しない。
-	// 中間点が動画上を通らないよう、右端を経由して移動する。
+	// Moving away from the video keeps the instructions bar visible without triggering a selection.
+	// Move via the right edge so the midpoint doesn't pass over the video.
 	await page.mouse.move(950, 100, { steps: 5 });
 	await page.mouse.move(950, 650, { steps: 5 });
 	await expect(page.getByText(instructions)).toBeVisible();
 	await expect(page.getByText(videoLabel, { exact: true })).toBeHidden();
 
-	// 動画上に載せるとツールバーが表示され、案内バーも表示され続ける。
+	// Hovering over the video shows the toolbar, and the instructions bar remains visible.
 	await hoverVideo(page);
 	await expect(page.getByText(videoLabel, { exact: true })).toBeVisible();
 	await expect(page.getByText(instructions)).toBeVisible();
 
-	// 動画の外(上端の隙間や空きエリア)へ動かしても選択は維持される。
+	// Moving outside the video (e.g. the gap at the top or empty areas) keeps the selection.
 	const box = await page.locator("#v").boundingBox();
 	if (!box) {
 		throw new Error("video element not found");
@@ -49,12 +49,12 @@ test("ピッカーの案内バー・選択・キャンセルが機能する", as
 	await page.mouse.move(950, 650, { steps: 5 });
 	await expect(page.getByText(videoLabel, { exact: true })).toBeVisible();
 
-	// キャンセルボタンまで実マウスで移動してクリックするとピッカー全体が閉じる。
+	// Moving the real mouse to the cancel button and clicking closes the entire picker.
 	await page.getByRole("button", { name: cancelLabel }).click();
 	await expect(page.locator("recordly-video-picker")).toHaveCount(0);
 });
 
-test("Escape でピッカーが閉じる", async ({
+test("pressing Escape closes the picker", async ({
 	context,
 	getMessage,
 	startPicker,

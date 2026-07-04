@@ -63,8 +63,8 @@ describe("video helpers", () => {
 		const bodyLike = document.createElement("div");
 		const video = document.createElement("video");
 		bodyLike.append(video);
-		// jsdom の getBoundingClientRect は既定で 0x0 を返すため、
-		// (10, 20) を含まない矩形としてそのまま利用できる。
+		// jsdom's getBoundingClientRect returns 0x0 by default,
+		// so it can be used as-is as a rect that does not contain (10, 20).
 		const result = findVideoFromPoint(
 			10,
 			20,
