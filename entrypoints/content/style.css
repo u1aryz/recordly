@@ -3,6 +3,8 @@
  * daisyUI の night テーマ(assets/tailwind.css と同一パレット)を default テーマとして定義し、
  * WXT の cssInjectionMode: "ui" による :root → :host 書き換えでシャドウルートに適用させる。
  * ページの html font-size に依存しないよう、サイズ系トークンは rem ではなく px で上書きする。
+ * Residual rem values inside daisyUI/Tailwind internals are converted to px
+ * at build time by contentCssRemToPx in wxt.config.ts.
  */
 @import "tailwindcss" source(none);
 @source "./";

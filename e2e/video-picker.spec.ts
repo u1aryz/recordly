@@ -54,6 +54,32 @@ test("picker instructions bar, selection, and cancel work correctly", async ({
 	await expect(page.locator("recordly-video-picker")).toHaveCount(0);
 });
 
+test("picker UI sizing is immune to the page root font-size", async ({
+	context,
+	getMessage,
+	startPicker,
+}) => {
+	const page = await context.newPage();
+	await page.goto(VIDEO_TEST_PAGE_URL);
+	// Simulate sites using the 62.5% root font-size trick (1rem = 6.25px).
+	await page.addStyleTag({ content: "html { font-size: 62.5%; }" });
+
+	await startPicker();
+	await hoverVideo(page);
+
+	const recordButton = page.getByRole("button", {
+		name: await getMessage("chooseFolderAndRecord"),
+	});
+	await expect(recordButton).toBeVisible();
+	// .btn-xs: --fontsize 11px, height = --size-field(4px) * 6 = 24px.
+	expect(
+		await recordButton.evaluate((el) => {
+			const style = getComputedStyle(el);
+			return { fontSize: style.fontSize, height: style.height };
+		}),
+	).toEqual({ fontSize: "11px", height: "24px" });
+});
+
 test("pressing Escape closes the picker", async ({
 	context,
 	getMessage,
