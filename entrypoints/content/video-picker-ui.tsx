@@ -58,7 +58,8 @@ export function createVideoPickerUi(
 			return;
 		}
 		active = false;
-		// onClose は React ツリー内のイベントから呼ばれるため、同期 unmount を避けて次のマクロタスクへ回す。
+		// onClose is called from an event inside the React tree, so we avoid a synchronous
+		// unmount and defer it to the next macrotask.
 		void uiPromise?.then((ui) => {
 			setTimeout(() => {
 				if (!active) {

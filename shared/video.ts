@@ -12,7 +12,7 @@ const MP4_MIME_TYPE_CANDIDATES = [
 const AUDIO_BITS_PER_SECOND = 128_000;
 const MIN_VIDEO_BITS_PER_SECOND = 1_500_000;
 const MAX_VIDEO_BITS_PER_SECOND = 30_000_000;
-// 約0.1 bit/pixel/frame @30fps 相当
+// Roughly equivalent to 0.1 bit/pixel/frame @30fps
 const BITS_PER_PIXEL_PER_SECOND = 3;
 
 export function getOrCreateVideoId(video: HTMLVideoElement): string {

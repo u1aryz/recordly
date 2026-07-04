@@ -43,7 +43,7 @@ export function RecordingHud({
 	const panelRef = useRef<HTMLElement>(null);
 	const dragStateRef = useRef<DragState | null>(null);
 
-	// 位置が復元/変更された直後に、実際に描画されたパネルサイズでクランプし直す。
+	// Right after the position is restored/changed, re-clamp it using the actual rendered panel size.
 	useLayoutEffect(() => {
 		const position = state.position;
 		const panel = panelRef.current;

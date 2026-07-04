@@ -87,9 +87,10 @@ export type RecordingTickCommand =
 	| { type: "rollover"; change: ResolutionChange };
 
 /**
- * 解像度監視の1tick分の評価結果と無データタイムアウト判定を、実行すべきコマンド列に変換する。
- * 同一tickで解像度変化(rollover/stop)と無データタイムアウト(stop)が両方発火し得るため、
- * 発生した順に配列で返す。
+ * Converts the result of one resolution-monitoring tick, along with the no-data timeout
+ * check, into a list of commands to execute. A resolution change (rollover/stop) and a
+ * no-data timeout (stop) can both fire in the same tick, so commands are returned as an
+ * array in the order they occur.
  */
 export function evaluateRecordingTick(
 	state: MonitorState,

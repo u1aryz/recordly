@@ -1,7 +1,7 @@
 export type SerialTaskQueue = {
-	/** タスクを直列に積む。前のタスクが失敗しても後続のタスクは実行される。 */
+	/** Enqueue a task to run serially. Later tasks still run even if an earlier one fails. */
 	enqueue: (task: () => Promise<void>) => void;
-	/** これまでに積まれたタスクがすべて完了することを待つ。 */
+	/** Wait until all tasks enqueued so far have completed. */
 	settled: () => Promise<void>;
 };
 

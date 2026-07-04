@@ -16,7 +16,7 @@ export type VideoPickerStartResult =
 type VideoPickerOverlayProps = {
 	onStart: (video: HTMLVideoElement) => Promise<VideoPickerStartResult>;
 	onClose: () => void;
-	/** jsdom は elementsFromPoint 未実装のため、テストでは差し替え可能にする。 */
+	/** jsdom doesn't implement elementsFromPoint, so allow overriding it in tests. */
 	findVideoAt?: (x: number, y: number) => HTMLVideoElement | null;
 };
 

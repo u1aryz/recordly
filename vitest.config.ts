@@ -5,7 +5,7 @@ export default defineConfig({
 		environment: "jsdom",
 		globals: true,
 		setupFiles: ["./tests/setup.ts"],
-		// e2e/(Playwright)を巻き込まないよう、ユニットテストは tests/ 配下に限定する。
+		// Limit unit tests to tests/ so e2e/ (Playwright) isn't picked up.
 		include: ["tests/**/*.test.{ts,tsx}"],
 	},
 	resolve: {

@@ -1,7 +1,8 @@
 /**
- * WXT の :host{all:initial !important} リセットは、WXT 自身が inline style で
- * 設定する z-index などを打ち消してしまう。css オプションはリセットの後に
- * 連結されるため、後勝ちの !important で applyPosition と同じ値を復元する。
+ * WXT's :host{all:initial !important} reset cancels out the z-index and other
+ * properties WXT itself sets via inline style. The css option is concatenated
+ * after the reset, so we restore the same values as applyPosition using
+ * !important, which wins by taking precedence last.
  */
 export const SHADOW_HOST_CSS = `
 :host {

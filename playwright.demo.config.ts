@@ -1,6 +1,6 @@
 import { defineConfig } from "@playwright/test";
 
-// デモ録画専用の設定。pnpm demo:record から使う。
+// Config dedicated to demo recording, used via pnpm demo:record.
 export default defineConfig({
 	testDir: "./e2e/demo",
 	workers: 1,

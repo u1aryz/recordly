@@ -2,9 +2,9 @@ import { defineConfig } from "@playwright/test";
 
 export default defineConfig({
 	testDir: "./e2e",
-	// デモ録画(pnpm demo:record)は通常のテストスイートに含めない。
+	// Demo recording (pnpm demo:record) is excluded from the normal test suite.
 	testIgnore: "**/demo/**",
-	// 拡張機能は persistent context を占有するため直列で実行する。
+	// Run serially since the extension occupies a persistent context.
 	workers: 1,
 	fullyParallel: false,
 	timeout: 60_000,

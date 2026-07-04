@@ -41,13 +41,13 @@ export type RecordingFinishOutcome = {
 };
 
 export type RecordingSessionCallbacks = {
-	/** チャンク書き込みやパート保存が進んだとき(HUD更新・CAPTURE_PROGRESS送信用)。 */
+	/** Called when a chunk write or part save progresses (used for HUD updates and CAPTURE_PROGRESS messages). */
 	onProgress: (metadata: CaptureMetadata) => void;
-	/** stop() が受理された直後(HUDの停止中表示用)。 */
+	/** Called right after stop() is accepted (used to show the "stopping" state in the HUD). */
 	onStopping: (elapsedMs: number) => void;
-	/** 次のパートが開始されたとき。change は解像度ロールオーバー由来のときのみ設定される。 */
+	/** Called when the next part starts. `change` is only set when it originates from a resolution rollover. */
 	onPartStarted: (metadata: CaptureMetadata, change?: ResolutionChange) => void;
-	/** 録画が完全に終了したとき。厳密に1回だけ呼ばれる。 */
+	/** Called when recording has fully finished. Guaranteed to be called exactly once. */
 	onFinished: (outcome: RecordingFinishOutcome) => void;
 };
 
@@ -56,12 +56,12 @@ export type RecordingSessionOptions = {
 	stream: MediaStream;
 	directory: FileSystemDirectoryHandle;
 	callbacks: RecordingSessionCallbacks;
-	/** テスト注入点。デフォルトは `new MediaRecorder(stream, options)`。 */
+	/** Test injection point. Defaults to `new MediaRecorder(stream, options)`. */
 	createRecorder?: (
 		stream: MediaStream,
 		options?: MediaRecorderOptions,
 	) => MediaRecorder;
-	/** テスト注入点。デフォルトは `performance.now()`。 */
+	/** Test injection point. Defaults to `performance.now()`. */
 	now?: () => number;
 };
 
