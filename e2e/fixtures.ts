@@ -38,7 +38,10 @@ type ExtensionFixtures = {
 	startPicker: () => Promise<void>;
 	/** content script の isolated world で showDirectoryPicker を OPFS に差し替える。 */
 	stubDirectoryPicker: (page: Page) => Promise<void>;
-	/** テストページの OPFS ルート直下のファイル一覧(名前・サイズ・先頭バイト)を返す。 */
+	/**
+	 * テストページの OPFS ルート直下のファイル一覧(名前・サイズ・先頭バイト)を返す。
+	 * 書き込み中で読み取れないファイルはスキップする(ポーリングの次回試行で拾う)。
+	 */
 	readOpfsFiles: (
 		page: Page,
 	) => Promise<{ name: string; size: number; head: number[] }[]>;
@@ -138,9 +141,16 @@ export const test = base.extend<ExtensionFixtures>({
 					if (handle.kind !== "file") {
 						continue;
 					}
-					const file = await (handle as FileSystemFileHandle).getFile();
-					const head = new Uint8Array(await file.slice(0, 12).arrayBuffer());
-					files.push({ name, size: file.size, head: Array.from(head) });
+					// File はスナップショット参照のため、取得後に元ファイルが書き換わると
+					// 読み取りが NotReadableError で失敗する。書き込み中のファイルは
+					// スキップして、expect.poll の次回試行に委ねる。
+					try {
+						const file = await (handle as FileSystemFileHandle).getFile();
+						const head = new Uint8Array(await file.slice(0, 12).arrayBuffer());
+						files.push({ name, size: file.size, head: Array.from(head) });
+					} catch {
+						// 読み取り中に書き換わったファイルはこの回では対象にしない。
+					}
 				}
 				return files;
 			});
