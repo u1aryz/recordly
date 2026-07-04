@@ -1,6 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128" fill="none">
-	<!-- Recordly secondary teal -->
-	<rect x="2" y="16" width="88" height="96" rx="10" fill="#21A47C" stroke="#087156" stroke-width="6"/>
-	<path d="M90 32L126 16V112L90 96V32Z" fill="#21A47C" stroke="#087156" stroke-width="6"/>
-	<circle cx="30" cy="46" r="18" fill="#FB7085" stroke="#D94560" stroke-width="6"/>
-</svg>
