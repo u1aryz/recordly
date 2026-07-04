@@ -71,13 +71,13 @@ describe("createHudStore", () => {
 		store.add(createMetadata("first", "First"));
 		store.add(createMetadata("second", "Second"));
 
-		store.finish("first", "保存しました。", "success");
+		store.finish("first", "Saved.", "success");
 
 		let state = store.getSnapshot();
 		expect(state.recordingCount).toBe(1);
 		expect(state.rows.find((row) => row.id === "first")?.detail).toEqual({
 			kind: "result",
-			message: "保存しました。",
+			message: "Saved.",
 			tone: "success",
 		});
 
@@ -92,7 +92,7 @@ describe("createHudStore", () => {
 		const store = createHudStore();
 		store.add(createMetadata("only", "Only"));
 
-		store.finish("only", "保存しました。", "success");
+		store.finish("only", "Saved.", "success");
 		vi.advanceTimersByTime(8000);
 
 		expect(store.getSnapshot().rows).toHaveLength(0);
@@ -123,16 +123,13 @@ describe("createHudStore", () => {
 		store.add(createMetadata("first", "First"));
 		store.updatePart("first", 2);
 
-		store.notify(
-			"first",
-			"解像度が変わったため、新しいファイルに切り替えました",
-		);
+		store.notify("first", "Resolution changed, switched to a new file");
 
 		expect(
 			store.getSnapshot().rows.find((row) => row.id === "first")?.detail,
 		).toEqual({
 			kind: "notice",
-			message: "解像度が変わったため、新しいファイルに切り替えました",
+			message: "Resolution changed, switched to a new file",
 		});
 
 		vi.advanceTimersByTime(5000);

@@ -2,7 +2,7 @@ import "@testing-library/jest-dom/vitest";
 import "fake-indexeddb/auto";
 import { afterEach, vi } from "vitest";
 import { fakeBrowser } from "wxt/testing";
-import jaMessages from "@/public/_locales/ja/messages.json";
+import enMessages from "@/public/_locales/en/messages.json";
 
 type LocaleMessage = {
 	message: string;
@@ -45,10 +45,10 @@ function getPlaceholderValue(
 }
 
 function getMessage(
-	key: keyof typeof jaMessages,
+	key: keyof typeof enMessages,
 	substitutions?: string | string[],
 ): string {
-	const definition = jaMessages[key] as LocaleMessage | undefined;
+	const definition = enMessages[key] as LocaleMessage | undefined;
 	if (!definition) {
 		return "";
 	}

@@ -15,7 +15,7 @@ describe("capture presentation", () => {
 		};
 
 		expect(getCapturePresentation(capture)).toMatchObject({
-			label: "途中まで保存",
+			label: "Partially saved",
 			tone: "warning",
 		});
 	});
@@ -29,7 +29,7 @@ describe("capture presentation", () => {
 		};
 
 		expect(getCapturePresentation(capture)).toMatchObject({
-			label: "要確認",
+			label: "Check required",
 			tone: "warning",
 		});
 	});
@@ -43,7 +43,7 @@ describe("capture presentation", () => {
 		};
 
 		expect(getEffectiveFileStatus(capture)).toBe("saved");
-		expect(getCapturePresentation(capture).label).toBe("保存完了");
+		expect(getCapturePresentation(capture).label).toBe("Saved");
 	});
 
 	it("explains that recording stopped because data stopped arriving", () => {
@@ -55,11 +55,11 @@ describe("capture presentation", () => {
 		};
 
 		expect(getCapturePresentation(capture)).toMatchObject({
-			label: "途中まで保存",
+			label: "Partially saved",
 			tone: "warning",
 		});
 		expect(getCapturePresentation(capture).description).toContain(
-			"録画データが届かなくなったため自動停止しました",
+			"Stopped automatically because no recording data arrived",
 		);
 	});
 
@@ -76,7 +76,7 @@ describe("capture presentation", () => {
 		};
 
 		expect(getCapturePresentation(capture).description).toContain(
-			"動画の解像度が 1280 x 720 から 1920 x 1080 に変わったため自動停止しました",
+			"Stopped automatically because the video resolution changed from 1280 x 720 to 1920 x 1080",
 		);
 	});
 });

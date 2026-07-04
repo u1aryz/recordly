@@ -101,7 +101,7 @@ describe("RecordingHud", () => {
 		act(() => {
 			store.add(createMetadata("first", "First"));
 			store.add(createMetadata("second", "Second"));
-			store.finish("first", "保存しました。", "success");
+			store.finish("first", "Saved.", "success");
 		});
 
 		expect(
@@ -126,7 +126,7 @@ describe("RecordingHud", () => {
 
 		act(() => {
 			store.add(createMetadata("only", "Only"));
-			store.finish("only", "保存しました。", "success");
+			store.finish("only", "Saved.", "success");
 		});
 
 		act(() => {
@@ -168,14 +168,11 @@ describe("RecordingHud", () => {
 		act(() => {
 			store.add(createMetadata("first", "First"));
 			store.updatePart("first", 2);
-			store.notify(
-				"first",
-				"解像度が変わったため、新しいファイルに切り替えました",
-			);
+			store.notify("first", "Resolution changed, switched to a new file");
 		});
 
 		expect(
-			screen.getByText("解像度が変わったため、新しいファイルに切り替えました"),
+			screen.getByText("Resolution changed, switched to a new file"),
 		).toBeInTheDocument();
 
 		act(() => {

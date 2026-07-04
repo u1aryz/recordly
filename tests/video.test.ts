@@ -135,7 +135,7 @@ describe("video helpers", () => {
 		const result = createVideoCaptureStream(video);
 
 		expect(result.stream).toBeNull();
-		expect(result.errorMessage).toContain("保護");
+		expect(result.errorMessage).toContain("protected");
 	});
 
 	it("returns a short actionable message when captureStream has no tracks", () => {
@@ -151,7 +151,7 @@ describe("video helpers", () => {
 
 		expect(result.stream).toBeNull();
 		expect(result.errorMessage).toBe(
-			"録画できる映像・音声がありません。動画を再生してからお試しください。",
+			"No video or audio is available to record. Play the video and try again.",
 		);
 	});
 });
