@@ -1,8 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-	getCapturePresentation,
-	getEffectiveFileStatus,
-} from "@/shared/capture-presentation";
+import { getCapturePresentation } from "@/shared/capture-presentation";
 import { createCaptureMetadata } from "@/shared/capture-state";
 
 describe("capture presentation", () => {
@@ -32,18 +29,6 @@ describe("capture presentation", () => {
 			label: "Check required",
 			tone: "warning",
 		});
-	});
-
-	it("keeps legacy indexeddb captures downloadable", () => {
-		const capture = {
-			...createDirectCapture(),
-			status: "complete" as const,
-			storageMode: "indexeddb" as const,
-			fileStatus: undefined,
-		};
-
-		expect(getEffectiveFileStatus(capture)).toBe("saved");
-		expect(getCapturePresentation(capture).label).toBe("Saved");
 	});
 
 	it("explains that recording stopped because data stopped arriving", () => {

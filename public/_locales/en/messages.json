@@ -77,10 +77,6 @@
 	"videoElementLabel": { "message": "video" },
 	"liveOrUnknown": { "message": "live/unknown" },
 	"capturesTitle": { "message": "Recordly Captures" },
-	"noSavedData": { "message": "There is no saved data." },
-	"streamingSaveUnsupported": {
-		"message": "This browser does not support streaming file saves."
-	},
 	"historyLoadFailed": { "message": "Could not load capture history." },
 	"retry": { "message": "Retry" },
 	"noCaptures": { "message": "No captures yet." },
@@ -103,9 +99,7 @@
 	},
 	"stoppingAndSaving": { "message": "Stopping and saving…" },
 	"stopAndSave": { "message": "Stop and save" },
-	"saveMp4": { "message": "Save MP4" },
 	"removeFromHistory": { "message": "Remove from history" },
-	"delete": { "message": "Delete" },
 	"recordingStatus": { "message": "Recording status" },
 	"moveRecordingHud": { "message": "Drag to move the recording status HUD" },
 	"recordingToDestination": {

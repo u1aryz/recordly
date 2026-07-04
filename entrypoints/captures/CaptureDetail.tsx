@@ -1,5 +1,4 @@
 import {
-	ArrowDownTrayIcon,
 	CheckCircleIcon,
 	ExclamationTriangleIcon,
 	InformationCircleIcon,
@@ -21,10 +20,8 @@ import { getPageHost } from "./capture-view-state";
 type CaptureDetailProps = {
 	capture: CaptureMetadata;
 	isDeleting: boolean;
-	isDownloading: boolean;
 	isStopping: boolean;
 	onStop: () => void;
-	onDownload: () => void;
 	onDelete: () => void;
 };
 
@@ -52,16 +49,11 @@ type AlertPresentation = {
 export function CaptureDetail({
 	capture,
 	isDeleting,
-	isDownloading,
 	isStopping,
 	onStop,
-	onDownload,
 	onDelete,
 }: CaptureDetailProps): JSX.Element {
 	const isRecording = capture.status === "recording";
-	const isDirectFile =
-		capture.storageMode === "direct-file" ||
-		capture.storageMode === "segmented-files";
 	const isSegmented = capture.storageMode === "segmented-files";
 	const presentation = getCapturePresentation(capture);
 	const shouldShowStatusAlert = presentation.tone !== "info";
@@ -130,7 +122,7 @@ export function CaptureDetail({
 				<ResolutionChangeHistory changes={capture.resolutionChanges} />
 			) : null}
 
-			{isDirectFile && !isRecording ? (
+			{!isRecording ? (
 				<p className="mt-4 text-base-content/65 text-sm">
 					{isSegmented
 						? t("mp4PartsAtSelectedDestination")
@@ -154,24 +146,6 @@ export function CaptureDetail({
 						{isStopping ? t("stoppingAndSaving") : t("stopAndSave")}
 					</button>
 				) : null}
-				{!isRecording && !isDirectFile ? (
-					<button
-						className="btn btn-primary"
-						disabled={isDownloading}
-						type="button"
-						onClick={onDownload}
-					>
-						{isDownloading ? (
-							<span
-								aria-hidden="true"
-								className="loading loading-spinner loading-sm"
-							/>
-						) : (
-							<ArrowDownTrayIcon className="h-5 w-5" />
-						)}
-						{t("saveMp4")}
-					</button>
-				) : null}
 				{!isRecording ? (
 					<button
 						className="btn btn-ghost text-error"
@@ -187,7 +161,7 @@ export function CaptureDetail({
 						) : (
 							<TrashIcon className="h-5 w-5" />
 						)}
-						{isDirectFile ? t("removeFromHistory") : t("delete")}
+						{t("removeFromHistory")}
 					</button>
 				) : null}
 			</div>

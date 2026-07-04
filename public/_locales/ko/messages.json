@@ -79,10 +79,6 @@
 	"videoElementLabel": { "message": "동영상" },
 	"liveOrUnknown": { "message": "실시간/알 수 없음" },
 	"capturesTitle": { "message": "Recordly 캡처" },
-	"noSavedData": { "message": "저장된 데이터가 없습니다." },
-	"streamingSaveUnsupported": {
-		"message": "이 브라우저는 스트리밍 방식의 파일 저장을 지원하지 않습니다."
-	},
 	"historyLoadFailed": { "message": "캡처 기록을 불러올 수 없습니다." },
 	"retry": { "message": "다시 시도" },
 	"noCaptures": { "message": "아직 캡처가 없습니다." },
@@ -105,9 +101,7 @@
 	},
 	"stoppingAndSaving": { "message": "저장하며 종료하는 중…" },
 	"stopAndSave": { "message": "중지하고 저장" },
-	"saveMp4": { "message": "MP4 저장" },
 	"removeFromHistory": { "message": "기록에서 삭제" },
-	"delete": { "message": "삭제" },
 	"recordingStatus": { "message": "녹화 상태" },
 	"moveRecordingHud": { "message": "드래그하여 녹화 상태 HUD 이동" },
 	"recordingToDestination": {

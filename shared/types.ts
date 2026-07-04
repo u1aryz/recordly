@@ -67,7 +67,7 @@ export type CaptureMetadata = {
 	height: number;
 	thumbnailDataUrl?: string;
 	chunkCount: number;
-	storageMode?: "indexeddb" | "direct-file" | "segmented-files";
+	storageMode?: "direct-file" | "segmented-files";
 	scope?: "element" | "tab";
 	partCount?: number;
 	savedPartCount?: number;

@@ -3,19 +3,6 @@ import type { CaptureMetadata } from "./types";
 const DB_NAME = "video-capture-picker";
 const DB_VERSION = 1;
 const CAPTURES_STORE = "captures";
-const CHUNKS_STORE = "chunks";
-
-type StoredChunk = {
-	id: string;
-	captureId: string;
-	index: number;
-	chunk: ArrayBuffer;
-	size: number;
-};
-
-function getChunkId(captureId: string, index: number): string {
-	return `${captureId}:${index.toString().padStart(8, "0")}`;
-}
 
 function requestToPromise<T>(request: IDBRequest<T>): Promise<T> {
 	return new Promise((resolve, reject) => {
@@ -39,10 +26,6 @@ export function openCaptureDb(): Promise<IDBDatabase> {
 			const db = request.result;
 			if (!db.objectStoreNames.contains(CAPTURES_STORE)) {
 				db.createObjectStore(CAPTURES_STORE, { keyPath: "id" });
-			}
-			if (!db.objectStoreNames.contains(CHUNKS_STORE)) {
-				const chunks = db.createObjectStore(CHUNKS_STORE, { keyPath: "id" });
-				chunks.createIndex("captureId", "captureId", { unique: false });
 			}
 		};
 		request.onsuccess = () => resolve(request.result);
@@ -80,120 +63,10 @@ export async function getCapture(
 	return capture;
 }
 
-export async function appendCaptureChunk(input: {
-	captureId: string;
-	index: number;
-	chunk: ArrayBuffer;
-	size: number;
-}): Promise<void> {
-	const db = await openCaptureDb();
-	const tx = db.transaction(CHUNKS_STORE, "readwrite");
-	const chunk: StoredChunk = {
-		id: getChunkId(input.captureId, input.index),
-		...input,
-	};
-	tx.objectStore(CHUNKS_STORE).put(chunk);
-	await transactionDone(tx);
-	db.close();
-}
-
-export async function appendCaptureChunkWithMetadata(input: {
-	metadata: CaptureMetadata;
-	chunk: ArrayBuffer;
-	index: number;
-	size: number;
-}): Promise<void> {
-	const db = await openCaptureDb();
-	const tx = db.transaction([CAPTURES_STORE, CHUNKS_STORE], "readwrite");
-	const chunk: StoredChunk = {
-		id: getChunkId(input.metadata.id, input.index),
-		captureId: input.metadata.id,
-		index: input.index,
-		chunk: input.chunk,
-		size: input.size,
-	};
-	tx.objectStore(CHUNKS_STORE).put(chunk);
-	tx.objectStore(CAPTURES_STORE).put(input.metadata);
-	await transactionDone(tx);
-	db.close();
-}
-
 export async function deleteCapture(captureId: string): Promise<void> {
 	const db = await openCaptureDb();
-	const tx = db.transaction([CAPTURES_STORE, CHUNKS_STORE], "readwrite");
+	const tx = db.transaction(CAPTURES_STORE, "readwrite");
 	tx.objectStore(CAPTURES_STORE).delete(captureId);
-	const chunks = tx.objectStore(CHUNKS_STORE);
-	const index = chunks.index("captureId");
-	const request = index.openCursor(IDBKeyRange.only(captureId));
-	request.onsuccess = () => {
-		const cursor = request.result;
-		if (!cursor) {
-			return;
-		}
-		cursor.delete();
-		cursor.continue();
-	};
 	await transactionDone(tx);
 	db.close();
-}
-
-export async function getCaptureBlob(metadata: CaptureMetadata): Promise<Blob> {
-	const db = await openCaptureDb();
-	const tx = db.transaction(CHUNKS_STORE, "readonly");
-	const index = tx.objectStore(CHUNKS_STORE).index("captureId");
-	const chunks = await requestToPromise<StoredChunk[]>(
-		index.getAll(IDBKeyRange.only(metadata.id)),
-	);
-	db.close();
-	return new Blob(
-		chunks.sort((a, b) => a.index - b.index).map((chunk) => chunk.chunk),
-		{ type: metadata.mimeType },
-	);
-}
-
-export function createCaptureReadableStream(
-	metadata: CaptureMetadata,
-): ReadableStream<Uint8Array> {
-	let db: IDBDatabase | null = null;
-	let nextIndex = 0;
-
-	function closeDb(): void {
-		db?.close();
-		db = null;
-	}
-
-	return new ReadableStream<Uint8Array>({
-		async pull(controller) {
-			try {
-				if (nextIndex >= metadata.chunkCount) {
-					closeDb();
-					controller.close();
-					return;
-				}
-
-				db ??= await openCaptureDb();
-				const tx = db.transaction(CHUNKS_STORE, "readonly");
-				const id = getChunkId(metadata.id, nextIndex);
-				const chunk = await requestToPromise<StoredChunk | undefined>(
-					tx.objectStore(CHUNKS_STORE).get(id),
-				);
-				await transactionDone(tx);
-				nextIndex += 1;
-
-				if (!chunk) {
-					closeDb();
-					controller.error(new Error("Capture chunk is missing."));
-					return;
-				}
-
-				controller.enqueue(new Uint8Array(chunk.chunk));
-			} catch (error) {
-				closeDb();
-				controller.error(error);
-			}
-		},
-		cancel() {
-			closeDb();
-		},
-	});
 }

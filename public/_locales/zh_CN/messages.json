@@ -77,10 +77,6 @@
 	"videoElementLabel": { "message": "视频" },
 	"liveOrUnknown": { "message": "直播／未知" },
 	"capturesTitle": { "message": "Recordly 捕获记录" },
-	"noSavedData": { "message": "没有已保存的数据。" },
-	"streamingSaveUnsupported": {
-		"message": "此浏览器不支持流式保存文件。"
-	},
 	"historyLoadFailed": { "message": "无法加载捕获历史记录。" },
 	"retry": { "message": "重试" },
 	"noCaptures": { "message": "暂无捕获记录。" },
@@ -103,9 +99,7 @@
 	},
 	"stoppingAndSaving": { "message": "正在停止并保存…" },
 	"stopAndSave": { "message": "停止并保存" },
-	"saveMp4": { "message": "保存 MP4" },
 	"removeFromHistory": { "message": "从历史记录中移除" },
-	"delete": { "message": "删除" },
 	"recordingStatus": { "message": "录制状态" },
 	"moveRecordingHud": { "message": "拖动以移动录制状态 HUD" },
 	"recordingToDestination": {

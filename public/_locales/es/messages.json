@@ -81,10 +81,6 @@
 	"videoElementLabel": { "message": "video" },
 	"liveOrUnknown": { "message": "en vivo/desconocido" },
 	"capturesTitle": { "message": "Capturas de Recordly" },
-	"noSavedData": { "message": "No hay datos guardados." },
-	"streamingSaveUnsupported": {
-		"message": "Este navegador no admite el guardado de archivos en flujo continuo."
-	},
 	"historyLoadFailed": {
 		"message": "No se pudo cargar el historial de capturas."
 	},
@@ -111,9 +107,7 @@
 	},
 	"stoppingAndSaving": { "message": "Deteniendo y guardando…" },
 	"stopAndSave": { "message": "Detener y guardar" },
-	"saveMp4": { "message": "Guardar MP4" },
 	"removeFromHistory": { "message": "Quitar del historial" },
-	"delete": { "message": "Eliminar" },
 	"recordingStatus": { "message": "Estado de la grabación" },
 	"moveRecordingHud": {
 		"message": "Arrastra para mover el HUD de estado de grabación"

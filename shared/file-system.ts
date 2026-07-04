@@ -1,24 +1,8 @@
-export type SaveFilePickerOptions = {
-	suggestedName?: string;
-	startIn?: string;
-	types?: {
-		description?: string;
-		accept: Record<string, string[]>;
-	}[];
-};
-
 export type DirectoryPickerOptions = {
 	id?: string;
 	mode?: "read" | "readwrite";
 	startIn?: string;
 };
-
-export const MP4_FILE_PICKER_TYPES = [
-	{
-		description: "MP4 video",
-		accept: { "video/mp4": [".mp4"] },
-	},
-];
 
 export const PART_SPLIT_BYTES = 2 * 1024 ** 3;
 
@@ -45,8 +29,5 @@ declare global {
 		showDirectoryPicker?: (
 			options?: DirectoryPickerOptions,
 		) => Promise<FileSystemDirectoryHandle>;
-		showSaveFilePicker?: (
-			options?: SaveFilePickerOptions,
-		) => Promise<FileSystemFileHandle>;
 	}
 }

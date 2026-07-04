@@ -77,10 +77,6 @@
 	"videoElementLabel": { "message": "動画" },
 	"liveOrUnknown": { "message": "ライブ／不明" },
 	"capturesTitle": { "message": "Recordly キャプチャ" },
-	"noSavedData": { "message": "保存済みデータがありません。" },
-	"streamingSaveUnsupported": {
-		"message": "このブラウザではストリーミング保存に対応していません。"
-	},
 	"historyLoadFailed": { "message": "履歴を読み込めませんでした。" },
 	"retry": { "message": "再試行" },
 	"noCaptures": { "message": "まだキャプチャはありません。" },
@@ -105,9 +101,7 @@
 	},
 	"stoppingAndSaving": { "message": "保存して終了中…" },
 	"stopAndSave": { "message": "停止して保存" },
-	"saveMp4": { "message": "MP4を保存" },
 	"removeFromHistory": { "message": "履歴から削除" },
-	"delete": { "message": "削除" },
 	"recordingStatus": { "message": "録画状況" },
 	"moveRecordingHud": { "message": "ドラッグして録画状況HUDを移動" },
 	"recordingToDestination": {

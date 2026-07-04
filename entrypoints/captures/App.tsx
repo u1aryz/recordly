@@ -1,11 +1,7 @@
 import { FilmIcon } from "@heroicons/react/24/outline";
 import type { JSX } from "react";
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
-import {
-	isFilePickerAbortError,
-	MP4_FILE_PICKER_TYPES,
-} from "@/shared/file-system";
-import { createCaptureReadableStream, listCaptures } from "@/shared/storage";
+import { listCaptures } from "@/shared/storage";
 import type { CaptureMetadata, PortMessage } from "@/shared/types";
 import { formatDuration } from "@/shared/video";
 import { t } from "@/utils/i18n";
@@ -29,8 +25,6 @@ function App(): JSX.Element {
 			selectedId: new URLSearchParams(location.search).get("captureId"),
 		},
 	);
-	const [message, setMessage] = useState<string | null>(null);
-	const [isDownloading, setIsDownloading] = useState(false);
 	const [stoppingCaptureId, setStoppingCaptureId] = useState<string | null>(
 		null,
 	);
@@ -185,39 +179,6 @@ function App(): JSX.Element {
 		}
 	}
 
-	async function downloadCapture(capture: CaptureMetadata) {
-		if (isDownloading) {
-			return;
-		}
-		if (capture.sizeBytes === 0 || capture.chunkCount === 0) {
-			setMessage(t("noSavedData"));
-			return;
-		}
-
-		if (!window.showSaveFilePicker) {
-			setMessage(t("streamingSaveUnsupported"));
-			return;
-		}
-
-		setIsDownloading(true);
-		try {
-			const file = await window.showSaveFilePicker({
-				suggestedName: capture.fileName,
-				startIn: "downloads",
-				types: MP4_FILE_PICKER_TYPES,
-			});
-			const writable = await file.createWritable();
-			await createCaptureReadableStream(capture).pipeTo(writable);
-		} catch (error) {
-			if (isFilePickerAbortError(error)) {
-				return;
-			}
-			throw error;
-		} finally {
-			setIsDownloading(false);
-		}
-	}
-
 	return (
 		<main className="flex min-h-screen flex-col bg-base-100 text-base-content">
 			<header className="border-base-300 border-b bg-base-200">
@@ -297,10 +258,8 @@ function App(): JSX.Element {
 						<CaptureDetail
 							capture={selected}
 							isDeleting={deletingCaptureId === selected.id}
-							isDownloading={isDownloading}
 							isStopping={stoppingCaptureId === selected.id}
 							onDelete={() => deleteSelectedCapture(selected)}
-							onDownload={() => downloadCapture(selected)}
 							onStop={() => stopCapture(selected)}
 						/>
 					) : (
@@ -308,11 +267,6 @@ function App(): JSX.Element {
 							{t("selectCapture")}
 						</div>
 					)}
-					{message ? (
-						<CaptureAlert className="mt-4" tone="warning">
-							{message}
-						</CaptureAlert>
-					) : null}
 				</section>
 			</div>
 		</main>
