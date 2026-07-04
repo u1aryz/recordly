@@ -68,7 +68,7 @@ pnpm exec playwright install chromium
 
 ## 贡献
 
-请参阅[贡献指南](../CONTRIBUTING.md)(英文)。本项目遵循[行为准则](../../CODE_OF_CONDUCT.md);如需报告安全漏洞,请参阅[安全策略](../../SECURITY.md)。
+请参阅[贡献指南](../CONTRIBUTING.md)(英文)。本项目遵循[行为准则](../../CODE_OF_CONDUCT.md);如需报告安全漏洞,请参阅[安全策略](../../SECURITY.md)。Recordly 不收集任何用户数据;详情请参阅[隐私政策](../../PRIVACY.md)(英文)。
 
 ## 许可证
 
