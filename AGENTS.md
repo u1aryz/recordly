@@ -9,10 +9,10 @@ Recordly は、Web ページ上の動画を選択し、キャプチャして MP4
 主な構成は次のとおりです。
 
 - `entrypoints/background.ts`: 拡張機能の background 処理。
-- `entrypoints/content.ts`: Web ページに注入される content script。
+- `entrypoints/content/`: Web ページに注入される content script。動画ピッカーや録画 HUD の React UI を含みます。
 - `entrypoints/popup/`: 拡張アイコンから開く popup UI。
 - `entrypoints/captures/`: キャプチャ進捗や停止後のダウンロードを扱う UI。
-- `shared/`: message、storage、capture state、video、binary などの共有ロジック。
+- `shared/`: message、storage、capture state、recording session/monitor、video、file-system などの共有ロジック。
 - `utils/`: i18n などの補助処理。
 - `tests/`: Vitest による共有ロジックのテスト。
 - `e2e/`: Playwright による E2E テスト(拡張機能を実ブラウザにロードしてピッカー操作〜録画保存まで検証)。
