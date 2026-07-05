@@ -215,14 +215,7 @@
 	"stopReasonVideoRemoved": {
 		"message": "선택한 동영상이 페이지에서 사라져 자동으로 중지됨"
 	},
-	"stopReasonUnsupported": {
-		"message": "브라우저가 이 녹화 방식을 지원하지 않음"
-	},
 	"stopReasonError": { "message": "녹화 중 오류 발생" },
-	"stopReasonTabCaptureFailed": { "message": "탭 녹화를 시작할 수 없음" },
-	"stopReasonTargetUnavailable": {
-		"message": "대상 탭을 사용할 수 없음"
-	},
 	"stopReasonWriteFailed": { "message": "파일에 쓸 수 없음" },
 	"stopReasonNoDataTimeout": {
 		"message": "녹화 데이터가 도착하지 않아 자동으로 중지됨"

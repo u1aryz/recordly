@@ -7,9 +7,7 @@ import type {
 } from "./types";
 
 export function isFatalStopReason(reason?: StopReason): boolean {
-	return (
-		reason === "error" || reason === "unsupported" || reason === "write_failed"
-	);
+	return reason === "error" || reason === "write_failed";
 }
 
 export function getFinishedStatus(

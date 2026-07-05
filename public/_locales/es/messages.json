@@ -227,16 +227,7 @@
 	"stopReasonVideoRemoved": {
 		"message": "Se detuvo automáticamente porque el video seleccionado se eliminó de la página"
 	},
-	"stopReasonUnsupported": {
-		"message": "El navegador no admite este método de grabación"
-	},
 	"stopReasonError": { "message": "Ocurrió un error durante la grabación" },
-	"stopReasonTabCaptureFailed": {
-		"message": "No se pudo iniciar la grabación de la pestaña"
-	},
-	"stopReasonTargetUnavailable": {
-		"message": "La pestaña objetivo no estaba disponible"
-	},
 	"stopReasonWriteFailed": { "message": "No se pudo escribir en el archivo" },
 	"stopReasonNoDataTimeout": {
 		"message": "Se detuvo automáticamente porque no llegaron datos de grabación"

@@ -32,7 +32,6 @@ function createMetadata(
 describe("isFatalStopReason", () => {
 	it.each([
 		"error",
-		"unsupported",
 		"write_failed",
 	] as const)("treats %s as fatal", (reason) => {
 		expect(isFatalStopReason(reason)).toBe(true);

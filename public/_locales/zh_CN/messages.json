@@ -213,14 +213,7 @@
 	"stopReasonVideoRemoved": {
 		"message": "由于所选视频已从页面中移除，已自动停止"
 	},
-	"stopReasonUnsupported": {
-		"message": "浏览器不支持此录制方式"
-	},
 	"stopReasonError": { "message": "录制过程中发生了错误" },
-	"stopReasonTabCaptureFailed": { "message": "无法开始标签页录制" },
-	"stopReasonTargetUnavailable": {
-		"message": "目标标签页不可用"
-	},
 	"stopReasonWriteFailed": { "message": "无法写入文件" },
 	"stopReasonNoDataTimeout": {
 		"message": "由于未收到录制数据，已自动停止"

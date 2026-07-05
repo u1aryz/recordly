@@ -213,14 +213,7 @@
 	"stopReasonVideoRemoved": {
 		"message": "Stopped automatically because the selected video was removed from the page"
 	},
-	"stopReasonUnsupported": {
-		"message": "The browser does not support this recording method"
-	},
 	"stopReasonError": { "message": "An error occurred while recording" },
-	"stopReasonTabCaptureFailed": { "message": "Could not start tab recording" },
-	"stopReasonTargetUnavailable": {
-		"message": "The target tab was unavailable"
-	},
 	"stopReasonWriteFailed": { "message": "Could not write to the file" },
 	"stopReasonNoDataTimeout": {
 		"message": "Stopped automatically because no recording data arrived"

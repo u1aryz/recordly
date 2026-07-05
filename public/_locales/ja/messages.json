@@ -215,14 +215,7 @@
 	"stopReasonVideoRemoved": {
 		"message": "対象動画がページからなくなったため自動停止しました"
 	},
-	"stopReasonUnsupported": {
-		"message": "ブラウザが録画方式に対応していません"
-	},
 	"stopReasonError": { "message": "録画中にエラーが発生しました" },
-	"stopReasonTabCaptureFailed": { "message": "タブ録画を開始できませんでした" },
-	"stopReasonTargetUnavailable": {
-		"message": "対象タブを利用できませんでした"
-	},
 	"stopReasonWriteFailed": { "message": "ファイルへの書き込みに失敗しました" },
 	"stopReasonNoDataTimeout": {
 		"message": "録画データが届かなくなったため自動停止しました"

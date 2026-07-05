@@ -22,10 +22,7 @@ const STOP_REASON_KEYS: Record<StopReason, Parameters<typeof t>[0]> = {
 	source_closed: "stopReasonSourceClosed",
 	video_ended: "stopReasonVideoEnded",
 	video_removed: "stopReasonVideoRemoved",
-	unsupported: "stopReasonUnsupported",
 	error: "stopReasonError",
-	tab_capture_failed: "stopReasonTabCaptureFailed",
-	target_unavailable: "stopReasonTargetUnavailable",
 	write_failed: "stopReasonWriteFailed",
 	no_data_timeout: "stopReasonNoDataTimeout",
 };

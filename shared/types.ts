@@ -8,10 +8,7 @@ export type StopReason =
 	| "source_closed"
 	| "video_ended"
 	| "video_removed"
-	| "unsupported"
 	| "error"
-	| "tab_capture_failed"
-	| "target_unavailable"
 	| "write_failed"
 	| "no_data_timeout";
 
@@ -68,7 +65,7 @@ export type CaptureMetadata = {
 	thumbnailDataUrl?: string;
 	chunkCount: number;
 	storageMode?: "direct-file" | "segmented-files";
-	scope?: "element" | "tab";
+	scope?: "element";
 	partCount?: number;
 	savedPartCount?: number;
 	currentPartSizeBytes?: number;
