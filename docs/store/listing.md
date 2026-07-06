@@ -202,6 +202,11 @@ defaults delete com.google.chrome.for.testing AppleLanguages
 
 ## First publish (manual, one-time)
 
+> **Done.** Recordly is published at
+> <https://chromewebstore.google.com/detail/recordly/jgaachkpbgimobjldcgfappghbhmhdak>
+> (extension ID: `jgaachkpbgimobjldcgfappghbhmhdak`). The steps below are kept for
+> reference.
+
 1. Verify the developer account contact email in the dashboard (Account tab).
 2. Build the package: `pnpm zip` → `output/recordly-<version>-chrome.zip`.
 3. Dashboard → **New item** → upload the zip. Note the generated **extension ID**.

@@ -1,6 +1,7 @@
 # Recordly
 
 [![CI](https://github.com/u1aryz/recordly/actions/workflows/ci.yml/badge.svg)](https://github.com/u1aryz/recordly/actions/workflows/ci.yml)
+[![Chrome Web Store](https://img.shields.io/chrome-web-store/v/jgaachkpbgimobjldcgfappghbhmhdak?label=Chrome%20Web%20Store)](https://chromewebstore.google.com/detail/recordly/jgaachkpbgimobjldcgfappghbhmhdak)
 [![Release](https://img.shields.io/github/v/release/u1aryz/recordly)](https://github.com/u1aryz/recordly/releases/latest)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](../../LICENSE)
 
@@ -20,11 +21,16 @@ Web ページ上の動画を選んで録画し、MP4 としてそのままディ
 
 ## インストール
 
-Recordly はまだ Chrome Web Store では公開されていません。リリースからインストールしてください。
+Recordly は [Chrome Web Store](https://chromewebstore.google.com/detail/recordly/jgaachkpbgimobjldcgfappghbhmhdak) からインストールできます。
+
+<details>
+<summary>手動インストール(リリースから)</summary>
 
 1. [最新リリース](https://github.com/u1aryz/recordly/releases/latest)から `recordly-x.x.x-chrome.zip` をダウンロードして展開します。
 2. `chrome://extensions` を開き、右上の**デベロッパーモード**を有効にします。
 3. **パッケージ化されていない拡張機能を読み込む**をクリックし、展開したフォルダを選択します。
+
+</details>
 
 ### 対応ブラウザ
 

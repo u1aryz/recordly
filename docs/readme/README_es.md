@@ -1,6 +1,7 @@
 # Recordly
 
 [![CI](https://github.com/u1aryz/recordly/actions/workflows/ci.yml/badge.svg)](https://github.com/u1aryz/recordly/actions/workflows/ci.yml)
+[![Chrome Web Store](https://img.shields.io/chrome-web-store/v/jgaachkpbgimobjldcgfappghbhmhdak?label=Chrome%20Web%20Store)](https://chromewebstore.google.com/detail/recordly/jgaachkpbgimobjldcgfappghbhmhdak)
 [![Release](https://img.shields.io/github/v/release/u1aryz/recordly)](https://github.com/u1aryz/recordly/releases/latest)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](../../LICENSE)
 
@@ -20,11 +21,16 @@ Elige cualquier video de una página web, grábalo y guárdalo directamente en d
 
 ## Instalación
 
-Recordly todavía no está en la Chrome Web Store. Instálalo desde una release:
+Instala Recordly desde la [Chrome Web Store](https://chromewebstore.google.com/detail/recordly/jgaachkpbgimobjldcgfappghbhmhdak).
+
+<details>
+<summary>Instalación manual (desde una release)</summary>
 
 1. Descarga `recordly-x.x.x-chrome.zip` desde la [última release](https://github.com/u1aryz/recordly/releases/latest) y descomprímelo.
 2. Abre `chrome://extensions` y activa el **Modo de desarrollador** (arriba a la derecha).
 3. Haz clic en **Cargar descomprimida** y selecciona la carpeta descomprimida.
+
+</details>
 
 ### Navegadores compatibles
 

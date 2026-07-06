@@ -1,6 +1,7 @@
 # Recordly
 
 [![CI](https://github.com/u1aryz/recordly/actions/workflows/ci.yml/badge.svg)](https://github.com/u1aryz/recordly/actions/workflows/ci.yml)
+[![Chrome Web Store](https://img.shields.io/chrome-web-store/v/jgaachkpbgimobjldcgfappghbhmhdak?label=Chrome%20Web%20Store)](https://chromewebstore.google.com/detail/recordly/jgaachkpbgimobjldcgfappghbhmhdak)
 [![Release](https://img.shields.io/github/v/release/u1aryz/recordly)](https://github.com/u1aryz/recordly/releases/latest)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](../../LICENSE)
 
@@ -20,11 +21,16 @@
 
 ## 安装
 
-Recordly 尚未上架 Chrome Web Store。请从 release 安装:
+可以从 [Chrome Web Store](https://chromewebstore.google.com/detail/recordly/jgaachkpbgimobjldcgfappghbhmhdak) 安装 Recordly。
+
+<details>
+<summary>手动安装(从 release)</summary>
 
 1. 从[最新 release](https://github.com/u1aryz/recordly/releases/latest) 下载 `recordly-x.x.x-chrome.zip` 并解压。
 2. 打开 `chrome://extensions`,开启右上角的**开发者模式**。
 3. 点击**加载已解压的扩展程序**,选择解压后的文件夹。
+
+</details>
 
 ### 支持的浏览器
 

@@ -1,6 +1,7 @@
 # Recordly
 
 [![CI](https://github.com/u1aryz/recordly/actions/workflows/ci.yml/badge.svg)](https://github.com/u1aryz/recordly/actions/workflows/ci.yml)
+[![Chrome Web Store](https://img.shields.io/chrome-web-store/v/jgaachkpbgimobjldcgfappghbhmhdak?label=Chrome%20Web%20Store)](https://chromewebstore.google.com/detail/recordly/jgaachkpbgimobjldcgfappghbhmhdak)
 [![Release](https://img.shields.io/github/v/release/u1aryz/recordly)](https://github.com/u1aryz/recordly/releases/latest)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](../../LICENSE)
 
@@ -20,11 +21,16 @@
 
 ## 설치
 
-Recordly는 아직 Chrome Web Store에 공개되지 않았습니다. 릴리스에서 설치하세요.
+Recordly는 [Chrome Web Store](https://chromewebstore.google.com/detail/recordly/jgaachkpbgimobjldcgfappghbhmhdak)에서 설치할 수 있습니다.
+
+<details>
+<summary>수동 설치 (릴리스에서)</summary>
 
 1. [최신 릴리스](https://github.com/u1aryz/recordly/releases/latest)에서 `recordly-x.x.x-chrome.zip`을 다운로드하고 압축을 풉니다.
 2. `chrome://extensions`를 열고 오른쪽 위의 **개발자 모드**를 켭니다.
 3. **압축해제된 확장 프로그램을 로드합니다**를 클릭하고 압축을 푼 폴더를 선택합니다.
+
+</details>
 
 ### 지원 브라우저
 

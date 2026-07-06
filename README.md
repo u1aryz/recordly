@@ -1,6 +1,7 @@
 # Recordly
 
 [![CI](https://github.com/u1aryz/recordly/actions/workflows/ci.yml/badge.svg)](https://github.com/u1aryz/recordly/actions/workflows/ci.yml)
+[![Chrome Web Store](https://img.shields.io/chrome-web-store/v/jgaachkpbgimobjldcgfappghbhmhdak?label=Chrome%20Web%20Store)](https://chromewebstore.google.com/detail/recordly/jgaachkpbgimobjldcgfappghbhmhdak)
 [![Release](https://img.shields.io/github/v/release/u1aryz/recordly)](https://github.com/u1aryz/recordly/releases/latest)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
@@ -20,11 +21,16 @@ English | [日本語](docs/readme/README_ja.md) | [Español](docs/readme/README_
 
 ## Install
 
-Recordly is not on the Chrome Web Store yet. Install it from a release:
+Install Recordly from the [Chrome Web Store](https://chromewebstore.google.com/detail/recordly/jgaachkpbgimobjldcgfappghbhmhdak).
+
+<details>
+<summary>Manual install (from a release)</summary>
 
 1. Download `recordly-x.x.x-chrome.zip` from the [latest release](https://github.com/u1aryz/recordly/releases/latest) and unzip it.
 2. Open `chrome://extensions` and turn on **Developer mode** (top right).
 3. Click **Load unpacked** and select the unzipped folder.
+
+</details>
 
 ### Supported browsers
 
