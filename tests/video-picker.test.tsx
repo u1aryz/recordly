@@ -72,7 +72,7 @@ describe("VideoPickerOverlay", () => {
 		expect(onClose).toHaveBeenCalledOnce();
 	});
 
-	it("calls onClose once the tracked video is removed from the document", () => {
+	it("clears the selection when the tracked video is removed and a scroll event fires", () => {
 		const video = createTrackedVideo();
 		const onClose = vi.fn();
 		render(
@@ -83,13 +83,68 @@ describe("VideoPickerOverlay", () => {
 			/>,
 		);
 		movePointer();
+		expect(screen.getByText(t("videoElementLabel"))).toBeInTheDocument();
 
 		video.remove();
 		act(() => {
 			window.dispatchEvent(new Event("scroll"));
 		});
 
-		expect(onClose).toHaveBeenCalledOnce();
+		expect(screen.queryByText(t("videoElementLabel"))).not.toBeInTheDocument();
+		expect(screen.getByText(t("pickerInstructions"))).toBeInTheDocument();
+		expect(onClose).not.toHaveBeenCalled();
+	});
+
+	it("clears the selection when the tracked video is removed without a scroll or resize event", async () => {
+		const video = createTrackedVideo();
+		const onClose = vi.fn();
+		render(
+			<VideoPickerOverlay
+				findVideoAt={() => video}
+				onClose={onClose}
+				onStart={vi.fn()}
+			/>,
+		);
+		movePointer();
+		expect(screen.getByText(t("videoElementLabel"))).toBeInTheDocument();
+
+		act(() => {
+			video.remove();
+		});
+
+		await vi.waitFor(() => {
+			expect(
+				screen.queryByText(t("videoElementLabel")),
+			).not.toBeInTheDocument();
+		});
+		expect(screen.getByText(t("pickerInstructions"))).toBeInTheDocument();
+		expect(onClose).not.toHaveBeenCalled();
+	});
+
+	it("keeps the selection when the tracked video is re-parented synchronously", async () => {
+		const video = createTrackedVideo();
+		render(
+			<VideoPickerOverlay
+				findVideoAt={() => video}
+				onClose={vi.fn()}
+				onStart={vi.fn()}
+			/>,
+		);
+		movePointer();
+		expect(screen.getByText(t("videoElementLabel"))).toBeInTheDocument();
+
+		const container = document.createElement("div");
+		document.body.append(container);
+		act(() => {
+			video.remove();
+			container.append(video);
+		});
+
+		// Give the MutationObserver callback (a microtask) a chance to run.
+		await act(async () => {
+			await Promise.resolve();
+		});
+		expect(screen.getByText(t("videoElementLabel"))).toBeInTheDocument();
 	});
 
 	it("disables the start button while onStart is pending and closes on success", async () => {

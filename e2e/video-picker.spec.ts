@@ -54,6 +54,31 @@ test("picker instructions bar, selection, and cancel work correctly", async ({
 	await expect(page.locator("recordly-video-picker")).toHaveCount(0);
 });
 
+test("clears the selection when the selected video is removed from the page without scrolling", async ({
+	context,
+	getMessage,
+	startPicker,
+}) => {
+	const page = await context.newPage();
+	await page.goto(VIDEO_TEST_PAGE_URL);
+	const instructions = await getMessage("pickerInstructions");
+	const videoLabel = await getMessage("videoElementLabel");
+
+	await startPicker();
+	await hoverVideo(page);
+	await expect(page.getByText(videoLabel, { exact: true })).toBeVisible();
+
+	// Simulate an SPA re-render removing the video (no scroll/resize involved).
+	await page.evaluate(() => {
+		document.getElementById("v")?.remove();
+	});
+
+	// The selection is cleared but the picker itself stays open.
+	await expect(page.getByText(videoLabel, { exact: true })).toBeHidden();
+	await expect(page.getByText(instructions)).toBeVisible();
+	await expect(page.locator("recordly-video-picker")).toHaveCount(1);
+});
+
 test("picker UI sizing is immune to the page root font-size", async ({
 	context,
 	getMessage,

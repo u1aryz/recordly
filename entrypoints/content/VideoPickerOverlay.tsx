@@ -6,7 +6,11 @@ import {
 	useRef,
 	useState,
 } from "react";
-import { describeVideo, findVideoFromPoint } from "@/shared/video";
+import {
+	describeVideo,
+	findVideoFromPoint,
+	isVideoConnected,
+} from "@/shared/video";
 import { t } from "@/utils/i18n";
 
 export type VideoPickerStartResult =
@@ -60,17 +64,24 @@ export function VideoPickerOverlay({
 		setRect(toVideoRect(video.getBoundingClientRect()));
 	}, []);
 
+	const clearSelection = useCallback((): void => {
+		currentVideoRef.current = null;
+		setCurrentVideo(null);
+		setRect(null);
+		setMessage(null);
+	}, []);
+
 	const refreshRect = useCallback((): void => {
 		const video = currentVideoRef.current;
 		if (!video) {
 			return;
 		}
-		if (!document.contains(video)) {
-			onCloseRef.current();
+		if (!isVideoConnected(video)) {
+			clearSelection();
 			return;
 		}
 		setRect(toVideoRect(video.getBoundingClientRect()));
-	}, []);
+	}, [clearSelection]);
 
 	useEffect(() => {
 		function onPointerMove(event: PointerEvent): void {
@@ -99,6 +110,24 @@ export function VideoPickerOverlay({
 			window.removeEventListener("resize", refreshRect, true);
 		};
 	}, [refreshRect, selectVideo]);
+
+	useEffect(() => {
+		if (!currentVideo) {
+			return;
+		}
+		// Watch for the selected video being removed from the DOM without a
+		// scroll/resize event (e.g. an SPA re-render).
+		const observer = new MutationObserver(() => {
+			if (!isVideoConnected(currentVideo)) {
+				clearSelection();
+			}
+		});
+		observer.observe(document.documentElement, {
+			childList: true,
+			subtree: true,
+		});
+		return () => observer.disconnect();
+	}, [currentVideo, clearSelection]);
 
 	useLayoutEffect(() => {
 		if (!rect || !toolbarRef.current) {
