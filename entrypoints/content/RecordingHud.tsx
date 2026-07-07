@@ -151,10 +151,12 @@ export function RecordingHud({
 				onPointerUp={endDrag}
 			>
 				<span className="flex items-center gap-2 font-bold">
-					<span aria-hidden="true" className="inline-grid *:[grid-area:1/1]">
-						<span className="status status-error animate-ping" />
-						<span className="status status-error" />
-					</span>
+					{state.recordingCount > 0 ? (
+						<span aria-hidden="true" className="inline-grid *:[grid-area:1/1]">
+							<span className="status status-error animate-ping" />
+							<span className="status status-error" />
+						</span>
+					) : null}
 					{t("recordingStatus")}
 				</span>
 				<span className="text-base-content/60 text-xs">

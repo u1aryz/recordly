@@ -119,6 +119,25 @@ describe("RecordingHud", () => {
 		).toBeInTheDocument();
 	});
 
+	it("shows the header recording dot only while recording", () => {
+		const store = createHudStore();
+		render(<RecordingHud onOpen={vi.fn()} onStop={vi.fn()} store={store} />);
+
+		act(() => {
+			store.add(createMetadata("only", "Only"));
+		});
+
+		const header = screen.getByTitle(t("moveRecordingHud"));
+		expect(header.querySelector(".status-error")).not.toBeNull();
+
+		act(() => {
+			store.finish("only", "Saved.", "success");
+		});
+
+		expect(header.querySelector(".status-error")).toBeNull();
+		expect(screen.getByText(t("recordingCount", "0"))).toBeInTheDocument();
+	});
+
 	it("hides the panel after the final result expires", () => {
 		vi.useFakeTimers();
 		const store = createHudStore();
