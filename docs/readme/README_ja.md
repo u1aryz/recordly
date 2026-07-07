@@ -19,6 +19,10 @@ Web ページ上の動画を選んで録画し、MP4 としてそのままディ
 - **録画 HUD と進捗ページ** — 録画中はページ上の HUD で、進捗やダウンロードは captures ページで確認できます。
 - **5言語対応** — English、日本語、Español、한국어、简体中文。
 
+## Recordly を選ぶ理由
+
+多くの録画拡張はタブや画面全体をキャプチャするため、共有ダイアログ、画面に映り込む関係ない UI、保存前の再エンコードがつきものです。Recordly は `<video>` 要素そのものを録画し、録画しながら MP4 としてディスクへ直接書き込みます — 停止した時点で、ファイルはすでに保存されています。
+
 ## インストール
 
 Recordly は [Chrome Web Store](https://chromewebstore.google.com/detail/recordly/jgaachkpbgimobjldcgfappghbhmhdak) からインストールできます。
@@ -79,3 +83,7 @@ pnpm exec playwright install chromium
 ## ライセンス
 
 [MIT](../../LICENSE)
+
+---
+
+Recordly が役に立ったら、このリポジトリに ⭐ を付けてもらえると、他の人が見つけやすくなります。

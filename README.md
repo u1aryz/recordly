@@ -19,6 +19,10 @@ English | [日本語](docs/readme/README_ja.md) | [Español](docs/readme/README_
 - **Recording HUD and progress page** — an on-page HUD while recording, plus a captures page for progress and downloads.
 - **5 languages** — English, 日本語, Español, 한국어, 简体中文.
 
+## Why Recordly?
+
+Most recorder extensions capture a tab or the whole screen: share dialogs, unrelated UI in the frame, and often a re-encoding step before the file is usable. Recordly records the `<video>` element itself and streams the recording to disk as MP4 while it runs — when you stop, the file is already saved.
+
 ## Install
 
 Install Recordly from the [Chrome Web Store](https://chromewebstore.google.com/detail/recordly/jgaachkpbgimobjldcgfappghbhmhdak).
@@ -79,3 +83,7 @@ See the [Contributing Guide](docs/CONTRIBUTING.md). This project follows the [Co
 ## License
 
 [MIT](LICENSE)
+
+---
+
+If Recordly is useful to you, a ⭐ on this repo helps others find it.

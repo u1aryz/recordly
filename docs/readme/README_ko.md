@@ -19,6 +19,10 @@
 - **녹화 HUD와 진행 상황 페이지** — 녹화 중에는 페이지 위 HUD로, 진행 상황과 다운로드는 captures 페이지에서 확인할 수 있습니다.
 - **5개 언어 지원** — English, 日本語, Español, 한국어, 简体中文.
 
+## 왜 Recordly인가요?
+
+대부분의 녹화 확장 프로그램은 탭이나 화면 전체를 캡처하기 때문에 공유 대화 상자, 화면에 섞여 들어가는 다른 UI, 저장 전 재인코딩 단계가 따라옵니다. Recordly는 `<video>` 요소 자체를 녹화하고 녹화 중에 MP4로 디스크에 바로 기록하므로, 중지하는 순간 파일 저장이 이미 끝나 있습니다.
+
 ## 설치
 
 Recordly는 [Chrome Web Store](https://chromewebstore.google.com/detail/recordly/jgaachkpbgimobjldcgfappghbhmhdak)에서 설치할 수 있습니다.
@@ -79,3 +83,7 @@ pnpm exec playwright install chromium
 ## 라이선스
 
 [MIT](../../LICENSE)
+
+---
+
+Recordly가 유용했다면 이 저장소에 ⭐를 남겨 주세요. 다른 사람들이 찾는 데 도움이 됩니다.

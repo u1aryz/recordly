@@ -19,6 +19,10 @@
 - **录制 HUD 和进度页面** — 录制时页面上有 HUD,进度和下载可在 captures 页面查看。
 - **支持 5 种语言** — English、日本語、Español、한국어、简体中文。
 
+## 为什么选择 Recordly?
+
+大多数录制扩展捕获的是标签页或整个屏幕:会弹出共享对话框、画面里混入无关的界面,而且往往需要重新编码才能得到可用的文件。Recordly 直接录制 `<video>` 元素本身,并在录制过程中以 MP4 写入磁盘 — 停止时文件已经保存完毕。
+
 ## 安装
 
 可以从 [Chrome Web Store](https://chromewebstore.google.com/detail/recordly/jgaachkpbgimobjldcgfappghbhmhdak) 安装 Recordly。
@@ -79,3 +83,7 @@ pnpm exec playwright install chromium
 ## 许可证
 
 [MIT](../../LICENSE)
+
+---
+
+如果 Recordly 对你有帮助,欢迎给这个仓库点个 ⭐,让更多人发现它。

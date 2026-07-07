@@ -19,6 +19,10 @@ Elige cualquier video de una página web, grábalo y guárdalo directamente en d
 - **HUD de grabación y página de progreso** — un HUD en la página durante la grabación, más una página de capturas para el progreso y las descargas.
 - **5 idiomas** — English, 日本語, Español, 한국어, 简体中文.
 
+## ¿Por qué Recordly?
+
+La mayoría de las extensiones de grabación capturan una pestaña o toda la pantalla: diálogos de compartir, interfaz ajena colándose en el encuadre y, a menudo, un paso de reencodificación antes de obtener un archivo utilizable. Recordly graba el propio elemento `<video>` y escribe la grabación en disco como MP4 mientras se ejecuta — al detenerla, el archivo ya está guardado.
+
 ## Instalación
 
 Instala Recordly desde la [Chrome Web Store](https://chromewebstore.google.com/detail/recordly/jgaachkpbgimobjldcgfappghbhmhdak).
@@ -79,3 +83,7 @@ Consulta la [guía de contribución](../CONTRIBUTING.md) (en inglés). Este proy
 ## Licencia
 
 [MIT](../../LICENSE)
+
+---
+
+Si Recordly te resulta útil, una ⭐ en este repositorio ayuda a que otras personas lo encuentren.
