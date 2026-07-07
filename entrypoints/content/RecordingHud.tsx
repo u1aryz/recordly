@@ -181,10 +181,16 @@ type RecordingHudRowProps = {
 	onStop: (captureId: string) => void;
 };
 
-const TONE_ACCENT_CLASS: Record<HudTone, string> = {
-	success: "shadow-[inset_3px_0_0_0] shadow-success",
-	warning: "shadow-[inset_3px_0_0_0] shadow-warning",
-	error: "shadow-[inset_3px_0_0_0] shadow-error",
+const TONE_DOT_CLASS: Record<HudTone, string> = {
+	success: "status-success",
+	warning: "status-warning",
+	error: "status-error",
+};
+
+const TONE_TEXT_CLASS: Record<HudTone, string> = {
+	success: "text-success",
+	warning: "text-warning",
+	error: "text-error",
 };
 
 function getDetailText(row: HudRow): string {
@@ -217,20 +223,17 @@ function RecordingHudRow({
 		}
 	}, [row.highlighted]);
 
-	const toneClass =
-		row.detail.kind === "result" ? TONE_ACCENT_CLASS[row.detail.tone] : "";
+	const resultTone = row.detail.kind === "result" ? row.detail.tone : null;
 
 	return (
 		<article
 			ref={rowRef}
 			className={`grid grid-cols-[64px_minmax(0,1fr)] gap-2.5 border-base-300 border-b p-3 transition-colors last:border-b-0 ${
-				row.highlighted
-					? "bg-warning/10 shadow-[inset_3px_0_0_0] shadow-warning"
-					: toneClass
+				row.highlighted ? "bg-warning/10" : ""
 			}`}
 			data-capture-id={row.id}
 			data-highlighted={row.highlighted || undefined}
-			data-tone={row.detail.kind === "result" ? row.detail.tone : undefined}
+			data-tone={resultTone ?? undefined}
 		>
 			<div className="h-10 w-16 overflow-hidden rounded border border-base-300 bg-base-200">
 				{row.thumbnailDataUrl ? (
@@ -255,8 +258,18 @@ function RecordingHudRow({
 				<p className="mt-0.5 text-[11px] text-base-content/60">
 					{row.width} x {row.height}
 				</p>
-				<p className="mt-1 text-base-content/75 text-xs">
-					{getDetailText(row)}
+				<p
+					className={`mt-1 flex items-center gap-1.5 text-xs ${
+						resultTone ? TONE_TEXT_CLASS[resultTone] : "text-base-content/75"
+					}`}
+				>
+					{resultTone ? (
+						<span
+							aria-hidden="true"
+							className={`status ${TONE_DOT_CLASS[resultTone]} flex-none`}
+						/>
+					) : null}
+					<span className="min-w-0">{getDetailText(row)}</span>
 				</p>
 				{row.detail.kind === "result" ? null : (
 					<div className="mt-2 flex flex-wrap gap-1.5">
