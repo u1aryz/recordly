@@ -56,6 +56,7 @@ type ActiveRecording = {
 };
 
 const activeRecordings = new Map<string, ActiveRecording>();
+let latestContinueOnResolutionChange: boolean | undefined;
 let recordingHud: RecordingHudManager | undefined;
 
 export default defineContentScript({
@@ -79,6 +80,15 @@ export default defineContentScript({
 			},
 		});
 		const picker = createVideoPickerUi(ctx, { onStart: startRecording });
+
+		const unwatchContinueOnResolutionChange = continueOnResolutionChange.watch(
+			(value) => {
+				latestContinueOnResolutionChange = value;
+				for (const active of activeRecordings.values()) {
+					active.continueOnResolutionChange = value;
+				}
+			},
+		);
 
 		browser.runtime.onMessage.addListener((message: unknown) => {
 			if (!isExtensionMessage(message)) {
@@ -104,6 +114,7 @@ export default defineContentScript({
 		window.addEventListener("pagehide", onPageHide);
 
 		ctx.onInvalidated(() => {
+			unwatchContinueOnResolutionChange();
 			picker.destroy();
 			window.removeEventListener("pagehide", onPageHide);
 			stopAllRecordings("error", t("recordingStoppedAfterExtensionUpdate"));
@@ -242,7 +253,8 @@ async function startRecording(
 		session: result.session,
 		stream,
 		port,
-		continueOnResolutionChange: continueOnResolutionChangeEnabled,
+		continueOnResolutionChange:
+			latestContinueOnResolutionChange ?? continueOnResolutionChangeEnabled,
 		monitorState: createMonitorState(),
 		resolutionTimer: 0,
 	};
