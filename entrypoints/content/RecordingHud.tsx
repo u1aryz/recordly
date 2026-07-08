@@ -219,13 +219,24 @@ function RecordingHudRow({
 		}
 	}, [row.highlighted]);
 
+	useEffect(() => {
+		const el = rowRef.current;
+		if (!el || row.highlightNonce === 0) {
+			return;
+		}
+		el.classList.remove("hud-row-blink");
+		// Force a reflow so the browser restarts the animation when the class is re-added.
+		void el.offsetWidth;
+		el.classList.add("hud-row-blink");
+	}, [row.highlightNonce]);
+
 	const resultTone = row.detail.kind === "result" ? row.detail.tone : null;
 
 	return (
 		<article
 			ref={rowRef}
 			className={`grid grid-cols-[64px_minmax(0,1fr)] gap-2.5 border-base-300 border-b p-3 transition-colors last:border-b-0 ${
-				row.highlighted ? "bg-warning/10" : ""
+				row.highlighted ? "hud-row-blink" : ""
 			}`}
 			data-capture-id={row.id}
 			data-highlighted={row.highlighted || undefined}

@@ -58,3 +58,33 @@
 	--text-base: 13px;
 	--text-base--line-height: 1.45;
 }
+
+/* Keep the total duration (800ms x 2) in sync with HIGHLIGHT_DISPLAY_MS in hud-store.ts. */
+@keyframes hud-row-blink {
+	0%,
+	100% {
+		background-color: transparent;
+	}
+	50% {
+		background-color: color-mix(
+			in oklab,
+			var(--color-warning) 10%,
+			transparent
+		);
+	}
+}
+
+.hud-row-blink {
+	animation: hud-row-blink 800ms ease-in-out 2;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.hud-row-blink {
+		animation: none;
+		background-color: color-mix(
+			in oklab,
+			var(--color-warning) 10%,
+			transparent
+		);
+	}
+}

@@ -171,6 +171,13 @@ describe("RecordingHud", () => {
 
 		const row = container.querySelector('[data-capture-id="existing"]');
 		expect(row).toHaveAttribute("data-highlighted", "true");
+		expect(row).toHaveClass("hud-row-blink");
+
+		// Re-highlighting while still highlighted restarts the blink animation.
+		act(() => {
+			store.highlight("existing");
+		});
+		expect(row).toHaveClass("hud-row-blink");
 
 		act(() => {
 			vi.advanceTimersByTime(1600);

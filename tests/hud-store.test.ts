@@ -117,6 +117,24 @@ describe("createHudStore", () => {
 		).toBe(false);
 	});
 
+	it("increments the highlight nonce on every highlight call", () => {
+		vi.useFakeTimers();
+		const store = createHudStore();
+		store.add(createMetadata("existing", "Existing"));
+
+		store.highlight("existing");
+		expect(
+			store.getSnapshot().rows.find((row) => row.id === "existing")
+				?.highlightNonce,
+		).toBe(1);
+
+		store.highlight("existing");
+		expect(
+			store.getSnapshot().rows.find((row) => row.id === "existing")
+				?.highlightNonce,
+		).toBe(2);
+	});
+
 	it("temporarily shows a notice then reverts to the part label", () => {
 		vi.useFakeTimers();
 		const store = createHudStore();

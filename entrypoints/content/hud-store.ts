@@ -21,6 +21,7 @@ export type HudRow = {
 	recording: boolean;
 	stopping: boolean;
 	highlighted: boolean;
+	highlightNonce: number;
 	detail: HudRowDetail;
 };
 
@@ -168,6 +169,7 @@ export function createHudStore(): HudStore {
 				recording: true,
 				stopping: false,
 				highlighted: false,
+				highlightNonce: 0,
 				detail: { kind: "recording" },
 			};
 			setRows([row, ...state.rows]);
@@ -226,7 +228,11 @@ export function createHudStore(): HudStore {
 			if (rowTimers.highlightTimer) {
 				window.clearTimeout(rowTimers.highlightTimer);
 			}
-			updateRow(captureId, (row) => ({ ...row, highlighted: true }));
+			updateRow(captureId, (row) => ({
+				...row,
+				highlighted: true,
+				highlightNonce: row.highlightNonce + 1,
+			}));
 			rowTimers.highlightTimer = window.setTimeout(() => {
 				rowTimers.highlightTimer = undefined;
 				updateRow(captureId, (row) => ({ ...row, highlighted: false }));
