@@ -183,12 +183,6 @@ type RecordingHudRowProps = {
 	onStop: (captureId: string) => void;
 };
 
-const TONE_DOT_CLASS: Record<HudTone, string> = {
-	success: "status-success",
-	warning: "status-warning",
-	error: "status-error",
-};
-
 const TONE_TEXT_CLASS: Record<HudTone, string> = {
 	success: "text-success",
 	warning: "text-warning",
@@ -261,17 +255,11 @@ function RecordingHudRow({
 					{row.width} x {row.height}
 				</p>
 				<p
-					className={`mt-1 flex items-center gap-1.5 text-xs ${
+					className={`mt-1 text-xs ${
 						resultTone ? TONE_TEXT_CLASS[resultTone] : "text-base-content/75"
 					}`}
 				>
-					{resultTone ? (
-						<span
-							aria-hidden="true"
-							className={`status ${TONE_DOT_CLASS[resultTone]} flex-none`}
-						/>
-					) : null}
-					<span className="min-w-0">{getDetailText(row)}</span>
+					{getDetailText(row)}
 				</p>
 				{row.detail.kind === "result" ? null : (
 					<div className="mt-2 flex flex-wrap gap-1.5">

@@ -221,12 +221,8 @@ export function VideoPickerOverlay({
 							</button>
 						</div>
 						{message && (
-							<div className="flex items-center gap-1.5 border-base-300 border-t p-2 text-warning">
-								<span
-									aria-hidden="true"
-									className="status status-warning flex-none"
-								/>
-								<span className="min-w-0">{message}</span>
+							<div className="border-base-300 border-t p-2 text-warning">
+								{message}
 							</div>
 						)}
 					</div>
