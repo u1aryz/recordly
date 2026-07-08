@@ -135,11 +135,23 @@ describe("createHudStore", () => {
 		).toBe(2);
 	});
 
+	it("updates the resolution when a new part starts", () => {
+		const store = createHudStore();
+		store.add(createMetadata("first", "First"));
+
+		store.updatePart("first", 2, { width: 1920, height: 1080 });
+
+		const row = store.getSnapshot().rows.find((row) => row.id === "first");
+		expect(row?.partCount).toBe(2);
+		expect(row?.width).toBe(1920);
+		expect(row?.height).toBe(1080);
+	});
+
 	it("temporarily shows a notice then reverts to the part label", () => {
 		vi.useFakeTimers();
 		const store = createHudStore();
 		store.add(createMetadata("first", "First"));
-		store.updatePart("first", 2);
+		store.updatePart("first", 2, { width: 1920, height: 1080 });
 
 		store.notify("first", "Resolution changed, switched to a new file");
 
@@ -163,7 +175,7 @@ describe("createHudStore", () => {
 		store.add(createMetadata("first", "First"));
 
 		store.notify("first", "notice");
-		store.updatePart("first", 3);
+		store.updatePart("first", 3, { width: 1920, height: 1080 });
 		vi.advanceTimersByTime(5000);
 
 		const row = store.getSnapshot().rows.find((row) => row.id === "first");

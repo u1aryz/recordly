@@ -231,13 +231,14 @@ describe("RecordingHud", () => {
 
 		act(() => {
 			store.add(createMetadata("first", "First"));
-			store.updatePart("first", 2);
+			store.updatePart("first", 2, { width: 1920, height: 1080 });
 			store.notify("first", "Resolution changed, switched to a new file");
 		});
 
 		expect(
 			screen.getByText("Resolution changed, switched to a new file"),
 		).toBeInTheDocument();
+		expect(screen.getByText("1920 x 1080")).toBeInTheDocument();
 
 		act(() => {
 			vi.advanceTimersByTime(5000);

@@ -208,7 +208,10 @@ async function startRecording(
 				recordingHud?.markStopping(metadata.id, elapsedMs);
 			},
 			onPartStarted(current, change) {
-				recordingHud?.updatePart(current.id, current.partCount ?? 1);
+				recordingHud?.updatePart(current.id, current.partCount ?? 1, {
+					width: current.width,
+					height: current.height,
+				});
 				postCaptureStreamMessage(port, createProgressMessage(current));
 				if (change) {
 					recordingHud?.notify(
@@ -261,14 +264,15 @@ async function startRecording(
 	activeRecordings.set(metadata.id, active);
 	recordingHud?.add(metadata);
 	bindRecordingEvents(active, video);
+	const startedMetadata = result.session.getMetadata();
 	postCaptureStreamMessage(port, {
 		type: "CAPTURE_STARTED",
-		metadata: result.session.getMetadata(),
+		metadata: startedMetadata,
 	});
-	recordingHud?.updatePart(
-		metadata.id,
-		result.session.getMetadata().partCount ?? 1,
-	);
+	recordingHud?.updatePart(metadata.id, startedMetadata.partCount ?? 1, {
+		width: startedMetadata.width,
+		height: startedMetadata.height,
+	});
 	recordingHud?.update(metadata.id, 0);
 	return { ok: true };
 }

@@ -6,7 +6,7 @@ import {
 	type ShadowRootContentScriptUi,
 } from "wxt/utils/content-script-ui/shadow-root";
 import type { HudPosition } from "@/shared/settings";
-import type { CaptureMetadata } from "@/shared/types";
+import type { CaptureMetadata, VideoResolution } from "@/shared/types";
 import {
 	createHudStore,
 	HUD_EXIT_ANIMATION_MS,
@@ -18,7 +18,11 @@ import { SHADOW_HOST_CSS } from "./shadow-host-css";
 export type RecordingHudManager = {
 	add: (metadata: CaptureMetadata) => void;
 	update: (captureId: string, elapsedMs: number) => void;
-	updatePart: (captureId: string, partCount: number) => void;
+	updatePart: (
+		captureId: string,
+		partCount: number,
+		size: VideoResolution,
+	) => void;
 	notify: (captureId: string, message: string) => void;
 	markStopping: (captureId: string, elapsedMs: number) => void;
 	finish: (captureId: string, message: string, tone: HudTone) => void;

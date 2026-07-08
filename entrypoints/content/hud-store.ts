@@ -1,5 +1,5 @@
 import type { HudPosition } from "@/shared/settings";
-import type { CaptureMetadata } from "@/shared/types";
+import type { CaptureMetadata, VideoResolution } from "@/shared/types";
 
 export type HudTone = "success" | "warning" | "error";
 
@@ -37,7 +37,11 @@ export type HudStore = {
 	getSnapshot: () => HudState;
 	add: (metadata: CaptureMetadata) => void;
 	update: (captureId: string, elapsedMs: number) => void;
-	updatePart: (captureId: string, partCount: number) => void;
+	updatePart: (
+		captureId: string,
+		partCount: number,
+		size: VideoResolution,
+	) => void;
 	notify: (captureId: string, message: string) => void;
 	markStopping: (captureId: string, elapsedMs: number) => void;
 	finish: (captureId: string, message: string, tone: HudTone) => void;
@@ -186,7 +190,7 @@ export function createHudStore(): HudStore {
 		update(captureId, elapsedMs) {
 			updateRow(captureId, (row) => ({ ...row, elapsedMs }));
 		},
-		updatePart(captureId, partCount) {
+		updatePart(captureId, partCount, size) {
 			const rowTimers = timers.get(captureId);
 			if (rowTimers?.noticeTimer) {
 				window.clearTimeout(rowTimers.noticeTimer);
@@ -195,6 +199,8 @@ export function createHudStore(): HudStore {
 			updateRow(captureId, (row) => ({
 				...row,
 				partCount,
+				width: size.width,
+				height: size.height,
 				detail: { kind: "part" },
 			}));
 		},
