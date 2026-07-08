@@ -1,6 +1,9 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { VideoPickerOverlay } from "@/entrypoints/content/VideoPickerOverlay";
+import {
+	VideoPickerOverlay,
+	type VideoPickerStartResult,
+} from "@/entrypoints/content/VideoPickerOverlay";
 import { t } from "@/utils/i18n";
 
 function movePointer(): void {
@@ -217,6 +220,63 @@ describe("VideoPickerOverlay", () => {
 		fireEvent.click(screen.getByText(t("chooseFolderAndRecord")));
 
 		expect(await screen.findByText("failed")).toBeInTheDocument();
+	});
+
+	it("keeps the failure message mounted when retrying while it is displayed", async () => {
+		const video = createTrackedVideo();
+		let resolveRetry!: (result: VideoPickerStartResult) => void;
+		const onStart = vi
+			.fn<() => Promise<VideoPickerStartResult>>()
+			.mockResolvedValueOnce({ ok: false, reason: "failed" })
+			.mockImplementationOnce(
+				() =>
+					new Promise((resolve) => {
+						resolveRetry = resolve;
+					}),
+			);
+		render(
+			<VideoPickerOverlay
+				findVideoAt={() => video}
+				onClose={vi.fn()}
+				onStart={onStart}
+			/>,
+		);
+		movePointer();
+
+		fireEvent.click(screen.getByText(t("chooseFolderAndRecord")));
+		const messageElement = await screen.findByText("failed");
+
+		fireEvent.click(screen.getByText(t("chooseFolderAndRecord")));
+		expect(screen.getByText("failed")).toBe(messageElement);
+
+		await act(async () => {
+			resolveRetry({ ok: false, reason: "failed" });
+		});
+		expect(screen.getByText("failed")).toBe(messageElement);
+	});
+
+	it("clears the failure message when a retry is cancelled", async () => {
+		const video = createTrackedVideo();
+		const onStart = vi
+			.fn<() => Promise<VideoPickerStartResult>>()
+			.mockResolvedValueOnce({ ok: false, reason: "failed" })
+			.mockResolvedValueOnce({ ok: false, cancelled: true });
+		render(
+			<VideoPickerOverlay
+				findVideoAt={() => video}
+				onClose={vi.fn()}
+				onStart={onStart}
+			/>,
+		);
+		movePointer();
+
+		fireEvent.click(screen.getByText(t("chooseFolderAndRecord")));
+		await screen.findByText("failed");
+
+		fireEvent.click(screen.getByText(t("chooseFolderAndRecord")));
+		await vi.waitFor(() => {
+			expect(screen.queryByText("failed")).not.toBeInTheDocument();
+		});
 	});
 
 	it("calls onClose when the cancel button is clicked", () => {

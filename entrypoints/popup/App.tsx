@@ -29,7 +29,7 @@ function App(): JSX.Element {
 	] = useState(true);
 
 	const refreshVideos = useCallback(async () => {
-		setState((current) => ({ ...current, loading: true, error: undefined }));
+		setState((current) => ({ ...current, loading: true }));
 		try {
 			setState(await loadPopupState());
 		} catch {

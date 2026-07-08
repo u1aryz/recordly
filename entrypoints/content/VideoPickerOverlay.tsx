@@ -151,7 +151,6 @@ export function VideoPickerOverlay({
 			return;
 		}
 		setPending(true);
-		setMessage(null);
 		const result = await onStart(video);
 		setPending(false);
 		if (result.ok) {
@@ -159,6 +158,7 @@ export function VideoPickerOverlay({
 			return;
 		}
 		if (result.cancelled) {
+			setMessage(null);
 			return;
 		}
 		setMessage(result.reason ?? t("recordingStartFailed"));
