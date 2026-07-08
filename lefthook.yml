@@ -1,10 +1,20 @@
+output:
+  - summary
+  - failure
+
 pre-commit:
-  commands:
-    check:
-      run: pnpm biome check --write --error-on-warnings --no-errors-on-unmatched --files-ignore-unknown=true {staged_files} && pnpm tsc --noEmit
+  parallel: true
+  skip:
+    - merge
+    - rebase
+  jobs:
+    - name: biome
+      run: pnpm biome check --write --error-on-warnings --no-errors-on-unmatched --files-ignore-unknown=true {staged_files}
       stage_fixed: true
+    - name: typecheck
+      run: pnpm typecheck
 
 commit-msg:
-  commands:
-    "lint commit message":
-      run: pnpm commitlint --edit "$1"
+  jobs:
+    - name: commitlint
+      run: pnpm commitlint --edit {1}

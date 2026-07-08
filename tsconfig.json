@@ -2,6 +2,8 @@
 	"extends": "./.wxt/tsconfig.json",
 	"compilerOptions": {
 		"allowImportingTsExtensions": true,
-		"jsx": "react-jsx"
+		"jsx": "react-jsx",
+		"incremental": true,
+		"tsBuildInfoFile": "node_modules/.cache/tsconfig.tsbuildinfo"
 	}
 }
