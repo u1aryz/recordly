@@ -157,6 +157,44 @@ describe("RecordingHud", () => {
 		).not.toBeInTheDocument();
 	});
 
+	it("applies the enter animation class when the panel appears", () => {
+		const store = createHudStore();
+		render(<RecordingHud onOpen={vi.fn()} onStop={vi.fn()} store={store} />);
+
+		act(() => {
+			store.add(createMetadata("only", "Only"));
+		});
+
+		expect(
+			screen.getByRole("region", { name: t("recordingStatus") }),
+		).toHaveClass("hud-panel-enter");
+	});
+
+	it("keeps rendering the last rows with the exit class while closing", () => {
+		const store = createHudStore();
+		render(<RecordingHud onOpen={vi.fn()} onStop={vi.fn()} store={store} />);
+
+		act(() => {
+			store.add(createMetadata("only", "Only"));
+		});
+		act(() => {
+			store.remove("only");
+			store.setClosing(true);
+		});
+
+		const panel = screen.getByRole("region", { name: t("recordingStatus") });
+		expect(panel).toHaveClass("hud-panel-exit");
+		expect(screen.getByText("Only")).toBeInTheDocument();
+
+		act(() => {
+			store.setClosing(false);
+		});
+
+		expect(
+			screen.queryByRole("region", { name: t("recordingStatus") }),
+		).not.toBeInTheDocument();
+	});
+
 	it("temporarily highlights an existing recording", () => {
 		vi.useFakeTimers();
 		const store = createHudStore();

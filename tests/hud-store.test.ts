@@ -193,6 +193,24 @@ describe("createHudStore", () => {
 		store.setPosition(null);
 		expect(store.getSnapshot().position).toBeNull();
 	});
+
+	it("toggles the closing flag and skips redundant emits", () => {
+		const store = createHudStore();
+		const listener = vi.fn();
+		store.subscribe(listener);
+		expect(store.getSnapshot().closing).toBe(false);
+
+		store.setClosing(true);
+		expect(store.getSnapshot().closing).toBe(true);
+		expect(listener).toHaveBeenCalledTimes(1);
+
+		store.setClosing(true);
+		expect(listener).toHaveBeenCalledTimes(1);
+
+		store.setClosing(false);
+		expect(store.getSnapshot().closing).toBe(false);
+		expect(listener).toHaveBeenCalledTimes(2);
+	});
 });
 
 describe("clampHudPosition", () => {

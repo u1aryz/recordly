@@ -29,6 +29,7 @@ export type HudState = {
 	rows: HudRow[];
 	recordingCount: number;
 	position: HudPosition | null;
+	closing: boolean;
 };
 
 export type HudStore = {
@@ -43,6 +44,7 @@ export type HudStore = {
 	remove: (captureId: string) => void;
 	highlight: (captureId: string) => void;
 	setPosition: (position: HudPosition | null) => void;
+	setClosing: (closing: boolean) => void;
 	destroy: () => void;
 };
 
@@ -50,6 +52,8 @@ const RESULT_DISPLAY_MS = 8000;
 const HIGHLIGHT_DISPLAY_MS = 1600;
 const NOTICE_DISPLAY_MS = 5000;
 export const HUD_MARGIN_PX = 16;
+// Keep in sync with .hud-panel-exit's animation duration in style.css.
+export const HUD_EXIT_ANIMATION_MS = 150;
 const FALLBACK_PANEL_WIDTH_PX = 390;
 const FALLBACK_PANEL_HEIGHT_PX = 160;
 
@@ -83,7 +87,12 @@ function countRecording(rows: HudRow[]): number {
 }
 
 export function createHudStore(): HudStore {
-	let state: HudState = { rows: [], recordingCount: 0, position: null };
+	let state: HudState = {
+		rows: [],
+		recordingCount: 0,
+		position: null,
+		closing: false,
+	};
 	const listeners = new Set<() => void>();
 	const timers = new Map<string, RowTimers>();
 
@@ -242,11 +251,23 @@ export function createHudStore(): HudStore {
 			state = { ...state, position };
 			emit();
 		},
+		setClosing(closing) {
+			if (state.closing === closing) {
+				return;
+			}
+			state = { ...state, closing };
+			emit();
+		},
 		destroy() {
 			for (const captureId of Array.from(timers.keys())) {
 				clearRowTimers(captureId);
 			}
-			state = { rows: [], recordingCount: 0, position: null };
+			state = {
+				rows: [],
+				recordingCount: 0,
+				position: null,
+				closing: false,
+			};
 			listeners.clear();
 		},
 	};

@@ -7,7 +7,11 @@ import {
 } from "wxt/utils/content-script-ui/shadow-root";
 import type { HudPosition } from "@/shared/settings";
 import type { CaptureMetadata } from "@/shared/types";
-import { createHudStore, type HudTone } from "./hud-store";
+import {
+	createHudStore,
+	HUD_EXIT_ANIMATION_MS,
+	type HudTone,
+} from "./hud-store";
 import { RecordingHud } from "./RecordingHud";
 import { SHADOW_HOST_CSS } from "./shadow-host-css";
 
@@ -38,6 +42,8 @@ export function createRecordingHudUi(
 	const store = createHudStore();
 	let destroyed = false;
 	let mounted = false;
+	let hiding = false;
+	let hideTimer: number | undefined;
 	let uiPromise: Promise<ShadowRootContentScriptUi<Root>> | undefined;
 
 	void options.getPosition?.().then((position) => {
@@ -75,28 +81,68 @@ export function createRecordingHudUi(
 		return uiPromise;
 	}
 
-	const unsubscribe = store.subscribe(() => {
-		const hasRows = store.getSnapshot().rows.length > 0;
-		if (hasRows && !mounted) {
-			mounted = true;
-			void ensureUi().then((ui) => {
-				if (store.getSnapshot().rows.length > 0) {
-					ui.mount();
-				} else {
-					mounted = false;
-				}
-			});
+	function prefersReducedMotion(): boolean {
+		return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+	}
+
+	function clearHideTimer(): void {
+		hiding = false;
+		if (hideTimer !== undefined) {
+			window.clearTimeout(hideTimer);
+			hideTimer = undefined;
+		}
+	}
+
+	function cancelHide(): void {
+		if (!hiding) {
 			return;
 		}
-		if (!hasRows && mounted) {
-			mounted = false;
-			void ensureUi().then((ui) => ui.remove());
+		clearHideTimer();
+		store.setClosing(false);
+	}
+
+	const unsubscribe = store.subscribe(() => {
+		const hasRows = store.getSnapshot().rows.length > 0;
+		if (hasRows) {
+			// A new recording may start mid-exit-animation; keep the panel alive.
+			cancelHide();
+			if (!mounted) {
+				mounted = true;
+				void ensureUi().then((ui) => {
+					if (store.getSnapshot().rows.length > 0) {
+						ui.mount();
+					} else {
+						mounted = false;
+					}
+				});
+			}
+			return;
+		}
+		if (mounted && !hiding) {
+			if (prefersReducedMotion()) {
+				mounted = false;
+				void ensureUi().then((ui) => ui.remove());
+				return;
+			}
+			// Set the guard before setClosing: emit() re-enters this listener synchronously.
+			hiding = true;
+			store.setClosing(true);
+			hideTimer = window.setTimeout(() => {
+				hideTimer = undefined;
+				hiding = false;
+				if (store.getSnapshot().rows.length === 0) {
+					mounted = false;
+					store.setClosing(false);
+					void ensureUi().then((ui) => ui.remove());
+				}
+			}, HUD_EXIT_ANIMATION_MS);
 		}
 	});
 
 	ctx.onInvalidated(() => {
 		destroyed = true;
 		unsubscribe();
+		clearHideTimer();
 	});
 
 	return {
@@ -112,6 +158,7 @@ export function createRecordingHudUi(
 		destroy() {
 			destroyed = true;
 			unsubscribe();
+			clearHideTimer();
 			store.destroy();
 			if (mounted) {
 				mounted = false;

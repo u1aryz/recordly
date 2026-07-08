@@ -10,6 +10,7 @@ import { formatDuration } from "@/shared/video";
 import { t } from "@/utils/i18n";
 import {
 	clampHudPosition,
+	type ElementSize,
 	HUD_MARGIN_PX,
 	type HudRow,
 	type HudStore,
@@ -29,8 +30,14 @@ type DragState = {
 	offsetY: number;
 };
 
-function getViewportSize(): { width: number; height: number } {
+function getViewportSize(): ElementSize {
 	return { width: window.innerWidth, height: window.innerHeight };
+}
+
+// offsetWidth/offsetHeight ignore the enter/exit scale transform, unlike
+// getBoundingClientRect(), so clamping is based on the settled panel size.
+function getPanelSize(panel: HTMLElement): ElementSize {
+	return { width: panel.offsetWidth, height: panel.offsetHeight };
 }
 
 export function RecordingHud({
@@ -42,6 +49,16 @@ export function RecordingHud({
 	const state = useSyncExternalStore(store.subscribe, store.getSnapshot);
 	const panelRef = useRef<HTMLElement>(null);
 	const dragStateRef = useRef<DragState | null>(null);
+	const lastRowsRef = useRef<HudRow[]>([]);
+
+	// Freeze the last non-empty rows so the exit animation has content to show.
+	// This runs after commit, so during the render where rows first becomes
+	// empty the ref still holds the previous rows.
+	useEffect(() => {
+		if (state.rows.length > 0) {
+			lastRowsRef.current = state.rows;
+		}
+	}, [state.rows]);
 
 	// Right after the position is restored/changed, re-clamp it using the actual rendered panel size.
 	useLayoutEffect(() => {
@@ -53,7 +70,7 @@ export function RecordingHud({
 		const clamped = clampHudPosition(
 			position.left,
 			position.top,
-			panel.getBoundingClientRect(),
+			getPanelSize(panel),
 			getViewportSize(),
 		);
 		if (clamped.left !== position.left || clamped.top !== position.top) {
@@ -72,7 +89,7 @@ export function RecordingHud({
 				clampHudPosition(
 					position.left,
 					position.top,
-					panel.getBoundingClientRect(),
+					getPanelSize(panel),
 					getViewportSize(),
 				),
 			);
@@ -108,7 +125,7 @@ export function RecordingHud({
 			clampHudPosition(
 				event.clientX - dragState.offsetX,
 				event.clientY - dragState.offsetY,
-				panelRef.current.getBoundingClientRect(),
+				getPanelSize(panelRef.current),
 				getViewportSize(),
 			),
 		);
@@ -127,15 +144,22 @@ export function RecordingHud({
 		}
 	}
 
-	if (state.rows.length === 0) {
+	if (state.rows.length === 0 && !state.closing) {
 		return null;
 	}
+
+	// While closing, keep rendering the frozen rows so the panel fades out
+	// with its content instead of collapsing to an empty shell.
+	const displayRows = state.rows.length > 0 ? state.rows : lastRowsRef.current;
+	const displayRecordingCount = displayRows.filter(
+		(row) => row.recording,
+	).length;
 
 	return (
 		<section
 			ref={panelRef}
 			aria-label={t("recordingStatus")}
-			className="pointer-events-auto fixed w-[min(390px,calc(100vw-32px))] overflow-hidden rounded-lg border border-base-300 bg-base-100 font-sans text-base-content text-sm shadow-2xl"
+			className={`${state.closing ? "hud-panel-exit" : "hud-panel-enter"} pointer-events-auto fixed w-[min(390px,calc(100vw-32px))] overflow-hidden rounded-lg border border-base-300 bg-base-100 font-sans text-base-content text-sm shadow-2xl`}
 			style={
 				state.position
 					? { left: state.position.left, top: state.position.top }
@@ -151,7 +175,7 @@ export function RecordingHud({
 				onPointerUp={endDrag}
 			>
 				<span className="flex items-center gap-2 font-bold">
-					{state.recordingCount > 0 ? (
+					{displayRecordingCount > 0 ? (
 						<span aria-hidden="true" className="inline-grid *:[grid-area:1/1]">
 							<span className="status status-error animate-ping" />
 							<span className="status status-error" />
@@ -160,11 +184,11 @@ export function RecordingHud({
 					{t("recordingStatus")}
 				</span>
 				<span className="text-base-content/60 text-xs">
-					{t("recordingCount", String(state.recordingCount))}
+					{t("recordingCount", String(displayRecordingCount))}
 				</span>
 			</header>
 			<div className="max-h-[50vh] overflow-y-auto overscroll-contain">
-				{state.rows.map((row) => (
+				{displayRows.map((row) => (
 					<RecordingHudRow
 						key={row.id}
 						onOpen={onOpen}
