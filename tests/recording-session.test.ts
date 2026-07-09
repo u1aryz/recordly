@@ -1,10 +1,14 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { PART_SPLIT_BYTES } from "@/shared/file-system";
+import { createPartFileName, PART_SPLIT_BYTES } from "@/shared/file-system";
 import {
 	type RecordingSessionCallbacks,
 	startRecordingSession,
 } from "@/shared/recording-session";
 import type { CaptureMetadata } from "@/shared/types";
+
+// Keeps the real defragmenter out of these tests; its behavior is covered by
+// tests/mp4-defragment.test.ts.
+const stubPostProcessPart = async () => ({ ok: true as const });
 
 function createMetadata(
 	overrides: Partial<CaptureMetadata> = {},
@@ -248,6 +252,7 @@ describe("startRecordingSession", () => {
 			callbacks,
 			createRecorder,
 			now,
+			postProcessPart: stubPostProcessPart,
 		});
 		expect(result.ok).toBe(true);
 		if (!result.ok) {
@@ -277,6 +282,7 @@ describe("startRecordingSession", () => {
 			directory,
 			callbacks,
 			createRecorder,
+			postProcessPart: stubPostProcessPart,
 		});
 		if (!result.ok) {
 			throw new Error("expected session to start");
@@ -307,6 +313,7 @@ describe("startRecordingSession", () => {
 			directory,
 			callbacks,
 			createRecorder,
+			postProcessPart: stubPostProcessPart,
 		});
 		if (!result.ok) {
 			throw new Error("expected session to start");
@@ -338,6 +345,7 @@ describe("startRecordingSession", () => {
 			directory,
 			callbacks,
 			createRecorder,
+			postProcessPart: stubPostProcessPart,
 		});
 		if (!result.ok) {
 			throw new Error("expected session to start");
@@ -374,6 +382,7 @@ describe("startRecordingSession", () => {
 			directory,
 			callbacks,
 			createRecorder,
+			postProcessPart: stubPostProcessPart,
 		});
 		if (!result.ok) {
 			throw new Error("expected session to start");
@@ -411,6 +420,7 @@ describe("startRecordingSession", () => {
 			directory,
 			callbacks,
 			createRecorder,
+			postProcessPart: stubPostProcessPart,
 		});
 		if (!result.ok) {
 			throw new Error("expected session to start");
@@ -437,6 +447,7 @@ describe("startRecordingSession", () => {
 			directory,
 			callbacks,
 			createRecorder,
+			postProcessPart: stubPostProcessPart,
 		});
 		if (!result.ok) {
 			throw new Error("expected session to start");
@@ -470,6 +481,7 @@ describe("startRecordingSession", () => {
 			directory,
 			callbacks,
 			createRecorder,
+			postProcessPart: stubPostProcessPart,
 		});
 		if (!result.ok) {
 			throw new Error("expected session to start");
@@ -503,6 +515,7 @@ describe("startRecordingSession", () => {
 			directory,
 			callbacks,
 			createRecorder,
+			postProcessPart: stubPostProcessPart,
 		});
 		if (!result.ok) {
 			throw new Error("expected session to start");
@@ -541,6 +554,7 @@ describe("startRecordingSession", () => {
 			directory,
 			callbacks,
 			createRecorder,
+			postProcessPart: stubPostProcessPart,
 		});
 		if (!result.ok) {
 			throw new Error("expected session to start");
@@ -576,6 +590,7 @@ describe("startRecordingSession", () => {
 			directory,
 			callbacks,
 			createRecorder,
+			postProcessPart: stubPostProcessPart,
 		});
 		if (!result.ok) {
 			throw new Error("expected session to start");
@@ -601,6 +616,7 @@ describe("startRecordingSession", () => {
 			directory,
 			callbacks,
 			createRecorder,
+			postProcessPart: stubPostProcessPart,
 		});
 		if (!result.ok) {
 			throw new Error("expected session to start");
@@ -633,6 +649,7 @@ describe("startRecordingSession", () => {
 			directory,
 			callbacks,
 			createRecorder,
+			postProcessPart: stubPostProcessPart,
 		});
 		if (!result.ok) {
 			throw new Error("expected session to start");
@@ -661,6 +678,7 @@ describe("startRecordingSession", () => {
 			directory,
 			callbacks,
 			createRecorder,
+			postProcessPart: stubPostProcessPart,
 		});
 		if (!result.ok) {
 			throw new Error("expected session to start");
@@ -671,6 +689,168 @@ describe("startRecordingSession", () => {
 		await flushMicrotasks();
 
 		expect(track.stop).toHaveBeenCalledTimes(1);
+	});
+
+	it("post-processes each saved part and skips discarded parts", async () => {
+		const { directory } = createFakeDirectory();
+		const { stream } = createFakeStream();
+		const { createRecorder, handles } = createRecorderFactory();
+		const callbacks = createCallbacks();
+		const postProcessPart = vi.fn(async () => ({ ok: true as const }));
+
+		const result = await startRecordingSession({
+			metadata: createMetadata(),
+			stream,
+			directory,
+			callbacks,
+			createRecorder,
+			postProcessPart,
+		});
+		if (!result.ok) {
+			throw new Error("expected session to start");
+		}
+
+		// Part 1 rolls over (saved); part 2 stops with no data (discarded).
+		await growPartTo(handles[0], PART_SPLIT_BYTES);
+		handles[0].emitStop();
+		await flushMicrotasks();
+		expect(handles).toHaveLength(2);
+		result.session.stop("user");
+		handles[1].emitStop();
+		await flushMicrotasks();
+
+		expect(postProcessPart).toHaveBeenCalledTimes(1);
+		expect(postProcessPart).toHaveBeenCalledWith(
+			directory,
+			createPartFileName("demo.mp4", "capture-1", 1),
+		);
+	});
+
+	it("delays onFinished until the final part's post-processing completes", async () => {
+		const { directory } = createFakeDirectory();
+		const { stream } = createFakeStream();
+		const { createRecorder, handles } = createRecorderFactory();
+		const callbacks = createCallbacks();
+		let resolvePostProcess: (() => void) | undefined;
+		const postProcessPart = vi.fn(
+			() =>
+				new Promise<{ ok: true }>((resolve) => {
+					resolvePostProcess = () => resolve({ ok: true });
+				}),
+		);
+
+		const result = await startRecordingSession({
+			metadata: createMetadata(),
+			stream,
+			directory,
+			callbacks,
+			createRecorder,
+			postProcessPart,
+		});
+		if (!result.ok) {
+			throw new Error("expected session to start");
+		}
+
+		handles[0].emitData(1024);
+		await flushMicrotasks();
+		result.session.stop("user");
+		handles[0].emitStop();
+		await flushMicrotasks();
+
+		expect(postProcessPart).toHaveBeenCalledTimes(1);
+		expect(callbacks.onFinished).not.toHaveBeenCalled();
+
+		resolvePostProcess?.();
+		await flushMicrotasks();
+		expect(callbacks.onFinished).toHaveBeenCalledTimes(1);
+	});
+
+	it("starts the next part without waiting for the previous part's post-processing", async () => {
+		const { directory } = createFakeDirectory();
+		const { stream } = createFakeStream();
+		const { createRecorder, handles } = createRecorderFactory();
+		const callbacks = createCallbacks();
+		const resolvers: (() => void)[] = [];
+		const postProcessPart = vi.fn(
+			() =>
+				new Promise<{ ok: true }>((resolve) => {
+					resolvers.push(() => resolve({ ok: true }));
+				}),
+		);
+
+		const result = await startRecordingSession({
+			metadata: createMetadata(),
+			stream,
+			directory,
+			callbacks,
+			createRecorder,
+			postProcessPart,
+		});
+		if (!result.ok) {
+			throw new Error("expected session to start");
+		}
+
+		await growPartTo(handles[0], PART_SPLIT_BYTES);
+		handles[0].emitStop();
+		await flushMicrotasks();
+
+		// Recording continues on part 2 while part 1 is still being rewritten.
+		expect(callbacks.onPartStarted).toHaveBeenCalledTimes(1);
+		expect(handles).toHaveLength(2);
+		expect(resolvers).toHaveLength(1);
+
+		handles[1].emitData(1024);
+		await flushMicrotasks();
+		result.session.stop("user");
+		handles[1].emitStop();
+		await flushMicrotasks();
+		expect(callbacks.onFinished).not.toHaveBeenCalled();
+
+		// The serial queue finishes part 1's rewrite before part 2's.
+		resolvers[0]();
+		await flushMicrotasks();
+		expect(resolvers).toHaveLength(2);
+		resolvers[1]();
+		await flushMicrotasks();
+		expect(callbacks.onFinished).toHaveBeenCalledTimes(1);
+	});
+
+	it("keeps the capture successful when post-processing fails", async () => {
+		const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+		const { directory } = createFakeDirectory();
+		const { stream } = createFakeStream();
+		const { createRecorder, handles } = createRecorderFactory();
+		const callbacks = createCallbacks();
+		const postProcessPart = vi.fn(async () => ({
+			ok: false as const,
+			reason: "unsupported_box_layout",
+		}));
+
+		const result = await startRecordingSession({
+			metadata: createMetadata(),
+			stream,
+			directory,
+			callbacks,
+			createRecorder,
+			postProcessPart,
+		});
+		if (!result.ok) {
+			throw new Error("expected session to start");
+		}
+
+		handles[0].emitData(1024);
+		await flushMicrotasks();
+		result.session.stop("user");
+		handles[0].emitStop();
+		await flushMicrotasks();
+
+		const outcome = (callbacks.onFinished as ReturnType<typeof vi.fn>).mock
+			.calls[0][0];
+		expect(outcome.message.status).toBe("complete");
+		expect(outcome.message.fileStatus).toBe("saved");
+		expect(outcome.message.savedPartCount).toBe(1);
+		expect(warn).toHaveBeenCalledTimes(1);
+		warn.mockRestore();
 	});
 
 	it("rolls back and reports failure when the recorder cannot be created", async () => {
@@ -687,6 +867,7 @@ describe("startRecordingSession", () => {
 			directory,
 			callbacks,
 			createRecorder,
+			postProcessPart: stubPostProcessPart,
 		});
 
 		expect(result.ok).toBe(false);

@@ -7,12 +7,61 @@ function hasFtypBox(head: number[]): boolean {
 	return ftyp.every((byte, index) => head[4 + index] === byte);
 }
 
+/** Lists the top-level box types of an MP4, or null when the layout is malformed. */
+function topLevelBoxTypes(bytes: number[]): string[] | null {
+	const types: string[] = [];
+	let offset = 0;
+	while (offset < bytes.length) {
+		if (offset + 8 > bytes.length) {
+			return null;
+		}
+		const size =
+			bytes[offset] * 0x1000000 +
+			bytes[offset + 1] * 0x10000 +
+			bytes[offset + 2] * 0x100 +
+			bytes[offset + 3];
+		const type = String.fromCharCode(
+			bytes[offset + 4],
+			bytes[offset + 5],
+			bytes[offset + 6],
+			bytes[offset + 7],
+		);
+		if (size === 1) {
+			// Large-size boxes don't appear in files this small; treat as malformed.
+			return null;
+		}
+		if (size < 8 || offset + size > bytes.length) {
+			return null;
+		}
+		types.push(type);
+		offset += size;
+	}
+	return types;
+}
+
+/** Reads the mvhd duration of the moov box that starts at `moovOffset`. */
+function readMvhdDuration(bytes: number[], moovOffset: number): number {
+	// moov header (8) is followed by mvhd: [size][mvhd][version+flags]...
+	const mvhdStart = moovOffset + 8;
+	const version = bytes[mvhdStart + 8];
+	// version 0: creation(4) + modification(4) + timescale(4) precede duration.
+	// version 1: creation(8) + modification(8) + timescale(4) precede duration.
+	const durationOffset = mvhdStart + 12 + (version === 1 ? 20 : 12);
+	let duration = 0;
+	const width = version === 1 ? 8 : 4;
+	for (let index = 0; index < width; index += 1) {
+		duration = duration * 256 + bytes[durationOffset + index];
+	}
+	return duration;
+}
+
 test("selects a video, records, and saves an MP4", async ({
 	context,
 	getMessage,
 	startPicker,
 	stubDirectoryPicker,
 	readOpfsFiles,
+	readOpfsFileBytes,
 }) => {
 	const page = await context.newPage();
 	await page.goto(VIDEO_TEST_PAGE_URL);
@@ -64,4 +113,25 @@ test("selects a video, records, and saves an MP4", async ({
 	);
 	expect(saved.size).toBeGreaterThan(0);
 	expect(hasFtypBox(saved.head)).toBe(true);
+
+	// The saved fragmented MP4 is defragmented in place after the recording
+	// stops, so poll until the flat faststart layout (single moov before the
+	// mdat, no moof fragments) appears.
+	await expect
+		.poll(
+			async () => {
+				const bytes = await readOpfsFileBytes(page, saved.name);
+				return bytes ? topLevelBoxTypes(bytes) : null;
+			},
+			{ timeout: 15_000 },
+		)
+		.toEqual(["ftyp", "moov", "mdat"]);
+
+	const defragged = await readOpfsFileBytes(page, saved.name);
+	if (!defragged) {
+		throw new Error("part file disappeared after defragmentation");
+	}
+	// The moov sits right after ftyp and now carries the real duration.
+	const ftypSize = defragged[3] + defragged[2] * 0x100;
+	expect(readMvhdDuration(defragged, ftypSize)).toBeGreaterThan(0);
 });

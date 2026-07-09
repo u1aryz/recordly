@@ -47,6 +47,12 @@ type ExtensionFixtures = {
 	readOpfsFiles: (
 		page: Page,
 	) => Promise<{ name: string; size: number; head: number[] }[]>;
+	/**
+	 * Reads the full bytes of one file under the test page's OPFS root.
+	 * Returns null while the file is missing or being rewritten (so callers
+	 * can retry from expect.poll).
+	 */
+	readOpfsFileBytes: (page: Page, name: string) => Promise<number[] | null>;
 };
 
 export const test = base.extend<ExtensionFixtures>({
@@ -166,6 +172,22 @@ export const test = base.extend<ExtensionFixtures>({
 				}
 				return files;
 			});
+		});
+	},
+	// biome-ignore lint/correctness/noEmptyPattern: Playwright fixture convention
+	readOpfsFileBytes: async ({}, use) => {
+		await use(async (page, name) => {
+			return await page.evaluate(async (fileName) => {
+				const root = await navigator.storage.getDirectory();
+				try {
+					const handle = await root.getFileHandle(fileName);
+					const file = await handle.getFile();
+					return Array.from(new Uint8Array(await file.arrayBuffer()));
+				} catch {
+					// Missing or rewritten mid-read; let the caller poll again.
+					return null;
+				}
+			}, name);
 		});
 	},
 });

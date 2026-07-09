@@ -7,7 +7,12 @@ import {
 } from "./capture-finish";
 import { markResolutionChangeFileDiscarded } from "./capture-state";
 import { createPartFileName, shouldSplitPart } from "./file-system";
+import {
+	type DefragmentPartOutcome,
+	defragmentPartFile,
+} from "./mp4-defragment";
 import { FORCE_FINALIZE_TIMEOUT_MS } from "./recording-monitor";
+import { createSerialTaskQueue } from "./task-queue";
 import type {
 	CaptureFinishedMessage,
 	CaptureMetadata,
@@ -63,6 +68,11 @@ export type RecordingSessionOptions = {
 	) => MediaRecorder;
 	/** Test injection point. Defaults to `performance.now()`. */
 	now?: () => number;
+	/** Test injection point. Defaults to `defragmentPartFile`. */
+	postProcessPart?: (
+		directory: FileSystemDirectoryHandle,
+		fileName: string,
+	) => Promise<DefragmentPartOutcome>;
 };
 
 export type RecordingSession = {
@@ -91,6 +101,11 @@ export async function startRecordingSession(
 		((s: MediaStream, recorderOptions?: MediaRecorderOptions) =>
 			new MediaRecorder(s, recorderOptions));
 	const now = options.now ?? (() => performance.now());
+	const postProcessPart = options.postProcessPart ?? defragmentPartFile;
+	// Saved parts are defragmented in the background, one at a time; recording
+	// of the next part continues meanwhile. finishRecording() waits for this
+	// queue so a capture is never reported finished mid-rewrite.
+	const postProcessQueue = createSerialTaskQueue();
 
 	let metadata = options.metadata;
 
@@ -337,6 +352,21 @@ export async function startRecordingSession(
 			savedPartCount: (metadata.savedPartCount ?? 0) + 1,
 		};
 		callbacks.onProgress(metadata);
+		postProcessQueue.enqueue(async () => {
+			const outcome = await postProcessPart(directory, part.fileName).catch(
+				(error: unknown) => ({
+					ok: false as const,
+					reason: getErrorMessage(error, "post-processing failed"),
+				}),
+			);
+			if (!outcome.ok) {
+				// Best effort: the fragmented original stays valid, just slower to
+				// start playing over a network.
+				console.warn(
+					`[recordly] keeping fragmented MP4 for ${part.fileName}: ${outcome.reason}`,
+				);
+			}
+		});
 	}
 
 	async function discardCurrentPart(part: RecordingPart): Promise<void> {
@@ -368,6 +398,9 @@ export async function startRecordingSession(
 			finalizeTimer = undefined;
 		}
 		stopMediaStreamTracks(stream);
+		// Keep the HUD in its "finalizing" state until every saved part has been
+		// defragmented (or its rewrite has bailed out).
+		await postProcessQueue.settled();
 		const hasSavedParts = (metadata.savedPartCount ?? 0) > 0;
 		const message = createCaptureFinishedMessage(metadata, {
 			stopReason,
