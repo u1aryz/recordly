@@ -36,6 +36,21 @@ function toVideoRect(domRect: DOMRect): VideoRect {
 	};
 }
 
+export function getToolbarPosition(
+	rect: { left: number; top: number },
+	toolbarSize: { width: number; height: number },
+	viewportWidth: number,
+	margin = 8,
+): ToolbarPosition {
+	return {
+		left: Math.max(
+			margin,
+			Math.min(rect.left, viewportWidth - toolbarSize.width - margin),
+		),
+		top: Math.max(margin, rect.top - toolbarSize.height - margin),
+	};
+}
+
 export function VideoPickerOverlay({
 	onStart,
 	onClose,
@@ -134,15 +149,16 @@ export function VideoPickerOverlay({
 			setToolbarPosition(null);
 			return;
 		}
-		const toolbarWidth = toolbarRef.current.offsetWidth;
-		const toolbarHeight = toolbarRef.current.offsetHeight;
-		setToolbarPosition({
-			left: Math.max(
-				8,
-				Math.min(rect.left, window.innerWidth - toolbarWidth - 8),
+		setToolbarPosition(
+			getToolbarPosition(
+				rect,
+				{
+					width: toolbarRef.current.offsetWidth,
+					height: toolbarRef.current.offsetHeight,
+				},
+				window.innerWidth,
 			),
-			top: Math.max(8, rect.top - toolbarHeight - 8),
-		});
+		);
 	}, [rect]);
 
 	async function handleStart(): Promise<void> {

@@ -5,7 +5,7 @@ import {
 	isFatalStopReason,
 	reduceStopReason,
 } from "./capture-finish";
-import { markResolutionChangeFileDiscarded } from "./capture-state";
+import { applyPartDiscard } from "./capture-state";
 import { createPartFileName, shouldSplitPart } from "./file-system";
 import {
 	type DefragmentPartOutcome,
@@ -376,16 +376,7 @@ export async function startRecordingSession(
 	}
 
 	function discardPartProgress(part: RecordingPart): void {
-		metadata = {
-			...metadata,
-			sizeBytes: Math.max(0, metadata.sizeBytes - part.sizeBytes),
-			chunkCount: Math.max(0, metadata.chunkCount - part.chunkCount),
-			currentPartSizeBytes: 0,
-			resolutionChanges: markResolutionChangeFileDiscarded(
-				metadata.resolutionChanges,
-				part.index,
-			),
-		};
+		metadata = applyPartDiscard(metadata, part);
 	}
 
 	async function finishRecording(): Promise<void> {

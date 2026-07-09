@@ -138,6 +138,22 @@ export function markResolutionChangeFileDiscarded(
 	);
 }
 
+export function applyPartDiscard(
+	metadata: CaptureMetadata,
+	part: { sizeBytes: number; chunkCount: number; index: number },
+): CaptureMetadata {
+	return {
+		...metadata,
+		sizeBytes: Math.max(0, metadata.sizeBytes - part.sizeBytes),
+		chunkCount: Math.max(0, metadata.chunkCount - part.chunkCount),
+		currentPartSizeBytes: 0,
+		resolutionChanges: markResolutionChangeFileDiscarded(
+			metadata.resolutionChanges,
+			part.index,
+		),
+	};
+}
+
 export function finishCapture(
 	metadata: CaptureMetadata,
 	input: {

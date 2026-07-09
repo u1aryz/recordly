@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import {
+	applyPartDiscard,
 	applyProgress,
 	createCaptureMetadata,
 	finishCapture,
@@ -207,6 +208,107 @@ describe("capture state", () => {
 
 		expect(markResolutionChangeFileDiscarded(changes, 5)).toBe(changes);
 		expect(markResolutionChangeFileDiscarded(undefined, 5)).toBeUndefined();
+	});
+
+	it("rolls back the discarded part's totals", () => {
+		const metadata = {
+			...createCaptureMetadata({
+				videoId: "video-id",
+				tabId: 1,
+				pageUrl: "https://example.test",
+				title: "Demo",
+				mimeType: "video/mp4",
+				width: 1920,
+				height: 1080,
+				storageMode: "segmented-files",
+			}),
+			sizeBytes: 500,
+			chunkCount: 5,
+			currentPartSizeBytes: 200,
+		};
+
+		const rolledBack = applyPartDiscard(metadata, {
+			sizeBytes: 200,
+			chunkCount: 2,
+			index: 1,
+		});
+
+		expect(rolledBack.sizeBytes).toBe(300);
+		expect(rolledBack.chunkCount).toBe(3);
+		expect(rolledBack.currentPartSizeBytes).toBe(0);
+	});
+
+	it("never rolls the totals back below zero", () => {
+		const metadata = {
+			...createCaptureMetadata({
+				videoId: "video-id",
+				tabId: 1,
+				pageUrl: "https://example.test",
+				title: "Demo",
+				mimeType: "video/mp4",
+				width: 1920,
+				height: 1080,
+				storageMode: "segmented-files",
+			}),
+			sizeBytes: 100,
+			chunkCount: 1,
+		};
+
+		const rolledBack = applyPartDiscard(metadata, {
+			sizeBytes: 999,
+			chunkCount: 9,
+			index: 1,
+		});
+
+		expect(rolledBack.sizeBytes).toBe(0);
+		expect(rolledBack.chunkCount).toBe(0);
+	});
+
+	it("marks the discarded part's resolution change entry", () => {
+		const changes = [
+			{
+				from: { width: 1920, height: 1080 },
+				to: { width: 1280, height: 720 },
+				partIndex: 2,
+			},
+			{
+				from: { width: 1280, height: 720 },
+				to: { width: 640, height: 360 },
+				partIndex: 3,
+			},
+		];
+		const metadata = {
+			...createCaptureMetadata({
+				videoId: "video-id",
+				tabId: 1,
+				pageUrl: "https://example.test",
+				title: "Demo",
+				mimeType: "video/mp4",
+				width: 1920,
+				height: 1080,
+				storageMode: "segmented-files",
+			}),
+			resolutionChanges: changes,
+		};
+
+		const rolledBack = applyPartDiscard(metadata, {
+			sizeBytes: 0,
+			chunkCount: 0,
+			index: 3,
+		});
+
+		expect(rolledBack.resolutionChanges).toEqual([
+			changes[0],
+			{ ...changes[1], fileDiscarded: true },
+		]);
+
+		const untouched = applyPartDiscard(metadata, {
+			sizeBytes: 0,
+			chunkCount: 0,
+			index: 5,
+		});
+
+		expect(untouched.resolutionChanges).toBe(changes);
 	});
 
 	it("preserves fileDiscarded flags through applyProgress merges", () => {
