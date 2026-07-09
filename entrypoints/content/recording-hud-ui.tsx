@@ -13,7 +13,7 @@ import {
 	type HudTone,
 } from "./hud-store";
 import { RecordingHud } from "./RecordingHud";
-import { SHADOW_HOST_CSS } from "./shadow-host-css";
+import { createShadowHostCss, HUD_Z_INDEX } from "./shadow-host-css";
 
 export type RecordingHudManager = {
 	add: (metadata: CaptureMetadata) => void;
@@ -60,8 +60,8 @@ export function createRecordingHudUi(
 		uiPromise ??= createShadowRootUi(ctx, {
 			name: "recordly-recording-hud",
 			position: "overlay",
-			zIndex: 2147483647,
-			css: SHADOW_HOST_CSS,
+			zIndex: HUD_Z_INDEX,
+			css: createShadowHostCss(HUD_Z_INDEX),
 			onMount(container) {
 				const appRoot = document.createElement("div");
 				container.append(appRoot);

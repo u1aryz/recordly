@@ -5,7 +5,7 @@ import {
 	createShadowRootUi,
 	type ShadowRootContentScriptUi,
 } from "wxt/utils/content-script-ui/shadow-root";
-import { SHADOW_HOST_CSS } from "./shadow-host-css";
+import { createShadowHostCss, PICKER_Z_INDEX } from "./shadow-host-css";
 import {
 	VideoPickerOverlay,
 	type VideoPickerStartResult,
@@ -33,8 +33,8 @@ export function createVideoPickerUi(
 		uiPromise ??= createShadowRootUi(ctx, {
 			name: "recordly-video-picker",
 			position: "overlay",
-			zIndex: 2147483647,
-			css: SHADOW_HOST_CSS,
+			zIndex: PICKER_Z_INDEX,
+			css: createShadowHostCss(PICKER_Z_INDEX),
 			onMount(container) {
 				const appRoot = document.createElement("div");
 				container.append(appRoot);
