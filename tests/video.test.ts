@@ -2,13 +2,17 @@ import { describe, expect, it, vi } from "vitest";
 import {
 	createMediaRecorderOptions,
 	createVideoCaptureStream,
+	describeVideo,
 	findVideoFromPoint,
 	formatBytes,
 	formatDuration,
 	formatResolution,
 	getMp4MimeType,
+	getOrCreateVideoId,
 	getVideoBitsPerSecond,
 	isVideoConnected,
+	listVideos,
+	stopMediaStreamTracks,
 } from "@/shared/video";
 
 describe("video helpers", () => {
@@ -153,5 +157,96 @@ describe("video helpers", () => {
 		expect(result.errorMessage).toBe(
 			"No video or audio is available to record. Play the video and try again.",
 		);
+	});
+
+	it("assigns a stable id to a video element", () => {
+		const video = document.createElement("video");
+		const id = getOrCreateVideoId(video);
+
+		expect(video.getAttribute("data-vcap-id")).toBe(id);
+		expect(getOrCreateVideoId(video)).toBe(id);
+	});
+
+	it("describes a capturable video with its intrinsic dimensions", () => {
+		const video = document.createElement("video");
+		Object.defineProperty(video, "videoWidth", { value: 1920 });
+		Object.defineProperty(video, "videoHeight", { value: 1080 });
+		video.captureStream = vi.fn(() => ({}) as MediaStream);
+		video.setAttribute("aria-label", "Aria title");
+
+		expect(describeVideo(video)).toMatchObject({
+			width: 1920,
+			height: 1080,
+			title: "Aria title",
+			hasAudio: true,
+			canCapture: true,
+			reason: undefined,
+		});
+	});
+
+	it("falls back to layout size when intrinsic dimensions are unavailable", () => {
+		const video = document.createElement("video");
+		Object.defineProperty(video, "clientWidth", { value: 640 });
+		Object.defineProperty(video, "clientHeight", { value: 360 });
+
+		const descriptor = describeVideo(video);
+
+		expect(descriptor.width).toBe(640);
+		expect(descriptor.height).toBe(360);
+	});
+
+	it("falls back through the title sources in order", () => {
+		const video = document.createElement("video");
+
+		document.title = "";
+		expect(describeVideo(video).title).toBe("Untitled video");
+
+		document.title = "Page title";
+		expect(describeVideo(video).title).toBe("Page title");
+
+		video.setAttribute("title", "Attr title");
+		expect(describeVideo(video).title).toBe("Attr title");
+
+		video.setAttribute("aria-label", "Aria title");
+		expect(describeVideo(video).title).toBe("Aria title");
+
+		document.title = "";
+	});
+
+	it("flags videos that cannot provide a capture stream", () => {
+		const video = document.createElement("video");
+
+		const descriptor = describeVideo(video);
+
+		expect(descriptor.canCapture).toBe(false);
+		expect(descriptor.reason).toBe(
+			"This browser does not support video.captureStream().",
+		);
+	});
+
+	it("lists videos in document order", () => {
+		const root = document.createElement("div");
+		const first = document.createElement("video");
+		const second = document.createElement("video");
+		root.append(first, second);
+
+		const descriptors = listVideos(root);
+
+		expect(descriptors).toHaveLength(2);
+		expect(descriptors[0]?.id).toBe(first.getAttribute("data-vcap-id"));
+		expect(descriptors[1]?.id).toBe(second.getAttribute("data-vcap-id"));
+		expect(listVideos(document.createElement("div"))).toEqual([]);
+	});
+
+	it("stops every track in the stream", () => {
+		const tracks = [{ stop: vi.fn() }, { stop: vi.fn() }];
+
+		stopMediaStreamTracks({
+			getTracks: () => tracks,
+		} as unknown as MediaStream);
+
+		for (const track of tracks) {
+			expect(track.stop).toHaveBeenCalledTimes(1);
+		}
 	});
 });

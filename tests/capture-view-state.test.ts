@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
 	type CaptureViewState,
+	isEditableTarget,
 	reduceCaptureViewOnPortMessage,
 } from "@/entrypoints/captures/capture-view-state";
 import type { CaptureMetadata } from "@/shared/types";
@@ -215,5 +216,25 @@ describe("reduceCaptureViewOnPortMessage", () => {
 		expect(
 			reduceCaptureViewOnPortMessage(state, { type: "CAPTURES_SUBSCRIBE" }),
 		).toBe(state);
+	});
+});
+
+describe("isEditableTarget", () => {
+	it("treats form fields as editable", () => {
+		expect(isEditableTarget(document.createElement("input"))).toBe(true);
+		expect(isEditableTarget(document.createElement("textarea"))).toBe(true);
+		expect(isEditableTarget(document.createElement("select"))).toBe(true);
+	});
+
+	it("treats contentEditable elements as editable", () => {
+		const div = document.createElement("div");
+		// jsdom does not derive isContentEditable from the attribute.
+		Object.defineProperty(div, "isContentEditable", { value: true });
+		expect(isEditableTarget(div)).toBe(true);
+	});
+
+	it("ignores non-editable targets", () => {
+		expect(isEditableTarget(null)).toBe(false);
+		expect(isEditableTarget(document.createElement("div"))).toBe(false);
 	});
 });

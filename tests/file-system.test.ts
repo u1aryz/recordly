@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
 	createPartFileName,
+	isFilePickerAbortError,
 	PART_SPLIT_BYTES,
 	shouldSplitPart,
 } from "@/shared/file-system";
@@ -21,5 +22,20 @@ describe("segmented capture files", () => {
 		expect(shouldSplitPart(PART_SPLIT_BYTES - 1)).toBe(false);
 		expect(shouldSplitPart(PART_SPLIT_BYTES)).toBe(true);
 		expect(shouldSplitPart(PART_SPLIT_BYTES + 1)).toBe(true);
+	});
+});
+
+describe("isFilePickerAbortError", () => {
+	it("matches only the picker's AbortError", () => {
+		expect(
+			isFilePickerAbortError(
+				new DOMException("The user aborted a request.", "AbortError"),
+			),
+		).toBe(true);
+		expect(
+			isFilePickerAbortError(new DOMException("denied", "NotAllowedError")),
+		).toBe(false);
+		expect(isFilePickerAbortError(new Error("AbortError"))).toBe(false);
+		expect(isFilePickerAbortError(undefined)).toBe(false);
 	});
 });
