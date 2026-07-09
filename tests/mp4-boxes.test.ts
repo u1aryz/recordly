@@ -3,6 +3,7 @@ import {
 	concatBytes,
 	fourCc,
 	i32,
+	i32Array,
 	makeBox,
 	makeFullBox,
 	peekBox,
@@ -14,7 +15,9 @@ import {
 	readU64,
 	splitChildBoxes,
 	u32,
+	u32Array,
 	u64,
+	u64Array,
 } from "@/shared/mp4-boxes";
 
 describe("byte helpers", () => {
@@ -39,6 +42,24 @@ describe("byte helpers", () => {
 
 	it("round-trips four-character codes", () => {
 		expect(readFourCc(fourCc("moov"), 0)).toBe("moov");
+	});
+
+	it("packs value tables into contiguous buffers", () => {
+		expect(Array.from(u32Array([1, 0xffffffff]))).toEqual([
+			0, 0, 0, 1, 0xff, 0xff, 0xff, 0xff,
+		]);
+		expect(Array.from(i32Array([-1, 2]))).toEqual([
+			0xff, 0xff, 0xff, 0xff, 0, 0, 0, 2,
+		]);
+		expect(Array.from(u64Array([1]))).toEqual([0, 0, 0, 0, 0, 0, 0, 1]);
+		expect(u32Array([]).length).toBe(0);
+	});
+
+	it("packs tables far beyond the spread-argument limit", () => {
+		const values = new Array(500_000).fill(7);
+		const packed = u32Array(values);
+		expect(packed.length).toBe(2_000_000);
+		expect(readU32(packed, 1_999_996)).toBe(7);
 	});
 
 	it("concatenates byte arrays in order", () => {

@@ -11,7 +11,7 @@ import {
 	type BoxRef,
 	concatBytes,
 	fourCc,
-	i32,
+	i32Array,
 	makeBox,
 	makeFullBox,
 	peekBox,
@@ -24,7 +24,9 @@ import {
 	splitChildBoxes,
 	U32_MAX,
 	u32,
+	u32Array,
 	u64,
+	u64Array,
 } from "./mp4-boxes";
 
 /** Upper bound for metadata boxes (ftyp/moov/moof) loaded into memory. */
@@ -643,7 +645,10 @@ function collectMoofChunks(
 				byteLength,
 				sampleCount: trun.samples.length,
 			});
-			movie.tracks[trackIndex].samples.push(...trun.samples);
+			// push(...samples) would hit the argument limit for very large runs.
+			for (const sample of trun.samples) {
+				movie.tracks[trackIndex].samples.push(sample);
+			}
 		}
 	}
 	return true;
@@ -668,6 +673,8 @@ function buildSampleTables(
 	chunkOffsets: number[],
 	useCo64: boolean,
 ): Uint8Array {
+	// Split-sized parts carry hundreds of thousands of samples, so every
+	// table below must use the u32Array-style packers, never argument spreads.
 	const parts: Uint8Array[] = [track.stsd];
 
 	const sttsRuns = encodeRuns(track.samples.map((sample) => sample.duration));
@@ -677,7 +684,7 @@ function buildSampleTables(
 			0,
 			0,
 			u32(sttsRuns.length),
-			...sttsRuns.flatMap((run) => [u32(run.count), u32(run.value)]),
+			u32Array(sttsRuns.flatMap((run) => [run.count, run.value])),
 		),
 	);
 
@@ -691,7 +698,9 @@ function buildSampleTables(
 				1,
 				0,
 				u32(cttsRuns.length),
-				...cttsRuns.flatMap((run) => [u32(run.count), i32(run.value)]),
+				// Interleaved (count, offset) pairs. Counts stay far below 2^31,
+				// so the signed packer writes identical bytes for both fields.
+				i32Array(cttsRuns.flatMap((run) => [run.count, run.value])),
 			),
 		);
 	}
@@ -709,7 +718,7 @@ function buildSampleTables(
 				0,
 				0,
 				u32(syncSampleNumbers.length),
-				...syncSampleNumbers.map((number) => u32(number)),
+				u32Array(syncSampleNumbers),
 			),
 		);
 	}
@@ -730,11 +739,13 @@ function buildSampleTables(
 			0,
 			0,
 			u32(stscEntries.length),
-			...stscEntries.flatMap((entry) => [
-				u32(entry.firstChunk),
-				u32(entry.samplesPerChunk),
-				u32(1),
-			]),
+			u32Array(
+				stscEntries.flatMap((entry) => [
+					entry.firstChunk,
+					entry.samplesPerChunk,
+					1,
+				]),
+			),
 		),
 	);
 
@@ -745,7 +756,7 @@ function buildSampleTables(
 			0,
 			u32(0),
 			u32(track.samples.length),
-			...track.samples.map((sample) => u32(sample.size)),
+			u32Array(track.samples.map((sample) => sample.size)),
 		),
 	);
 
@@ -756,7 +767,7 @@ function buildSampleTables(
 				0,
 				0,
 				u32(chunkOffsets.length),
-				...chunkOffsets.map((offset) => u64(offset)),
+				u64Array(chunkOffsets),
 			),
 		);
 	} else {
@@ -766,7 +777,7 @@ function buildSampleTables(
 				0,
 				0,
 				u32(chunkOffsets.length),
-				...chunkOffsets.map((offset) => u32(offset)),
+				u32Array(chunkOffsets),
 			),
 		);
 	}

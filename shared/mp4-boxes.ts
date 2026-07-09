@@ -80,6 +80,40 @@ export function fourCc(type: string): Uint8Array<ArrayBuffer> {
 	return bytes;
 }
 
+/**
+ * Packs u32 values into one buffer. Large sample tables must go through
+ * these packers: spreading per-value byte arrays as call arguments hits the
+ * engine's argument-count limit at roughly 100k values.
+ */
+export function u32Array(values: readonly number[]): Uint8Array<ArrayBuffer> {
+	const bytes = new Uint8Array(values.length * 4);
+	const view = new DataView(bytes.buffer);
+	for (const [index, value] of values.entries()) {
+		view.setUint32(index * 4, value);
+	}
+	return bytes;
+}
+
+/** Packs i32 values into one buffer. See u32Array for why packing is required. */
+export function i32Array(values: readonly number[]): Uint8Array<ArrayBuffer> {
+	const bytes = new Uint8Array(values.length * 4);
+	const view = new DataView(bytes.buffer);
+	for (const [index, value] of values.entries()) {
+		view.setInt32(index * 4, value);
+	}
+	return bytes;
+}
+
+/** Packs u64 values into one buffer. See u32Array for why packing is required. */
+export function u64Array(values: readonly number[]): Uint8Array<ArrayBuffer> {
+	const bytes = new Uint8Array(values.length * 8);
+	const view = new DataView(bytes.buffer);
+	for (const [index, value] of values.entries()) {
+		view.setBigUint64(index * 8, BigInt(value));
+	}
+	return bytes;
+}
+
 export function concatBytes(
 	parts: readonly Uint8Array[],
 ): Uint8Array<ArrayBuffer> {

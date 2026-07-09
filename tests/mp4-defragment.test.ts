@@ -10,6 +10,7 @@ import {
 	readU64,
 	splitChildBoxes,
 	u32,
+	u32Array,
 	u64,
 } from "@/shared/mp4-boxes";
 import {
@@ -176,10 +177,11 @@ function buildFragment(
 				u32(run.samples.length),
 				i32(dataOffsets[runIndex]),
 				...(run.firstSampleSync ? [u32(SYNC_SAMPLE_FLAGS)] : []),
-				...run.samples.flatMap((sample) => [
-					u32(sample.duration),
-					u32(sample.size),
-				]),
+				// Packed rather than spread so the builder can produce runs with
+				// hundreds of thousands of samples.
+				u32Array(
+					run.samples.flatMap((sample) => [sample.duration, sample.size]),
+				),
 			);
 			return makeBox("traf", tfhd, tfdt, trun);
 		});
@@ -537,6 +539,55 @@ describe("planDefragment", () => {
 		]);
 		const planned = await planDefragment(new Blob([flat]));
 		expect(planned).toMatchObject({ ok: false, reason: "not_fragmented_mp4" });
+	});
+
+	it("defragments a split-sized part with hundreds of thousands of samples", async () => {
+		// A ~2GiB rollover part spans 45 minutes to 3+ hours of recording,
+		// i.e. hundreds of thousands of samples per track. Regression test for
+		// the argument-spread RangeError that made exactly those parts bail
+		// out (spreading one 4-byte array per sample into makeFullBox).
+		const fragmentCount = 2000;
+		const samplesPerFragment = 200;
+		const fragments: FragmentSpec[] = Array.from(
+			{ length: fragmentCount },
+			() => ({
+				runs: [
+					{
+						trackId: 1,
+						// Alternating durations defeat run-length encoding, so stts
+						// grows with the sample count just like real 29.97fps video.
+						samples: Array.from({ length: samplesPerFragment }, (_, index) => ({
+							duration: index % 2 === 0 ? 1023 : 1024,
+							size: 1,
+						})),
+					},
+				],
+			}),
+		);
+		const { bytes } = buildFragmentedMp4([AUDIO_TRACK], fragments);
+		const planned = await planDefragment(new Blob([bytes]));
+		if (!planned.ok) {
+			throw new Error(`bail: ${planned.reason} ${planned.detail ?? ""}`);
+		}
+		expect(planned.plan.mdatSourceRanges).toHaveLength(fragmentCount);
+
+		// Spot-check table sizes without materializing huge expected arrays.
+		const sampleCount = fragmentCount * samplesPerFragment;
+		const moovEntry = indexChildren(
+			planned.plan.header,
+			0,
+			planned.plan.header.length - 8, // trailing 8-byte mdat header
+		).get("moov");
+		if (!moovEntry) {
+			throw new Error("moov missing");
+		}
+		const { tables } = trackTablesOf(moovEntry, 0);
+		const stsz = tables.get("stsz")?.bytes;
+		expect(stsz && readU32(stsz, 16)).toBe(sampleCount);
+		const stts = tables.get("stts")?.bytes;
+		expect(stts && readU32(stts, 12)).toBe(sampleCount);
+		expect(stts && readU32(stts, 16)).toBe(1); // first entry count
+		expect(stts && readU32(stts, 20)).toBe(1023); // first entry duration
 	});
 
 	it("drops a trailing mfra index box", async () => {
