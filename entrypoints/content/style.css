@@ -59,6 +59,13 @@
 	--text-base--line-height: 1.45;
 }
 
+/* Outline ring + deep drop shadow so overlay panels stay visible on dark pages. */
+.overlay-contrast-shadow {
+	box-shadow:
+		0 0 0 1px color-mix(in oklab, var(--color-base-content) 22%, transparent),
+		0 25px 50px -12px oklch(0% 0 0 / 0.6);
+}
+
 /* Keep the total duration (800ms x 2) in sync with HIGHLIGHT_DISPLAY_MS in hud-store.ts. */
 @keyframes hud-row-blink {
 	0%,

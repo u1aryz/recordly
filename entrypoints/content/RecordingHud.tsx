@@ -159,7 +159,7 @@ export function RecordingHud({
 		<section
 			ref={panelRef}
 			aria-label={t("recordingStatus")}
-			className={`${state.closing ? "hud-panel-exit" : "hud-panel-enter"} pointer-events-auto fixed w-[min(390px,calc(100vw-32px))] overflow-hidden rounded-lg border border-base-300 bg-base-100 font-sans text-base-content text-sm shadow-2xl`}
+			className={`${state.closing ? "hud-panel-exit" : "hud-panel-enter"} overlay-contrast-shadow pointer-events-auto fixed w-[min(390px,calc(100vw-32px))] overflow-hidden rounded-lg border border-base-300 bg-base-100 font-sans text-base-content text-sm`}
 			style={
 				state.position
 					? { left: state.position.left, top: state.position.top }

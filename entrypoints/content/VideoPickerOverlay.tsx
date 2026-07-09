@@ -168,7 +168,7 @@ export function VideoPickerOverlay({
 
 	return (
 		<div className="pointer-events-none fixed inset-0" ref={rootRef}>
-			<div className="pointer-events-none fixed top-3 left-1/2 max-w-[calc(100vw-24px)] -translate-x-1/2 whitespace-nowrap rounded-lg border border-base-300 bg-base-100 px-3.5 py-2.5 font-semibold text-base-content text-xs shadow-2xl">
+			<div className="overlay-contrast-shadow pointer-events-none fixed top-3 left-1/2 max-w-[calc(100vw-24px)] -translate-x-1/2 whitespace-nowrap rounded-lg border border-base-300 bg-base-100 px-3.5 py-2.5 font-semibold text-base-content text-xs">
 				{t("pickerInstructions")}
 				<span className="text-base-content/60">
 					{"　"}
@@ -187,7 +187,7 @@ export function VideoPickerOverlay({
 						}}
 					/>
 					<div
-						className="pointer-events-auto fixed flex max-w-[calc(100vw-16px)] flex-col overflow-hidden rounded-lg border border-base-300 bg-base-100 text-base-content text-xs shadow-2xl"
+						className="overlay-contrast-shadow pointer-events-auto fixed flex max-w-[calc(100vw-16px)] flex-col overflow-hidden rounded-lg border border-base-300 bg-base-100 text-base-content text-xs"
 						ref={toolbarRef}
 						style={
 							toolbarPosition
