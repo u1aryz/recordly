@@ -61,6 +61,13 @@ test("demo: select a video with the picker, record, and save an MP4", async ({
 		)
 		.toHaveLength(1);
 
+	// Wait for the HUD to report the save so the demo ends on the
+	// completion message rather than the finalizing state.
+	const completionMessage = await getMessage("completionDefault");
+	await expect(page.getByText(completionMessage)).toBeVisible({
+		timeout: 15_000,
+	});
+
 	// Show the final state briefly before finishing.
 	await page.waitForTimeout(1500);
 });
