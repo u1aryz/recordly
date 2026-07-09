@@ -120,3 +120,32 @@ test("pressing Escape closes the picker", async ({
 	await page.keyboard.press("Escape");
 	await expect(page.locator("recordly-video-picker")).toHaveCount(0);
 });
+
+test("picker UI stays clickable above a page element with a z-index", async ({
+	context,
+	getMessage,
+	startPicker,
+}) => {
+	const page = await context.newPage();
+	await page.goto(VIDEO_TEST_PAGE_URL);
+	const videoLabel = await getMessage("videoElementLabel");
+	const cancelLabel = await getMessage("cancel");
+
+	// Stretch the page's fixed z-index:100 header over the whole viewport so
+	// every picker interaction fails if the overlay is stacked beneath it.
+	await page.evaluate(() => {
+		const header = document.querySelector("header");
+		if (header) {
+			header.style.height = "100vh";
+		}
+	});
+
+	await startPicker();
+	await hoverVideo(page);
+	await expect(page.getByText(videoLabel, { exact: true })).toBeVisible();
+
+	// Playwright refuses to click a covered element, so this click also
+	// proves the toolbar is painted above the header.
+	await page.getByRole("button", { name: cancelLabel }).click();
+	await expect(page.locator("recordly-video-picker")).toHaveCount(0);
+});

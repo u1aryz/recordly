@@ -135,3 +135,56 @@ test("selects a video, records, and saves an MP4", async ({
 	const ftypSize = defragged[3] + defragged[2] * 0x100;
 	expect(readMvhdDuration(defragged, ftypSize)).toBeGreaterThan(0);
 });
+
+test("stops automatically and saves when the video ends", async ({
+	context,
+	getMessage,
+	startPicker,
+	stubDirectoryPicker,
+	readOpfsFiles,
+}) => {
+	const page = await context.newPage();
+	await page.goto(VIDEO_TEST_PAGE_URL);
+	const videoLabel = await getMessage("videoElementLabel");
+	const startLabel = await getMessage("chooseFolderAndRecord");
+	const stopLabel = await getMessage("stopAndSave");
+
+	await stubDirectoryPicker(page);
+	await startPicker();
+	const box = await page.locator("#v").boundingBox();
+	if (!box) {
+		throw new Error("video element not found");
+	}
+	await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2, {
+		steps: 5,
+	});
+	await expect(page.getByText(videoLabel, { exact: true })).toBeVisible();
+	await page.getByRole("button", { name: startLabel }).click();
+	await expect(page.getByRole("button", { name: stopLabel })).toBeVisible({
+		timeout: 15_000,
+	});
+
+	// Record past the chunk timeslice (3 seconds), then simulate the video
+	// reaching its end. The canvas-driven stream never ends on its own, so
+	// dispatch the "ended" event the content script listens for.
+	await page.waitForTimeout(3500);
+	await page.evaluate(() => {
+		document.getElementById("v")?.dispatchEvent(new Event("ended"));
+	});
+
+	// The HUD reports the automatic stop and the part file is saved.
+	await expect(
+		page.getByText(await getMessage("completionVideoEnded")),
+	).toBeVisible({ timeout: 15_000 });
+	await expect
+		.poll(
+			async () => {
+				const files = await readOpfsFiles(page);
+				return files.filter(
+					(file) => /-part-001\.mp4$/.test(file.name) && file.size > 0,
+				);
+			},
+			{ timeout: 15_000 },
+		)
+		.toHaveLength(1);
+});
