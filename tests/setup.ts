@@ -2,6 +2,7 @@ import "@testing-library/jest-dom/vitest";
 import "fake-indexeddb/auto";
 import { afterEach, vi } from "vitest";
 import { fakeBrowser } from "wxt/testing";
+import { defineBackground } from "wxt/utils/define-background";
 import enMessages from "@/public/_locales/en/messages.json";
 
 type LocaleMessage = {
@@ -66,6 +67,9 @@ vi.mock("wxt/browser", () => ({ browser: fakeBrowser }));
 // entrypoints/**/App.tsx references the global `browser` via WXT's
 // auto-import, so make component tests see the same fakeBrowser instance.
 vi.stubGlobal("browser", fakeBrowser);
+// entrypoints/background.ts references `defineBackground` via WXT's
+// auto-import; stub it with the real WXT implementation.
+vi.stubGlobal("defineBackground", defineBackground);
 
 afterEach(() => {
 	fakeBrowser.reset();
