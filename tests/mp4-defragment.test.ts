@@ -36,6 +36,13 @@ type RunSpec = {
 	samples: { duration: number; size: number }[];
 	/** Emits trun first_sample_flags marking the first sample as sync. */
 	firstSampleSync?: boolean;
+	/**
+	 * tfdt baseMediaDecodeTime override. Defaults to the sum of the track's
+	 * earlier sample durations, matching Chromium's muxer for gapless output.
+	 */
+	decodeTime?: number;
+	/** tfdt box version (u32 vs u64 payload). Defaults to 1. */
+	tfdtVersion?: 0 | 1;
 };
 
 type FragmentSpec = {
@@ -145,6 +152,7 @@ function buildFragment(
 	tracks: TrackSpec[],
 	fragment: FragmentSpec,
 	sequenceNumber: number,
+	trackDecodeTimes: Map<number, number> = new Map(),
 ): { bytes: Uint8Array<ArrayBuffer>; payloads: Uint8Array<ArrayBuffer>[] } {
 	const mfhd = makeFullBox("mfhd", 0, 0, u32(sequenceNumber));
 	const payloads = fragment.runs.map((run, runIndex) =>
@@ -168,7 +176,12 @@ function buildFragment(
 				u32(run.trackId),
 				u32(track.defaultSampleFlags),
 			);
-			const tfdt = makeFullBox("tfdt", 1, 0, u64(0));
+			const decodeTime =
+				run.decodeTime ?? trackDecodeTimes.get(run.trackId) ?? 0;
+			const tfdt =
+				run.tfdtVersion === 0
+					? makeFullBox("tfdt", 0, 0, u32(decodeTime))
+					: makeFullBox("tfdt", 1, 0, u64(decodeTime));
 			const trunFlags = 0x000301 | (run.firstSampleSync ? 0x000004 : 0);
 			const trun = makeFullBox(
 				"trun",
@@ -219,10 +232,19 @@ function buildFragmentedMp4(
 ): { bytes: Uint8Array<ArrayBuffer>; runPayloads: Uint8Array<ArrayBuffer>[] } {
 	const parts = [buildFtyp(), buildMoov(tracks)];
 	const runPayloads: Uint8Array<ArrayBuffer>[] = [];
+	const trackDecodeTimes = new Map<number, number>();
 	for (const [index, fragment] of fragments.entries()) {
-		const built = buildFragment(tracks, fragment, index + 1);
+		const built = buildFragment(tracks, fragment, index + 1, trackDecodeTimes);
 		parts.push(built.bytes);
 		runPayloads.push(...built.payloads);
+		for (const run of fragment.runs) {
+			const durationTotal = run.samples.reduce(
+				(total, sample) => total + sample.duration,
+				0,
+			);
+			const runStart = run.decodeTime ?? trackDecodeTimes.get(run.trackId) ?? 0;
+			trackDecodeTimes.set(run.trackId, runStart + durationTotal);
+		}
 	}
 	return { bytes: concatBytes(parts), runPayloads };
 }
@@ -529,6 +551,168 @@ describe("planDefragment", () => {
 			"moov",
 			"mdat",
 		]);
+	});
+
+	it("folds tfdt corrections into the previous fragment's last sample duration", async () => {
+		// Chromium estimates each fragment's last sample duration from the
+		// nominal frame rate; the next fragment's tfdt carries the real decode
+		// time. The rewrite must apply that correction or the flat file drifts.
+		const fragments: FragmentSpec[] = [
+			{
+				runs: [
+					{
+						trackId: 2,
+						samples: [
+							{ duration: 1500, size: 1000 },
+							{ duration: 1500, size: 2000 },
+						],
+						firstSampleSync: true,
+					},
+				],
+			},
+			{
+				runs: [
+					{
+						trackId: 2,
+						samples: [
+							{ duration: 1500, size: 3000 },
+							{ duration: 1500, size: 500 },
+						],
+						// 100 ticks later than the declared durations (gap).
+						decodeTime: 3100,
+						firstSampleSync: true,
+					},
+				],
+			},
+			{
+				runs: [
+					{
+						trackId: 2,
+						samples: [{ duration: 1500, size: 700 }],
+						// 50 ticks earlier than declared (estimate overshoot).
+						decodeTime: 6050,
+						firstSampleSync: true,
+					},
+				],
+			},
+		];
+		const { bytes } = buildFragmentedMp4([VIDEO_TRACK], fragments);
+		const planned = await planDefragment(new Blob([bytes]));
+		expect(planned.ok).toBe(true);
+		if (!planned.ok) {
+			return;
+		}
+		const output = await assembleOutput(new Blob([bytes]), planned.plan);
+		const moovEntry = indexChildren(output, 0, output.length).get("moov");
+		if (!moovEntry) {
+			throw new Error("moov missing");
+		}
+		const { mdhd, tables } = trackTablesOf(moovEntry, 0);
+		// Fragment 1's last sample stretches by +100, fragment 2's shrinks by -50.
+		expect(readTableEntries(tables.get("stts")?.bytes, 2)).toEqual([
+			[1, 1500],
+			[1, 1600],
+			[1, 1500],
+			[1, 1450],
+			[1, 1500],
+		]);
+		expect(readU32(mdhd, 24)).toBe(1500 + 1600 + 1500 + 1450 + 1500);
+	});
+
+	it("applies a version 0 (u32) tfdt correction", async () => {
+		const fragments: FragmentSpec[] = [
+			{
+				runs: [
+					{
+						trackId: 1,
+						samples: [
+							{ duration: 1024, size: 40 },
+							{ duration: 1024, size: 60 },
+						],
+						tfdtVersion: 0,
+					},
+				],
+			},
+			{
+				runs: [
+					{
+						trackId: 1,
+						samples: [{ duration: 1024, size: 80 }],
+						decodeTime: 2148,
+						tfdtVersion: 0,
+					},
+				],
+			},
+		];
+		const { bytes } = buildFragmentedMp4([AUDIO_TRACK], fragments);
+		const planned = await planDefragment(new Blob([bytes]));
+		expect(planned.ok).toBe(true);
+		if (!planned.ok) {
+			return;
+		}
+		const output = await assembleOutput(new Blob([bytes]), planned.plan);
+		const moovEntry = indexChildren(output, 0, output.length).get("moov");
+		if (!moovEntry) {
+			throw new Error("moov missing");
+		}
+		const { tables } = trackTablesOf(moovEntry, 0);
+		expect(readTableEntries(tables.get("stts")?.bytes, 2)).toEqual([
+			[1, 1024],
+			[1, 1124],
+			[1, 1024],
+		]);
+	});
+
+	it("bails out when a tfdt correction would zero out a sample duration", async () => {
+		const fragments: FragmentSpec[] = [
+			{
+				runs: [
+					{
+						trackId: 1,
+						samples: [
+							{ duration: 1024, size: 40 },
+							{ duration: 1024, size: 60 },
+						],
+					},
+				],
+			},
+			{
+				runs: [
+					{
+						trackId: 1,
+						samples: [{ duration: 1024, size: 80 }],
+						// Rewinds a full sample duration: 2048 - 1024 leaves 0.
+						decodeTime: 1024,
+					},
+				],
+			},
+		];
+		const { bytes } = buildFragmentedMp4([AUDIO_TRACK], fragments);
+		const planned = await planDefragment(new Blob([bytes]));
+		expect(planned).toMatchObject({
+			ok: false,
+			reason: "consistency_check_failed",
+		});
+	});
+
+	it("bails out when a track's first fragment starts at a nonzero decode time", async () => {
+		const fragments: FragmentSpec[] = [
+			{
+				runs: [
+					{
+						trackId: 1,
+						samples: [{ duration: 1024, size: 40 }],
+						decodeTime: 10,
+					},
+				],
+			},
+		];
+		const { bytes } = buildFragmentedMp4([AUDIO_TRACK], fragments);
+		const planned = await planDefragment(new Blob([bytes]));
+		expect(planned).toMatchObject({
+			ok: false,
+			reason: "consistency_check_failed",
+		});
 	});
 
 	it("bails out on an already-flat MP4 without fragments", async () => {

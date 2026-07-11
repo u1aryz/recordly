@@ -95,6 +95,11 @@ type ParsedTrack = {
 	dinf: Uint8Array;
 	stsd: Uint8Array;
 	samples: SampleEntry[];
+	/**
+	 * Sum of collected sample durations, in media timescale. Equals the decode
+	 * time the next fragment's tfdt is expected to declare.
+	 */
+	decodeTime: number;
 };
 
 type TrexDefaults = {
@@ -341,6 +346,7 @@ function parseTrak(trakBox: Uint8Array): ParsedTrack | undefined {
 		dinf,
 		stsd,
 		samples: [],
+		decodeTime: 0,
 	};
 }
 
@@ -481,6 +487,22 @@ function parseTfhd(box: Uint8Array): ParsedTfhd | undefined {
 	return offset <= box.length ? result : undefined;
 }
 
+/** Reads a tfdt box's baseMediaDecodeTime (u32 in version 0, u64 in version 1). */
+function parseTfdt(box: Uint8Array): number | undefined {
+	const full = readFullBoxHeader(box);
+	if (!full || (full.version !== 0 && full.version !== 1)) {
+		return undefined;
+	}
+	if (full.version === 0) {
+		return full.bodyStart + 4 <= box.length
+			? readU32(box, full.bodyStart)
+			: undefined;
+	}
+	return full.bodyStart + 8 <= box.length
+		? readU64(box, full.bodyStart)
+		: undefined;
+}
+
 type ParsedTrun = {
 	dataOffset: number;
 	samples: SampleEntry[];
@@ -572,68 +594,131 @@ function parseTrun(
 	return { dataOffset, samples };
 }
 
+/**
+ * Aligns a track's collected samples with a fragment's tfdt decode time.
+ * Chromium's muxer gives each fragment's last sample an *estimated* duration
+ * (from the nominal frame rate) and lets the next fragment's tfdt correct the
+ * accumulated error. Apply the same correction to the previous sample,
+ * otherwise the rebuilt stts drifts against real time and audio/video
+ * desynchronize over long captures. Returns a failure detail when the
+ * declared decode time cannot be reconciled.
+ */
+function reconcileTrackDecodeTime(
+	track: ParsedTrack,
+	baseDecodeTime: number,
+): string | undefined {
+	if (track.samples.length === 0) {
+		if (baseDecodeTime !== 0) {
+			return `track ${track.trackId} first fragment starts at nonzero decode time ${baseDecodeTime}`;
+		}
+		return undefined;
+	}
+	if (baseDecodeTime === track.decodeTime) {
+		return undefined;
+	}
+	const lastSample = track.samples[track.samples.length - 1];
+	const adjustedDuration =
+		lastSample.duration + (baseDecodeTime - track.decodeTime);
+	if (adjustedDuration <= 0 || adjustedDuration > U32_MAX) {
+		return `tfdt correction out of range for track ${track.trackId} (adjusted duration ${adjustedDuration})`;
+	}
+	lastSample.duration = adjustedDuration;
+	track.decodeTime = baseDecodeTime;
+	return undefined;
+}
+
+type CollectMoofResult =
+	| { ok: true }
+	| { ok: false; reason: DefragmentBailReason; detail: string };
+
 /** Parses one moof and appends its sample runs to the movie's tracks. */
 function collectMoofChunks(
 	moofBox: Uint8Array,
 	moofStart: number,
 	movie: ParsedMovie,
 	chunks: SourceChunk[],
-): boolean {
+): CollectMoofResult {
+	const layoutBail: CollectMoofResult = {
+		ok: false,
+		reason: "unsupported_box_layout",
+		detail: `unrecognized moof at offset ${moofStart}`,
+	};
 	const children = childBoxes(moofBox);
 	if (!children) {
-		return false;
+		return layoutBail;
 	}
 	for (const child of children) {
 		if (child.type === "mfhd" || isPaddingBox(child.type)) {
 			continue;
 		}
 		if (child.type !== "traf") {
-			return false;
+			return layoutBail;
 		}
 		const trafBox = subBox(moofBox, child);
 		const trafChildren = splitChildBoxes(trafBox, child.headerSize);
 		if (!trafChildren) {
-			return false;
+			return layoutBail;
 		}
 		let tfhd: ParsedTfhd | undefined;
+		let tfdtBox: Uint8Array | undefined;
 		const truns: Uint8Array[] = [];
 		for (const trafChild of trafChildren) {
-			if (trafChild.type === "tfdt" || isPaddingBox(trafChild.type)) {
+			if (isPaddingBox(trafChild.type)) {
 				continue;
 			}
-			if (trafChild.type === "tfhd") {
+			if (trafChild.type === "tfdt") {
+				if (tfdtBox) {
+					return layoutBail;
+				}
+				tfdtBox = subBox(trafBox, trafChild);
+			} else if (trafChild.type === "tfhd") {
 				tfhd = parseTfhd(subBox(trafBox, trafChild));
 				if (!tfhd) {
-					return false;
+					return layoutBail;
 				}
 			} else if (trafChild.type === "trun") {
 				truns.push(subBox(trafBox, trafChild));
 			} else {
-				return false;
+				return layoutBail;
 			}
 		}
 		if (!tfhd) {
-			return false;
+			return layoutBail;
 		}
 		if (tfhd.durationIsEmpty && truns.length > 0) {
-			return false;
+			return layoutBail;
 		}
 		if (truns.length === 0) {
 			continue;
 		}
 		const trackIndex = movie.trackIndexById.get(tfhd.trackId);
 		if (trackIndex === undefined) {
-			return false;
+			return layoutBail;
 		}
 		const base = tfhd.defaultBaseIsMoof ? moofStart : tfhd.baseDataOffset;
 		if (base === undefined) {
-			return false;
+			return layoutBail;
+		}
+		const track = movie.tracks[trackIndex];
+		if (tfdtBox) {
+			const baseDecodeTime = parseTfdt(tfdtBox);
+			if (baseDecodeTime === undefined) {
+				return layoutBail;
+			}
+			const failureDetail = reconcileTrackDecodeTime(track, baseDecodeTime);
+			if (failureDetail) {
+				return {
+					ok: false,
+					reason: "consistency_check_failed",
+					detail: failureDetail,
+				};
+			}
 		}
 		const trex = movie.trexById.get(tfhd.trackId);
 		for (const trunBox of truns) {
 			const trun = parseTrun(trunBox, tfhd, trex);
 			if (!trun || trun.samples.length === 0) {
-				return false;
+				return layoutBail;
 			}
 			let byteLength = 0;
 			for (const sample of trun.samples) {
@@ -647,11 +732,12 @@ function collectMoofChunks(
 			});
 			// push(...samples) would hit the argument limit for very large runs.
 			for (const sample of trun.samples) {
-				movie.tracks[trackIndex].samples.push(sample);
+				track.samples.push(sample);
+				track.decodeTime += sample.duration;
 			}
 		}
 	}
-	return true;
+	return { ok: true };
 }
 
 function encodeRuns(values: number[]): { count: number; value: number }[] {
@@ -925,11 +1011,9 @@ async function planDefragmentInner(
 				return bail("unsupported_box_layout", "moof before moov");
 			}
 			const moofBytes = await readBoxBytes(source, box);
-			if (!collectMoofChunks(moofBytes, box.start, movie, chunks)) {
-				return bail(
-					"unsupported_box_layout",
-					`unrecognized moof at offset ${box.start}`,
-				);
+			const collected = collectMoofChunks(moofBytes, box.start, movie, chunks);
+			if (!collected.ok) {
+				return bail(collected.reason, collected.detail);
 			}
 			moofCount += 1;
 		} else if (box.type === "mdat") {
