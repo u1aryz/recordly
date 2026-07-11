@@ -700,6 +700,24 @@ function collectMoofChunks(
 			return layoutBail;
 		}
 		const track = movie.tracks[trackIndex];
+		const trex = movie.trexById.get(tfhd.trackId);
+		const runs: ParsedTrun[] = [];
+		let sampleCount = 0;
+		for (const trunBox of truns) {
+			const trun = parseTrun(trunBox, tfhd, trex);
+			if (!trun) {
+				return layoutBail;
+			}
+			runs.push(trun);
+			sampleCount += trun.samples.length;
+		}
+		// Chromium's muxer closes out a track with no pending samples by writing
+		// an empty traf (a zero-sample trun plus a tfdt of 0) in the final moof.
+		// It carries no sample data, so skip it without reconciling its tfdt —
+		// the reset decode time would otherwise read as a huge backwards jump.
+		if (sampleCount === 0) {
+			continue;
+		}
 		if (tfdtBox) {
 			const baseDecodeTime = parseTfdt(tfdtBox);
 			if (baseDecodeTime === undefined) {
@@ -714,11 +732,9 @@ function collectMoofChunks(
 				};
 			}
 		}
-		const trex = movie.trexById.get(tfhd.trackId);
-		for (const trunBox of truns) {
-			const trun = parseTrun(trunBox, tfhd, trex);
-			if (!trun || trun.samples.length === 0) {
-				return layoutBail;
+		for (const trun of runs) {
+			if (trun.samples.length === 0) {
+				continue;
 			}
 			let byteLength = 0;
 			for (const sample of trun.samples) {

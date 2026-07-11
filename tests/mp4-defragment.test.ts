@@ -663,6 +663,46 @@ describe("planDefragment", () => {
 		]);
 	});
 
+	it("skips an empty traf written when a track ends before the recording", async () => {
+		// Chromium's muxer closes out a track with no pending samples by writing
+		// a zero-sample trun plus a tfdt of 0 in the final moof. That reset
+		// decode time must be ignored, not treated as a backwards tfdt jump.
+		const fragments: FragmentSpec[] = [
+			...TWO_TRACK_FRAGMENTS,
+			{
+				runs: [
+					{ trackId: 1, samples: [], decodeTime: 0 },
+					{
+						trackId: 2,
+						samples: [{ duration: 1500, size: 900 }],
+						firstSampleSync: true,
+					},
+				],
+			},
+		];
+		const { bytes } = buildFragmentedMp4([AUDIO_TRACK, VIDEO_TRACK], fragments);
+		const source = new Blob([bytes]);
+		const planned = await planDefragment(source);
+		if (!planned.ok) {
+			throw new Error(`bail: ${planned.reason} ${planned.detail ?? ""}`);
+		}
+		const output = await assembleOutput(source, planned.plan);
+		const moovEntry = indexChildren(output, 0, output.length).get("moov");
+		if (!moovEntry) {
+			throw new Error("moov missing");
+		}
+		// The audio track keeps only the samples from the real fragments.
+		const audio = trackTablesOf(moovEntry, 0);
+		expect(readStszSizes(audio.tables.get("stsz")?.bytes)).toEqual([
+			100, 200, 300, 150, 250,
+		]);
+		// The video samples of the final fragment survive the skipped traf.
+		const video = trackTablesOf(moovEntry, 1);
+		expect(readStszSizes(video.tables.get("stsz")?.bytes)).toEqual([
+			1000, 2000, 3000, 500, 700, 900,
+		]);
+	});
+
 	it("bails out when a tfdt correction would zero out a sample duration", async () => {
 		const fragments: FragmentSpec[] = [
 			{
