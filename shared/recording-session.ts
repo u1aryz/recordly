@@ -24,6 +24,9 @@ import { createMediaRecorderOptions, stopMediaStreamTracks } from "./video";
 const CAPTURE_CHUNK_TIMESLICE_MS = 3000;
 const MAX_CAPTURE_CHUNK_BYTES = 42 * 1024 * 1024;
 const MAX_QUEUED_WRITE_BYTES = 128 * 1024 * 1024;
+// Must stay well under the MV3 service worker idle timeout (~30s) so
+// keepalive progress messages reach the background before it shuts down.
+const POST_PROCESS_KEEPALIVE_INTERVAL_MS = 10_000;
 
 type RecordingPart = {
 	index: number;
@@ -390,8 +393,14 @@ export async function startRecordingSession(
 		}
 		stopMediaStreamTracks(stream);
 		// Keep the HUD in its "finalizing" state until every saved part has been
-		// defragmented (or its rewrite has bailed out).
+		// defragmented (or its rewrite has bailed out). No chunks flow while that
+		// runs, so heartbeat progress callbacks keep the background service
+		// worker's idle timer from expiring and disconnecting the port.
+		const keepAliveTimer = window.setInterval(() => {
+			callbacks.onProgress(metadata);
+		}, POST_PROCESS_KEEPALIVE_INTERVAL_MS);
 		await postProcessQueue.settled();
+		window.clearInterval(keepAliveTimer);
 		const hasSavedParts = (metadata.savedPartCount ?? 0) > 0;
 		const message = createCaptureFinishedMessage(metadata, {
 			stopReason,

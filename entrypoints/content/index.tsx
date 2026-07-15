@@ -411,5 +411,11 @@ function postCaptureStreamMessage(
 	port: Browser.runtime.Port,
 	message: CaptureStreamPortMessage,
 ): void {
-	port.postMessage(message);
+	try {
+		port.postMessage(message);
+	} catch {
+		// The port drops when the background service worker is torn down;
+		// runtime.sendMessage respawns the worker so the message still lands.
+		void browser.runtime.sendMessage(message).catch(() => undefined);
+	}
 }

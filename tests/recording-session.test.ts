@@ -765,6 +765,60 @@ describe("startRecordingSession", () => {
 		expect(callbacks.onFinished).toHaveBeenCalledTimes(1);
 	});
 
+	it("sends progress heartbeats while post-processing delays the finish", async () => {
+		vi.useFakeTimers();
+		const { directory } = createFakeDirectory();
+		const { stream } = createFakeStream();
+		const { createRecorder, handles } = createRecorderFactory();
+		const callbacks = createCallbacks();
+		let resolvePostProcess: (() => void) | undefined;
+		const postProcessPart = vi.fn(
+			() =>
+				new Promise<{ ok: true }>((resolve) => {
+					resolvePostProcess = () => resolve({ ok: true });
+				}),
+		);
+
+		const result = await startRecordingSession({
+			metadata: createMetadata(),
+			stream,
+			directory,
+			callbacks,
+			createRecorder,
+			postProcessPart,
+		});
+		if (!result.ok) {
+			throw new Error("expected session to start");
+		}
+
+		handles[0].emitData(1024);
+		await vi.advanceTimersByTimeAsync(0);
+		result.session.stop("user");
+		handles[0].emitStop();
+		// Zero-advance twice to drain the multi-await finalize chain, so the
+		// keepalive interval is registered (and saveCurrentPart's onProgress
+		// call is counted) before sampling the call count below.
+		await vi.advanceTimersByTimeAsync(0);
+		await vi.advanceTimersByTimeAsync(0);
+
+		// The recording is now waiting on post-processing; heartbeats keep the
+		// background service worker alive across the silent window.
+		const onProgress = callbacks.onProgress as ReturnType<typeof vi.fn>;
+		const callsBefore = onProgress.mock.calls.length;
+		await vi.advanceTimersByTimeAsync(30_000);
+		const callsDuring = onProgress.mock.calls.length;
+		expect(callsDuring).toBeGreaterThan(callsBefore);
+		expect(callbacks.onFinished).not.toHaveBeenCalled();
+
+		resolvePostProcess?.();
+		await vi.advanceTimersByTimeAsync(0);
+		expect(callbacks.onFinished).toHaveBeenCalledTimes(1);
+
+		// The heartbeat stops once the session has finished.
+		await vi.advanceTimersByTimeAsync(60_000);
+		expect(onProgress.mock.calls.length).toBe(callsDuring);
+	});
+
 	it("starts the next part without waiting for the previous part's post-processing", async () => {
 		const { directory } = createFakeDirectory();
 		const { stream } = createFakeStream();
