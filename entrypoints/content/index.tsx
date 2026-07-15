@@ -5,6 +5,7 @@ import {
 	getHudResult,
 } from "@/shared/capture-finish";
 import { createCaptureMetadata } from "@/shared/capture-state";
+import { isExtensionContextValid } from "@/shared/extension-context";
 import { isFilePickerAbortError } from "@/shared/file-system";
 import { isExtensionMessage } from "@/shared/message";
 import {
@@ -70,9 +71,15 @@ export default defineContentScript({
 				return recordingHudPosition.getValue();
 			},
 			onOpen(captureId) {
+				if (!isExtensionContextValid()) {
+					return;
+				}
 				void browser.runtime.sendMessage({ type: "OPEN_CAPTURES", captureId });
 			},
 			onPositionChange(position) {
+				if (!isExtensionContextValid()) {
+					return;
+				}
 				return recordingHudPosition.setValue(position);
 			},
 			onStop(captureId) {
@@ -114,7 +121,11 @@ export default defineContentScript({
 		window.addEventListener("pagehide", onPageHide);
 
 		ctx.onInvalidated(() => {
-			unwatchContinueOnResolutionChange();
+			// Extension APIs throw "Extension context invalidated" from here on
+			// (e.g. after an extension update), so only call them while they work.
+			if (isExtensionContextValid()) {
+				unwatchContinueOnResolutionChange();
+			}
 			picker.destroy();
 			window.removeEventListener("pagehide", onPageHide);
 			stopAllRecordings("error", t("recordingStoppedAfterExtensionUpdate"));
@@ -237,14 +248,14 @@ async function startRecording(
 						window.clearInterval(active.resolutionTimer);
 					}
 					activeRecordings.delete(metadata.id);
-					port.disconnect();
+					disconnectPort(port);
 				}
 			},
 		},
 	});
 
 	if (!result.ok) {
-		port.disconnect();
+		disconnectPort(port);
 		stopMediaStreamTracks(stream);
 		return {
 			ok: false,
@@ -407,6 +418,13 @@ function createThumbnail(video: HTMLVideoElement): string | undefined {
 	}
 }
 
+function disconnectPort(port: Browser.runtime.Port): void {
+	// disconnect() throws once the extension context is invalidated.
+	if (isExtensionContextValid()) {
+		port.disconnect();
+	}
+}
+
 function postCaptureStreamMessage(
 	port: Browser.runtime.Port,
 	message: CaptureStreamPortMessage,
@@ -416,6 +434,11 @@ function postCaptureStreamMessage(
 	} catch {
 		// The port drops when the background service worker is torn down;
 		// runtime.sendMessage respawns the worker so the message still lands.
+		// Once the extension context is invalidated there is no receiver left
+		// and sendMessage itself throws synchronously, so drop the message.
+		if (!isExtensionContextValid()) {
+			return;
+		}
 		void browser.runtime.sendMessage(message).catch(() => undefined);
 	}
 }
