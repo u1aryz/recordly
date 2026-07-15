@@ -4,6 +4,11 @@ export type DirectoryPickerOptions = {
 	startIn?: string;
 };
 
+// Chromium's MediaRecorder MP4 muxer crashes the capture tab once a single
+// recorder session emits about 4 GiB (a 32-bit limit), so parts roll over to
+// a fresh MediaRecorder well before that. Closed parts also survive a tab
+// crash, while an unclosed part is discarded with its swap file. Do not
+// remove this split; if raising the threshold, keep a safe margin below 4 GiB.
 export const PART_SPLIT_BYTES = 2 * 1024 ** 3;
 
 export function createPartFileName(

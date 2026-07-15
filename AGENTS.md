@@ -55,4 +55,5 @@ Code agents work with pnpm. Only the commands used in ordinary implementation an
 - Commits follow Conventional Commits, with descriptions written in English.
 - Prefer resolving linter errors through refactoring. If the Biome configuration needs revisiting, check with the user first.
 - For browser extensions, carefully assess the impact of permission additions, manifest changes, and storage schema changes.
+- The size-based part split (`PART_SPLIT_BYTES` in `shared/file-system.ts`) works around a Chromium limitation: the MediaRecorder MP4 muxer crashes the capture tab once a single recorder session emits about 4 GiB. Never remove the split; when adjusting the threshold, keep a safe margin below 4 GiB.
 - `zip`-related commands and mise commands are assumed not to be used in ordinary code agent work.
