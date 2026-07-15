@@ -182,8 +182,21 @@ export function VideoPickerOverlay({
 
 	const info = currentVideo ? describeVideo(currentVideo) : null;
 
+	// Stacking relies on DOM order (all fixed siblings, no z-index):
+	// highlight frame < instruction banner < toolbar.
 	return (
 		<div className="pointer-events-none fixed inset-0" ref={rootRef}>
+			{rect && (
+				<div
+					className="pointer-events-none fixed border-2 border-base-100 shadow-[0_0_0_1px_var(--color-base-100),0_0_0_4px_var(--color-primary)]"
+					style={{
+						left: rect.left,
+						top: rect.top,
+						width: rect.width,
+						height: rect.height,
+					}}
+				/>
+			)}
 			<div className="overlay-contrast-shadow pointer-events-none fixed top-3 left-1/2 max-w-[calc(100vw-24px)] -translate-x-1/2 whitespace-nowrap rounded-lg border border-base-300 bg-base-100 px-3.5 py-2.5 font-semibold text-base-content text-xs">
 				{t("pickerInstructions")}
 				<span className="text-base-content/60">
@@ -191,58 +204,47 @@ export function VideoPickerOverlay({
 					{t("pickerCancelHint")}
 				</span>
 			</div>
-			{currentVideo && rect && info && (
-				<>
-					<div
-						className="pointer-events-none fixed border-2 border-base-100 shadow-[0_0_0_1px_var(--color-base-100),0_0_0_4px_var(--color-primary)]"
-						style={{
-							left: rect.left,
-							top: rect.top,
-							width: rect.width,
-							height: rect.height,
-						}}
-					/>
-					<div
-						className="overlay-contrast-shadow pointer-events-auto fixed flex max-w-[calc(100vw-16px)] flex-col overflow-hidden rounded-lg border border-base-300 bg-base-100 text-base-content text-xs"
-						ref={toolbarRef}
-						style={
-							toolbarPosition
-								? { left: toolbarPosition.left, top: toolbarPosition.top }
-								: { left: rect.left, top: Math.max(8, rect.top - 8) }
-						}
-					>
-						<div className="flex flex-wrap items-center gap-2 p-2">
-							<span className="badge badge-primary badge-soft badge-sm font-bold">
-								{t("videoElementLabel")}
-							</span>
-							<span className="text-base-content/70">
-								{info.width || "?"} x {info.height || "?"} /{" "}
-								{info.paused ? t("paused") : t("playing")} /{" "}
-								{info.muted ? t("muted") : t("audioAvailable")}
-							</span>
-							<button
-								className="btn btn-primary btn-xs"
-								disabled={pending}
-								onClick={() => void handleStart()}
-								type="button"
-							>
-								{t("chooseFolderAndRecord")}
-							</button>
-							<button
-								className="btn btn-ghost btn-xs"
-								onClick={onClose}
-								type="button"
-							>
-								{t("cancel")}
-							</button>
-						</div>
-						{message && (
-							<div className="border-base-300 border-t p-2 text-warning">
-								{message}
-							</div>
-						)}
+			{rect && info && (
+				<div
+					className="overlay-contrast-shadow pointer-events-auto fixed flex max-w-[calc(100vw-16px)] flex-col overflow-hidden rounded-lg border border-base-300 bg-base-100 text-base-content text-xs"
+					ref={toolbarRef}
+					style={
+						toolbarPosition
+							? { left: toolbarPosition.left, top: toolbarPosition.top }
+							: { left: rect.left, top: Math.max(8, rect.top - 8) }
+					}
+				>
+					<div className="flex flex-wrap items-center gap-2 p-2">
+						<span className="badge badge-primary badge-soft badge-sm font-bold">
+							{t("videoElementLabel")}
+						</span>
+						<span className="text-base-content/70">
+							{info.width || "?"} x {info.height || "?"} /{" "}
+							{info.paused ? t("paused") : t("playing")} /{" "}
+							{info.muted ? t("muted") : t("audioAvailable")}
+						</span>
+						<button
+							className="btn btn-primary btn-xs"
+							disabled={pending}
+							onClick={() => void handleStart()}
+							type="button"
+						>
+							{t("chooseFolderAndRecord")}
+						</button>
+						<button
+							className="btn btn-ghost btn-xs"
+							onClick={onClose}
+							type="button"
+						>
+							{t("cancel")}
+						</button>
 					</div>
-				</>
+					{message && (
+						<div className="border-base-300 border-t p-2 text-warning">
+							{message}
+						</div>
+					)}
+				</div>
 			)}
 		</div>
 	);
