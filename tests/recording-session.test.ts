@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createPartFileName, PART_SPLIT_BYTES } from "@/shared/file-system";
+import type { DefragmentPartOutcome } from "@/shared/mp4-defragment";
 import {
 	type RecordingSessionCallbacks,
 	startRecordingSession,
@@ -903,6 +904,60 @@ describe("startRecordingSession", () => {
 		expect(outcome.message.status).toBe("complete");
 		expect(outcome.message.fileStatus).toBe("saved");
 		expect(outcome.message.savedPartCount).toBe(1);
+		// Structural failures are deterministic, so no retry is attempted.
+		expect(postProcessPart).toHaveBeenCalledTimes(1);
+		expect(warn).toHaveBeenCalledTimes(1);
+		warn.mockRestore();
+	});
+
+	it("retries a transient post-processing failure after recording stops", async () => {
+		const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+		const { directory } = createFakeDirectory();
+		const { stream } = createFakeStream();
+		const { createRecorder, handles } = createRecorderFactory();
+		const callbacks = createCallbacks();
+		const outcomes: DefragmentPartOutcome[] = [
+			{
+				ok: false,
+				reason: "read_error: Array buffer allocation failed",
+				transient: true,
+			},
+			{ ok: true },
+		];
+		const postProcessPart = vi.fn(
+			async () => outcomes.shift() ?? { ok: true as const },
+		);
+
+		const result = await startRecordingSession({
+			metadata: createMetadata(),
+			stream,
+			directory,
+			callbacks,
+			createRecorder,
+			postProcessPart,
+		});
+		if (!result.ok) {
+			throw new Error("expected session to start");
+		}
+
+		handles[0].emitData(1024);
+		await flushMicrotasks();
+		result.session.stop("user");
+		handles[0].emitStop();
+		await flushMicrotasks();
+
+		expect(postProcessPart).toHaveBeenCalledTimes(2);
+		expect(postProcessPart).toHaveBeenNthCalledWith(
+			2,
+			directory,
+			createPartFileName("demo.mp4", "capture-1", 1),
+		);
+		expect(callbacks.onFinished).toHaveBeenCalledTimes(1);
+		const outcome = (callbacks.onFinished as ReturnType<typeof vi.fn>).mock
+			.calls[0][0];
+		expect(outcome.message.status).toBe("complete");
+		expect(outcome.message.fileStatus).toBe("saved");
+		// Only the retry notice is logged; the retry succeeded.
 		expect(warn).toHaveBeenCalledTimes(1);
 		warn.mockRestore();
 	});

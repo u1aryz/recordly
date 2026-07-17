@@ -109,6 +109,11 @@ export async function startRecordingSession(
 	// of the next part continues meanwhile. finishRecording() waits for this
 	// queue so a capture is never reported finished mid-rewrite.
 	const postProcessQueue = createSerialTaskQueue();
+	// Parts whose rewrite failed for a transient platform reason (e.g. an
+	// ArrayBuffer allocation failing while the next part was still recording).
+	// They get one more attempt in finishRecording(), after the recorder and
+	// its write queues have released their memory.
+	const postProcessRetryFileNames: string[] = [];
 
 	let metadata = options.metadata;
 
@@ -356,20 +361,36 @@ export async function startRecordingSession(
 		};
 		callbacks.onProgress(metadata);
 		postProcessQueue.enqueue(async () => {
-			const outcome = await postProcessPart(directory, part.fileName).catch(
-				(error: unknown) => ({
-					ok: false as const,
-					reason: getErrorMessage(error, "post-processing failed"),
-				}),
-			);
-			if (!outcome.ok) {
-				// Best effort: the fragmented original stays valid, just slower to
-				// start playing over a network.
-				console.warn(
-					`[recordly] keeping fragmented MP4 for ${part.fileName}: ${outcome.reason}`,
-				);
+			const outcome = await runPostProcess(part.fileName);
+			if (outcome.ok) {
+				return;
 			}
+			if (outcome.transient) {
+				console.warn(
+					`[recordly] defragmenting ${part.fileName} failed (${outcome.reason}); retrying once recording has stopped`,
+				);
+				postProcessRetryFileNames.push(part.fileName);
+				return;
+			}
+			warnKeepingFragmented(part.fileName, outcome.reason);
 		});
+	}
+
+	async function runPostProcess(
+		fileName: string,
+	): Promise<DefragmentPartOutcome> {
+		return postProcessPart(directory, fileName).catch((error: unknown) => ({
+			ok: false as const,
+			reason: getErrorMessage(error, "post-processing failed"),
+		}));
+	}
+
+	function warnKeepingFragmented(fileName: string, reason: string): void {
+		// Best effort: the fragmented original stays valid, just slower to start
+		// playing over a network.
+		console.warn(
+			`[recordly] keeping fragmented MP4 for ${fileName}: ${reason}`,
+		);
 	}
 
 	async function discardCurrentPart(part: RecordingPart): Promise<void> {
@@ -400,6 +421,14 @@ export async function startRecordingSession(
 			callbacks.onProgress(metadata);
 		}, POST_PROCESS_KEEPALIVE_INTERVAL_MS);
 		await postProcessQueue.settled();
+		// The recorder is stopped and its write queues are drained, so a rewrite
+		// that failed under recording-time memory pressure gets one more chance.
+		for (const fileName of postProcessRetryFileNames) {
+			const outcome = await runPostProcess(fileName);
+			if (!outcome.ok) {
+				warnKeepingFragmented(fileName, outcome.reason);
+			}
+		}
 		window.clearInterval(keepAliveTimer);
 		const hasSavedParts = (metadata.savedPartCount ?? 0) > 0;
 		const message = createCaptureFinishedMessage(metadata, {

@@ -1032,7 +1032,8 @@ describe("defragmentPartFile", () => {
 		]);
 		const fake = createFakeHandles(flat);
 		const outcome = await defragmentPartFile(fake.directory, "part-001.mp4");
-		expect(outcome.ok).toBe(false);
+		// Structural bails are deterministic, so they must not read as transient.
+		expect(outcome).toMatchObject({ ok: false, transient: false });
 		expect(fake.createWritable).not.toHaveBeenCalled();
 	});
 
@@ -1041,7 +1042,7 @@ describe("defragmentPartFile", () => {
 		const fake = createFakeHandles(bytes);
 		fake.writable.write.mockRejectedValueOnce(new Error("disk full"));
 		const outcome = await defragmentPartFile(fake.directory, "part-001.mp4");
-		expect(outcome.ok).toBe(false);
+		expect(outcome).toMatchObject({ ok: false, transient: true });
 		expect(fake.isAborted()).toBe(true);
 		expect(fake.isClosed()).toBe(false);
 	});
@@ -1053,6 +1054,29 @@ describe("defragmentPartFile", () => {
 			}),
 		} as unknown as FileSystemDirectoryHandle;
 		const outcome = await defragmentPartFile(directory, "part-001.mp4");
-		expect(outcome.ok).toBe(false);
+		expect(outcome).toMatchObject({ ok: false, transient: true });
+	});
+
+	it("marks a read failure (e.g. failed allocation) as transient", async () => {
+		const source = {
+			size: 1024,
+			slice: () => {
+				throw new Error("Array buffer allocation failed");
+			},
+		};
+		const fileHandle = {
+			getFile: vi.fn(async () => source),
+			createWritable: vi.fn(),
+		};
+		const directory = {
+			getFileHandle: vi.fn(async () => fileHandle),
+		} as unknown as FileSystemDirectoryHandle;
+		const outcome = await defragmentPartFile(directory, "part-001.mp4");
+		expect(outcome).toMatchObject({
+			ok: false,
+			reason: "read_error: Array buffer allocation failed",
+			transient: true,
+		});
+		expect(fileHandle.createWritable).not.toHaveBeenCalled();
 	});
 });

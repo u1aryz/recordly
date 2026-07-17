@@ -69,7 +69,17 @@ export type PlanDefragmentResult =
 
 export type DefragmentPartOutcome =
 	| { ok: true }
-	| { ok: false; reason: string };
+	| {
+			ok: false;
+			reason: string;
+			/**
+			 * True when the failure came from the platform (I/O errors, failed
+			 * memory allocations) rather than the file's structure, so retrying
+			 * later — typically once recording has stopped and released its
+			 * memory — can succeed.
+			 */
+			transient?: boolean;
+	  };
 
 type SampleEntry = {
 	duration: number;
@@ -1221,6 +1231,7 @@ export async function defragmentPartFile(
 		return {
 			ok: false,
 			reason: `failed to open part file: ${describeError(error)}`,
+			transient: true,
 		};
 	}
 	const planned = await planDefragment(source);
@@ -1230,6 +1241,9 @@ export async function defragmentPartFile(
 			reason: planned.detail
 				? `${planned.reason}: ${planned.detail}`
 				: planned.reason,
+			// Structural bails are deterministic; only platform read failures
+			// (surfaced as read_error) can clear up on a later attempt.
+			transient: planned.reason === "read_error",
 		};
 	}
 	let writable: FileSystemWritableFileStream;
@@ -1239,6 +1253,7 @@ export async function defragmentPartFile(
 		return {
 			ok: false,
 			reason: `failed to open writable: ${describeError(error)}`,
+			transient: true,
 		};
 	}
 	try {
@@ -1249,6 +1264,7 @@ export async function defragmentPartFile(
 		return {
 			ok: false,
 			reason: `failed to rewrite part file: ${describeError(error)}`,
+			transient: true,
 		};
 	}
 	return { ok: true };
