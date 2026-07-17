@@ -218,6 +218,9 @@ async function startRecording(
 			onStopping(elapsedMs) {
 				recordingHud?.markStopping(metadata.id, elapsedMs);
 			},
+			onPostProcessProgress(progress) {
+				recordingHud?.updateFinalizeProgress(metadata.id, progress);
+			},
 			onPartStarted(current, change) {
 				recordingHud?.updatePart(current.id, current.partCount ?? 1, {
 					width: current.width,

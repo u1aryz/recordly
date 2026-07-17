@@ -120,6 +120,14 @@
 	},
 	"openStatus": { "message": "상태 열기" },
 	"finalizingMp4": { "message": "MP4 파일을 마무리하는 중입니다." },
+	"finalizingPart": {
+		"message": "파트 $CURRENT$/$TOTAL$ 최적화 중 ($PERCENT$%).",
+		"placeholders": {
+			"current": { "content": "$1" },
+			"total": { "content": "$2" },
+			"percent": { "content": "$3" }
+		}
+	},
 	"statusRecording": { "message": "녹화 중" },
 	"recordingAndSaving": { "message": "녹화 중·파일로 저장 중" },
 	"recordingAndSavingDescription": {

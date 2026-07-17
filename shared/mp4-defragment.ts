@@ -67,6 +67,11 @@ export type PlanDefragmentResult =
 	| { ok: true; plan: DefragmentPlan }
 	| { ok: false; reason: DefragmentBailReason; detail?: string };
 
+export type DefragmentProgressCallback = (
+	bytesWritten: number,
+	totalBytes: number,
+) => void;
+
 export type DefragmentPartOutcome =
 	| { ok: true }
 	| {
@@ -1205,10 +1210,19 @@ export async function writeDefragmentPlan(
 	source: Blob,
 	plan: DefragmentPlan,
 	writable: Pick<FileSystemWritableFileStream, "write">,
+	onProgress?: DefragmentProgressCallback,
 ): Promise<void> {
+	const totalBytes = plan.mdatSourceRanges.reduce(
+		(total, range) => total + range.size,
+		plan.header.length,
+	);
 	await writable.write(plan.header);
+	let bytesWritten = plan.header.length;
+	onProgress?.(bytesWritten, totalBytes);
 	for (const range of plan.mdatSourceRanges) {
 		await writable.write(source.slice(range.start, range.start + range.size));
+		bytesWritten += range.size;
+		onProgress?.(bytesWritten, totalBytes);
 	}
 }
 
@@ -1221,6 +1235,7 @@ export async function writeDefragmentPlan(
 export async function defragmentPartFile(
 	directory: FileSystemDirectoryHandle,
 	fileName: string,
+	onProgress?: DefragmentProgressCallback,
 ): Promise<DefragmentPartOutcome> {
 	let fileHandle: FileSystemFileHandle;
 	let source: File;
@@ -1257,7 +1272,7 @@ export async function defragmentPartFile(
 		};
 	}
 	try {
-		await writeDefragmentPlan(source, planned.plan, writable);
+		await writeDefragmentPlan(source, planned.plan, writable, onProgress);
 		await writable.close();
 	} catch (error) {
 		await writable.abort().catch(() => undefined);

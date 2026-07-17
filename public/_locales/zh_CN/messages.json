@@ -118,6 +118,14 @@
 	},
 	"openStatus": { "message": "打开状态" },
 	"finalizingMp4": { "message": "正在完成 MP4 文件。" },
+	"finalizingPart": {
+		"message": "正在优化第 $CURRENT$/$TOTAL$ 部分 ($PERCENT$%)。",
+		"placeholders": {
+			"current": { "content": "$1" },
+			"total": { "content": "$2" },
+			"percent": { "content": "$3" }
+		}
+	},
 	"statusRecording": { "message": "录制中" },
 	"recordingAndSaving": { "message": "录制中，正在保存到文件" },
 	"recordingAndSavingDescription": {

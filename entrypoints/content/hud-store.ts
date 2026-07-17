@@ -1,3 +1,4 @@
+import type { PostProcessProgress } from "@/shared/recording-session";
 import type { HudPosition } from "@/shared/settings";
 import type { CaptureMetadata, VideoResolution } from "@/shared/types";
 
@@ -7,7 +8,7 @@ export type HudRowDetail =
 	| { kind: "recording" }
 	| { kind: "part" }
 	| { kind: "notice"; message: string }
-	| { kind: "finalizing" }
+	| { kind: "finalizing"; progress?: PostProcessProgress }
 	| { kind: "result"; message: string; tone: HudTone };
 
 export type HudRow = {
@@ -44,6 +45,10 @@ export type HudStore = {
 	) => void;
 	notify: (captureId: string, message: string) => void;
 	markStopping: (captureId: string, elapsedMs: number) => void;
+	updateFinalizeProgress: (
+		captureId: string,
+		progress: PostProcessProgress,
+	) => void;
 	finish: (captureId: string, message: string, tone: HudTone) => void;
 	remove: (captureId: string) => void;
 	highlight: (captureId: string) => void;
@@ -224,6 +229,18 @@ export function createHudStore(): HudStore {
 				elapsedMs,
 				stopping: true,
 				detail: { kind: "finalizing" },
+			}));
+		},
+		updateFinalizeProgress(captureId, progress) {
+			// Parts also defragment in the background while recording continues;
+			// only surface progress once the row is in its finalizing state.
+			const row = state.rows.find((candidate) => candidate.id === captureId);
+			if (!row?.stopping || row.detail.kind === "result") {
+				return;
+			}
+			updateRow(captureId, (current) => ({
+				...current,
+				detail: { kind: "finalizing", progress },
 			}));
 		},
 		finish(captureId, message, tone) {

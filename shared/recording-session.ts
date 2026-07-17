@@ -9,6 +9,7 @@ import { applyPartDiscard } from "./capture-state";
 import { createPartFileName, shouldSplitPart } from "./file-system";
 import {
 	type DefragmentPartOutcome,
+	type DefragmentProgressCallback,
 	defragmentPartFile,
 } from "./mp4-defragment";
 import { FORCE_FINALIZE_TIMEOUT_MS } from "./recording-monitor";
@@ -48,11 +49,25 @@ export type RecordingFinishOutcome = {
 	hasSavedParts: boolean;
 };
 
+export type PostProcessProgress = {
+	/** 1-based index of the part currently being defragmented. */
+	currentPart: number;
+	/** Number of parts saved so far (grows while recording continues). */
+	totalParts: number;
+	/**
+	 * Overall completion across all saved parts, 0-100. Reaches 100 only once
+	 * every enqueued part has fully completed, including its writable close.
+	 */
+	percent: number;
+};
+
 export type RecordingSessionCallbacks = {
 	/** Called when a chunk write or part save progresses (used for HUD updates and CAPTURE_PROGRESS messages). */
 	onProgress: (metadata: CaptureMetadata) => void;
 	/** Called right after stop() is accepted (used to show the "stopping" state in the HUD). */
 	onStopping: (elapsedMs: number) => void;
+	/** Called as saved parts are defragmented (used to show finalize progress in the HUD). */
+	onPostProcessProgress?: (progress: PostProcessProgress) => void;
 	/** Called when the next part starts. `change` is only set when it originates from a resolution rollover. */
 	onPartStarted: (metadata: CaptureMetadata, change?: ResolutionChange) => void;
 	/** Called when recording has fully finished. Guaranteed to be called exactly once. */
@@ -75,6 +90,7 @@ export type RecordingSessionOptions = {
 	postProcessPart?: (
 		directory: FileSystemDirectoryHandle,
 		fileName: string,
+		onProgress?: DefragmentProgressCallback,
 	) => Promise<DefragmentPartOutcome>;
 };
 
@@ -114,6 +130,67 @@ export async function startRecordingSession(
 	// They get one more attempt in finishRecording(), after the recorder and
 	// its write queues have released their memory.
 	const postProcessRetryFileNames: string[] = [];
+	// Byte-weighted defragment progress across all saved parts, reported to the
+	// HUD while the finalize phase keeps the stop button disabled.
+	const postProcessProgress = {
+		totalParts: 0,
+		completedParts: 0,
+		totalBytes: 0,
+		completedBytes: 0,
+		currentPartBytes: 0,
+		currentPartFraction: 0,
+	};
+	let lastEmittedProgressKey: string | undefined;
+
+	function emitPostProcessProgress(): void {
+		const onPostProcessProgress = callbacks.onPostProcessProgress;
+		const {
+			totalParts,
+			completedParts,
+			totalBytes,
+			completedBytes,
+			currentPartBytes,
+			currentPartFraction,
+		} = postProcessProgress;
+		if (!onPostProcessProgress || totalBytes === 0) {
+			return;
+		}
+		const doneBytes = completedBytes + currentPartBytes * currentPartFraction;
+		const rawPercent = Math.min(
+			100,
+			Math.floor((doneBytes / totalBytes) * 100),
+		);
+		const progress: PostProcessProgress = {
+			currentPart: Math.min(completedParts + 1, totalParts),
+			totalParts,
+			// While a part is still in flight, its writable.close() (swap-file
+			// commit plus browser file checks) has no byte-level progress, so hold
+			// the display at 99% until the part has fully completed.
+			percent: currentPartBytes > 0 ? Math.min(99, rawPercent) : rawPercent,
+		};
+		// The byte-level callback fires per sample run; only surface changes the
+		// HUD can actually display.
+		const key = `${progress.currentPart}/${progress.totalParts}/${progress.percent}`;
+		if (key === lastEmittedProgressKey) {
+			return;
+		}
+		lastEmittedProgressKey = key;
+		onPostProcessProgress(progress);
+	}
+
+	function beginPartPostProcess(partBytes: number): void {
+		postProcessProgress.currentPartBytes = partBytes;
+		postProcessProgress.currentPartFraction = 0;
+		emitPostProcessProgress();
+	}
+
+	function finishPartPostProcess(partBytes: number): void {
+		postProcessProgress.completedParts += 1;
+		postProcessProgress.completedBytes += partBytes;
+		postProcessProgress.currentPartBytes = 0;
+		postProcessProgress.currentPartFraction = 0;
+		emitPostProcessProgress();
+	}
 
 	let metadata = options.metadata;
 
@@ -360,8 +437,21 @@ export async function startRecordingSession(
 			savedPartCount: (metadata.savedPartCount ?? 0) + 1,
 		};
 		callbacks.onProgress(metadata);
+		const partBytes = part.sizeBytes;
+		postProcessProgress.totalParts += 1;
+		postProcessProgress.totalBytes += partBytes;
 		postProcessQueue.enqueue(async () => {
-			const outcome = await runPostProcess(part.fileName);
+			beginPartPostProcess(partBytes);
+			const outcome = await runPostProcess(part.fileName, (written, total) => {
+				if (total > 0) {
+					postProcessProgress.currentPartFraction = Math.min(
+						1,
+						written / total,
+					);
+					emitPostProcessProgress();
+				}
+			});
+			finishPartPostProcess(partBytes);
 			if (outcome.ok) {
 				return;
 			}
@@ -378,11 +468,14 @@ export async function startRecordingSession(
 
 	async function runPostProcess(
 		fileName: string,
+		onProgress?: DefragmentProgressCallback,
 	): Promise<DefragmentPartOutcome> {
-		return postProcessPart(directory, fileName).catch((error: unknown) => ({
-			ok: false as const,
-			reason: getErrorMessage(error, "post-processing failed"),
-		}));
+		return postProcessPart(directory, fileName, onProgress).catch(
+			(error: unknown) => ({
+				ok: false as const,
+				reason: getErrorMessage(error, "post-processing failed"),
+			}),
+		);
 	}
 
 	function warnKeepingFragmented(fileName: string, reason: string): void {

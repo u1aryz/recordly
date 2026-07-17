@@ -222,7 +222,13 @@ function getDetailText(row: HudRow): string {
 		case "notice":
 			return row.detail.message;
 		case "finalizing":
-			return t("finalizingMp4");
+			return row.detail.progress
+				? t("finalizingPart", [
+						String(row.detail.progress.currentPart),
+						String(row.detail.progress.totalParts),
+						String(row.detail.progress.percent),
+					])
+				: t("finalizingMp4");
 		case "result":
 			return row.detail.message;
 		default:
@@ -286,18 +292,27 @@ function RecordingHudRow({
 						{row.detail.kind === "result" ? "" : formatDuration(row.elapsedMs)}
 					</span>
 				</div>
-				<p className="mt-0.5 text-[11px] text-base-content/60">
+				<p className="mt-1 text-[11px] text-base-content/60">
 					{row.width} x {row.height}
 				</p>
 				<p
-					className={`mt-1 text-xs ${
+					className={`mt-1.5 text-xs ${
 						resultTone ? TONE_TEXT_CLASS[resultTone] : "text-base-content/75"
 					}`}
 				>
 					{getDetailText(row)}
 				</p>
+				{row.detail.kind === "finalizing" ? (
+					// Without a value the bar renders indeterminate, covering the gap
+					// between the stop request and the first defragment progress event.
+					<progress
+						className="progress progress-primary mt-2 block h-1.5 w-full"
+						max={100}
+						value={row.detail.progress?.percent}
+					/>
+				) : null}
 				{row.detail.kind === "result" ? null : (
-					<div className="mt-2 flex flex-wrap gap-1.5">
+					<div className="mt-2.5 flex flex-wrap gap-2">
 						<button
 							className="btn btn-primary btn-xs"
 							onClick={() => onOpen(row.id)}
@@ -311,7 +326,14 @@ function RecordingHudRow({
 							onClick={() => onStop(row.id)}
 							type="button"
 						>
-							{t("stopAndSave")}
+							{row.stopping ? (
+								<>
+									<span className="loading loading-spinner loading-xs" />
+									{t("stoppingAndSaving")}
+								</>
+							) : (
+								t("stopAndSave")
+							)}
 						</button>
 					</div>
 				)}

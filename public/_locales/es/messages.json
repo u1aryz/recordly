@@ -128,6 +128,14 @@
 	},
 	"openStatus": { "message": "Abrir estado" },
 	"finalizingMp4": { "message": "Finalizando el archivo MP4." },
+	"finalizingPart": {
+		"message": "Optimizando la parte $CURRENT$/$TOTAL$ ($PERCENT$%).",
+		"placeholders": {
+			"current": { "content": "$1" },
+			"total": { "content": "$2" },
+			"percent": { "content": "$3" }
+		}
+	},
 	"statusRecording": { "message": "Grabando" },
 	"recordingAndSaving": { "message": "Grabando y guardando en archivo" },
 	"recordingAndSavingDescription": {

@@ -5,6 +5,7 @@ import {
 	createShadowRootUi,
 	type ShadowRootContentScriptUi,
 } from "wxt/utils/content-script-ui/shadow-root";
+import type { PostProcessProgress } from "@/shared/recording-session";
 import type { HudPosition } from "@/shared/settings";
 import type { CaptureMetadata, VideoResolution } from "@/shared/types";
 import {
@@ -25,6 +26,10 @@ export type RecordingHudManager = {
 	) => void;
 	notify: (captureId: string, message: string) => void;
 	markStopping: (captureId: string, elapsedMs: number) => void;
+	updateFinalizeProgress: (
+		captureId: string,
+		progress: PostProcessProgress,
+	) => void;
 	finish: (captureId: string, message: string, tone: HudTone) => void;
 	remove: (captureId: string) => void;
 	highlight: (captureId: string) => void;
@@ -155,6 +160,7 @@ export function createRecordingHudUi(
 		updatePart: store.updatePart,
 		notify: store.notify,
 		markStopping: store.markStopping,
+		updateFinalizeProgress: store.updateFinalizeProgress,
 		finish: store.finish,
 		remove: store.remove,
 		highlight: store.highlight,

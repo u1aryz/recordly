@@ -724,7 +724,98 @@ describe("startRecordingSession", () => {
 		expect(postProcessPart).toHaveBeenCalledWith(
 			directory,
 			createPartFileName("demo.mp4", "capture-1", 1),
+			expect.any(Function),
 		);
+	});
+
+	it("reports defragment progress while a saved part is rewritten", async () => {
+		const { directory } = createFakeDirectory();
+		const { stream } = createFakeStream();
+		const { createRecorder, handles } = createRecorderFactory();
+		const onPostProcessProgress = vi.fn();
+		const callbacks = { ...createCallbacks(), onPostProcessProgress };
+		const postProcessPart = vi.fn(
+			async (
+				_directory: FileSystemDirectoryHandle,
+				_fileName: string,
+				onProgress?: (bytesWritten: number, totalBytes: number) => void,
+			) => {
+				onProgress?.(512, 1024);
+				onProgress?.(1024, 1024);
+				return { ok: true as const };
+			},
+		);
+
+		const result = await startRecordingSession({
+			metadata: createMetadata(),
+			stream,
+			directory,
+			callbacks,
+			createRecorder,
+			postProcessPart,
+		});
+		if (!result.ok) {
+			throw new Error("expected session to start");
+		}
+
+		handles[0].emitData(1024);
+		await flushMicrotasks();
+		result.session.stop("user");
+		handles[0].emitStop();
+		await flushMicrotasks();
+
+		// The display holds at 99% after the last byte: the part's writable is
+		// still committing (close) until the outcome resolves.
+		expect(
+			onPostProcessProgress.mock.calls.map(([progress]) => progress),
+		).toEqual([
+			{ currentPart: 1, totalParts: 1, percent: 0 },
+			{ currentPart: 1, totalParts: 1, percent: 50 },
+			{ currentPart: 1, totalParts: 1, percent: 99 },
+			{ currentPart: 1, totalParts: 1, percent: 100 },
+		]);
+	});
+
+	it("weights overall defragment progress by part size", async () => {
+		const { directory } = createFakeDirectory();
+		const { stream } = createFakeStream();
+		const { createRecorder, handles } = createRecorderFactory();
+		const onPostProcessProgress = vi.fn();
+		const callbacks = { ...createCallbacks(), onPostProcessProgress };
+		const postProcessPart = vi.fn(async () => ({ ok: true as const }));
+
+		const result = await startRecordingSession({
+			metadata: createMetadata(),
+			stream,
+			directory,
+			callbacks,
+			createRecorder,
+			postProcessPart,
+		});
+		if (!result.ok) {
+			throw new Error("expected session to start");
+		}
+
+		// Part 1 rolls over at the split size; part 2 stays tiny.
+		await growPartTo(handles[0], PART_SPLIT_BYTES);
+		handles[0].emitStop();
+		await flushMicrotasks();
+		handles[1].emitData(1024);
+		await flushMicrotasks();
+		result.session.stop("user");
+		handles[1].emitStop();
+		await flushMicrotasks();
+
+		// The overall percent is byte-weighted, so the finished 2 GiB part keeps
+		// the bar near-complete once the tiny final part joins the total.
+		expect(
+			onPostProcessProgress.mock.calls.map(([progress]) => progress),
+		).toEqual([
+			{ currentPart: 1, totalParts: 1, percent: 0 },
+			{ currentPart: 1, totalParts: 1, percent: 100 },
+			{ currentPart: 2, totalParts: 2, percent: 99 },
+			{ currentPart: 2, totalParts: 2, percent: 100 },
+		]);
 	});
 
 	it("delays onFinished until the final part's post-processing completes", async () => {
@@ -951,6 +1042,7 @@ describe("startRecordingSession", () => {
 			2,
 			directory,
 			createPartFileName("demo.mp4", "capture-1", 1),
+			undefined,
 		);
 		expect(callbacks.onFinished).toHaveBeenCalledTimes(1);
 		const outcome = (callbacks.onFinished as ReturnType<typeof vi.fn>).mock

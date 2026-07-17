@@ -65,6 +65,29 @@ describe("createHudStore", () => {
 		expect(second?.detail).toEqual({ kind: "finalizing" });
 	});
 
+	it("applies finalize progress only while the row is stopping", () => {
+		const store = createHudStore();
+		store.add(createMetadata("first", "First"));
+
+		store.updateFinalizeProgress("first", {
+			currentPart: 1,
+			totalParts: 2,
+			percent: 40,
+		});
+		expect(store.getSnapshot().rows[0].detail).toEqual({ kind: "recording" });
+
+		store.markStopping("first", 5000);
+		store.updateFinalizeProgress("first", {
+			currentPart: 2,
+			totalParts: 2,
+			percent: 64,
+		});
+		expect(store.getSnapshot().rows[0].detail).toEqual({
+			kind: "finalizing",
+			progress: { currentPart: 2, totalParts: 2, percent: 64 },
+		});
+	});
+
 	it("keeps other recordings active while removing a finished row", () => {
 		vi.useFakeTimers();
 		const store = createHudStore();

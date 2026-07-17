@@ -120,6 +120,14 @@
 	},
 	"openStatus": { "message": "状況を開く" },
 	"finalizingMp4": { "message": "MP4ファイルを確定しています。" },
+	"finalizingPart": {
+		"message": "パート $CURRENT$/$TOTAL$ を最適化しています ($PERCENT$%)。",
+		"placeholders": {
+			"current": { "content": "$1" },
+			"total": { "content": "$2" },
+			"percent": { "content": "$3" }
+		}
+	},
 	"statusRecording": { "message": "録画中" },
 	"recordingAndSaving": { "message": "録画中・ファイルへ保存中" },
 	"recordingAndSavingDescription": {

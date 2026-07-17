@@ -91,6 +91,36 @@ describe("RecordingHud", () => {
 		expect(onStop).toHaveBeenCalledWith("first");
 	});
 
+	it("shows finalize progress and a spinner on the stopping row", () => {
+		const store = createHudStore();
+		const { container } = render(
+			<RecordingHud onOpen={vi.fn()} onStop={vi.fn()} store={store} />,
+		);
+
+		act(() => {
+			store.add(createMetadata("one", "One"));
+			store.markStopping("one", 5000);
+		});
+
+		const row = container.querySelector('[data-capture-id="one"]');
+		// Indeterminate until the first defragment progress event arrives.
+		expect(row?.querySelector("progress")).not.toHaveAttribute("value");
+		expect(row).toHaveTextContent(t("stoppingAndSaving"));
+		expect(row?.querySelector("button:last-of-type")).toBeDisabled();
+		expect(row?.querySelector(".loading-spinner")).toBeInTheDocument();
+
+		act(() => {
+			store.updateFinalizeProgress("one", {
+				currentPart: 2,
+				totalParts: 3,
+				percent: 64,
+			});
+		});
+
+		expect(row).toHaveTextContent(t("finalizingPart", ["2", "3", "64"]));
+		expect(row?.querySelector("progress")?.getAttribute("value")).toBe("64");
+	});
+
 	it("keeps other recordings active while removing a finished row", () => {
 		vi.useFakeTimers();
 		const store = createHudStore();

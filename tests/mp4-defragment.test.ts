@@ -1024,6 +1024,34 @@ describe("defragmentPartFile", () => {
 		]);
 	});
 
+	it("reports monotonic byte progress up to the rewritten size", async () => {
+		const { bytes } = buildFragmentedMp4(
+			[AUDIO_TRACK, VIDEO_TRACK],
+			TWO_TRACK_FRAGMENTS,
+		);
+		const fake = createFakeHandles(bytes);
+		const progress: { written: number; total: number }[] = [];
+		const outcome = await defragmentPartFile(
+			fake.directory,
+			"part-001.mp4",
+			(written, total) => {
+				progress.push({ written, total });
+			},
+		);
+		expect(outcome).toEqual({ ok: true });
+		const outputLength = concatBytes(fake.written).length;
+		expect(progress.length).toBeGreaterThan(1);
+		for (const [index, entry] of progress.entries()) {
+			expect(entry.total).toBe(outputLength);
+			if (index > 0) {
+				expect(entry.written).toBeGreaterThanOrEqual(
+					progress[index - 1].written,
+				);
+			}
+		}
+		expect(progress[progress.length - 1].written).toBe(outputLength);
+	});
+
 	it("never opens a writable when the plan bails out", async () => {
 		const flat = concatBytes([
 			buildFtyp(),
