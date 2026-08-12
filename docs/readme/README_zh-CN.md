@@ -48,7 +48,7 @@ Recordly 面向 Chromium/Chrome,不支持 Firefox。它依赖 File System Access
 
 ## 开发
 
-前置条件:Node.js >= 22 和 pnpm。或者,也可以使用 [mise](https://mise.jdx.dev/) 通过 `mise install` 配置工具链。
+前置条件:Node.js >= 22 和兼容的 pnpm 11 版本（`^11.2.1`）。仓库会直接使用本地已安装的兼容 pnpm，不会自动下载完全匹配的版本。或者,也可以使用 [mise](https://mise.jdx.dev/) 通过 `mise install` 配置工具链。
 
 ```bash
 pnpm install

@@ -21,7 +21,13 @@
 		"react"
 	],
 	"type": "module",
-	"packageManager": "pnpm@11.6.0",
+	"devEngines": {
+		"packageManager": {
+			"name": "pnpm",
+			"version": "^11.2.1",
+			"onFail": "ignore"
+		}
+	},
 	"engines": {
 		"node": ">=22"
 	},

@@ -48,7 +48,7 @@ Recordly está dirigido a Chromium/Chrome. Firefox no es compatible: Recordly de
 
 ## Desarrollo
 
-Requisitos previos: Node.js >= 22 y pnpm. Como alternativa, [mise](https://mise.jdx.dev/) puede configurar las herramientas por ti con `mise install`.
+Requisitos previos: Node.js >= 22 y una versión compatible de pnpm 11 (`^11.2.1`). El repositorio usa la versión compatible de pnpm ya instalada sin descargar automáticamente una versión exacta. Como alternativa, [mise](https://mise.jdx.dev/) puede configurar las herramientas por ti con `mise install`.
 
 ```bash
 pnpm install

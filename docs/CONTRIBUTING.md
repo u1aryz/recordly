@@ -7,7 +7,7 @@ This project follows the [Code of Conduct](CODE_OF_CONDUCT.md). To report a secu
 ## Prerequisites
 
 - Node.js >= 22
-- pnpm
+- A compatible pnpm 11 release (`^11.2.1`). The repository uses your installed compatible pnpm without automatically downloading an exact version.
 
 Alternatively, [mise](https://mise.jdx.dev/) can set up the toolchain for you with `mise install`.
 

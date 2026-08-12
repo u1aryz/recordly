@@ -48,7 +48,7 @@ Recordly は Chromium/Chrome 向けです。Firefox には対応していませ�
 
 ## 開発
 
-前提条件: Node.js >= 22 と pnpm。代わりに [mise](https://mise.jdx.dev/) を使う場合は、`mise install` でツールチェーンを導入できます。
+前提条件: Node.js >= 22 と互換性のある pnpm 11 (`^11.2.1`)。リポジトリは完全一致するバージョンを自動ダウンロードせず、手元の互換 pnpm をそのまま利用します。代わりに [mise](https://mise.jdx.dev/) を使う場合は、`mise install` でツールチェーンを導入できます。
 
 ```bash
 pnpm install

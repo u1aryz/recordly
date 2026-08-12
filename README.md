@@ -48,7 +48,7 @@ Recordly targets Chromium/Chrome. Firefox is not supported: Recordly relies on t
 
 ## Development
 
-Prerequisites: Node.js >= 22 and pnpm. Alternatively, [mise](https://mise.jdx.dev/) can set up the toolchain for you with `mise install`.
+Prerequisites: Node.js >= 22 and a compatible pnpm 11 release (`^11.2.1`). The repository uses your installed compatible pnpm without automatically downloading an exact version. Alternatively, [mise](https://mise.jdx.dev/) can set up the toolchain for you with `mise install`.
 
 ```bash
 pnpm install

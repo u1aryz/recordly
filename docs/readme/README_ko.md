@@ -48,7 +48,7 @@ Recordly는 Chromium/Chrome을 대상으로 합니다. Firefox는 지원하지 �
 
 ## 개발
 
-사전 요구 사항: Node.js >= 22, pnpm. 대신 [mise](https://mise.jdx.dev/)를 사용하면 `mise install`로 툴체인을 설치할 수 있습니다.
+사전 요구 사항: Node.js >= 22 및 호환되는 pnpm 11 버전(`^11.2.1`). 저장소는 정확히 일치하는 버전을 자동으로 다운로드하지 않고 이미 설치된 호환 pnpm을 그대로 사용합니다. 대신 [mise](https://mise.jdx.dev/)를 사용하면 `mise install`로 툴체인을 설치할 수 있습니다.
 
 ```bash
 pnpm install
