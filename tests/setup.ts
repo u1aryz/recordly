@@ -1,7 +1,7 @@
 import "@testing-library/jest-dom/vitest";
 import "fake-indexeddb/auto";
 import { afterEach, vi } from "vitest";
-import { fakeBrowser } from "wxt/testing";
+import { fakeBrowser } from "wxt/testing/fake-browser";
 import { defineBackground } from "wxt/utils/define-background";
 import enMessages from "@/public/_locales/en/messages.json";
 

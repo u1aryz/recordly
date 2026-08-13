@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { fakeBrowser } from "wxt/testing";
+import { fakeBrowser } from "wxt/testing/fake-browser";
 import { t } from "@/utils/i18n";
 
 const originalRuntimeId = fakeBrowser.runtime.id;

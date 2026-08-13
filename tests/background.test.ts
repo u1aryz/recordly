@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { fakeBrowser } from "wxt/testing";
+import { fakeBrowser } from "wxt/testing/fake-browser";
 import { createCaptureMetadata } from "@/shared/capture-state";
 import { getCapture, putCapture } from "@/shared/storage";
 import type { CaptureMetadata, PortMessage } from "@/shared/types";
@@ -107,7 +107,7 @@ async function triggerMessage(
 	message: unknown,
 	sender: Browser.runtime.MessageSender,
 ): Promise<unknown[]> {
-	return fakeBrowser.runtime.onMessage.trigger(message, sender);
+	return fakeBrowser.runtime.onMessage.trigger(message, sender, vi.fn());
 }
 
 beforeEach(() => {
@@ -115,8 +115,10 @@ beforeEach(() => {
 	// capture registries.
 	vi.resetModules();
 	onConnect = createFakeEvent();
-	fakeBrowser.runtime.onConnect =
-		onConnect as unknown as typeof fakeBrowser.runtime.onConnect;
+	Object.defineProperty(fakeBrowser.runtime, "onConnect", {
+		configurable: true,
+		value: onConnect as unknown as typeof fakeBrowser.runtime.onConnect,
+	});
 });
 
 afterEach(() => {

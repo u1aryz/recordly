@@ -225,19 +225,20 @@ Subsequent releases are submitted automatically by `.github/workflows/release.ym
 on `v*` tags using `wxt submit`. The submit step is skipped until the secrets below
 are configured.
 
-1. Generate Chrome Web Store API credentials — `pnpm wxt submit init` walks through
-   creating a Google Cloud project, enabling the Chrome Web Store API, creating an
-   OAuth client, and obtaining a refresh token. It writes `.env.submit` (gitignored)
-   for local use.
+1. Generate Chrome Web Store API v2 credentials — `pnpm wxt submit init` walks through
+   enabling the API, creating a service account, and granting it access to the Chrome
+   Web Store account. Select API v2 when prompted. The command writes `.env.submit`
+   (gitignored) for local use.
 2. Test locally: `pnpm zip && pnpm wxt submit --dry-run --chrome-zip output/*-chrome.zip`.
 3. Add GitHub repository secrets (Settings → Secrets and variables → Actions):
    - `CHROME_EXTENSION_ID` — the ID from the dashboard item
-   - `CHROME_CLIENT_ID` / `CHROME_CLIENT_SECRET` — the OAuth client
-   - `CHROME_REFRESH_TOKEN` — from `wxt submit init`
+   - `CHROME_PUBLISHER_ID` — the publisher ID from the developer dashboard
+   - `CHROME_SERVICE_ACCOUNT_CLIENT_EMAIL` — the service account's client email
+   - `CHROME_SERVICE_ACCOUNT_PRIVATE_KEY` — the service account's private key
 4. Tag a release (`git tag v0.0.5 && git push --tags`). The workflow zips, uploads to
    the Chrome Web Store, and submits for review; the version is published automatically
    once the review passes.
 
-Note: the refresh token expires if unused for ~6 months, and re-authorizing rotates
-it. If the submit step starts failing with auth errors, regenerate via
-`pnpm wxt submit init` and update the secret.
+If the submit step starts failing with authentication errors, verify that the service
+account still has Chrome Web Store access and rerun `pnpm wxt submit init` to refresh
+the local configuration and GitHub secrets.
