@@ -27,6 +27,10 @@ run = "pnpm test:e2e"
 description = "Format and type-check"
 run = ["pnpm format", "pnpm typecheck"]
 
+[tasks.bump]
+description = "Bump the version, commit, and tag without pushing"
+run = "pnpm bump"
+
 [tasks.zip]
 description = "Create the extension zip"
 run = "pnpm zip"
